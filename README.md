@@ -17,10 +17,11 @@ Copyright of the original code: Finflow GmbH and the upstream contributors.
 
 Branch `caifudeguo/main` holds all changes; `main` mirrors upstream.
 
-| Date       | Change                                                                                                                                                                                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-11 | Added this notice to the README. No code changes yet.                                                                                                                                                                                                        |
-| 2026-10-11 | Added `caifudeguo/check-core.mjs` + `core-manifest.json`: CI fails if the AV-Depot core (`av-depot.ts`, `income-tax.ts`, `constants/av-depot.ts`, `src/utils/**`) differs from upstream, except files listed in `allowedChanges`. Run `pnpm run check:core`. |
+| Date       | Change                                                                                                                                                                                                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-11 | Added this notice to the README. No code changes yet.                                                                                                                                                                                                                   |
+| 2026-10-11 | Added `caifudeguo/check-core.mjs` + `core-manifest.json`: CI fails if the AV-Depot core (`av-depot.ts`, `income-tax.ts`, `constants/av-depot.ts`, `src/utils/**`) differs from upstream, except files listed in `allowedChanges`. Run `pnpm run check:core`.            |
+| 2026-10-11 | `package.json`: renamed to `caifudeguo-calculators`, description marks it as a modified version of finanzfluss/calculators, homepage/repository/bugs point to this repo, removed `finanzfluss`/`finflow` keywords. `author: Finflow GmbH` and `license: AGPL-3.0` kept. |
 
 ---
 

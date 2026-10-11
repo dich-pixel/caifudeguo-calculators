@@ -1,23 +1,25 @@
 {
-  "name": "@finanzfluss/calculators",
+  "name": "caifudeguo-calculators",
   "type": "module",
   "version": "1.4.3",
   "packageManager": "pnpm@10.30.3",
-  "description": "Financial calculators for Finanzfluss",
+  "description": "Modified version of finanzfluss/calculators (AGPL-3.0) used for the calculators on caifudeguo.de. Not affiliated with Finanzfluss.",
   "author": "Finflow GmbH",
+  "contributors": [
+    "Rich Dr (caifudeguo.de)"
+  ],
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/finanzfluss/calculators#readme",
+  "homepage": "https://github.com/dich-pixel/caifudeguo-calculators#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/finanzfluss/calculators.git"
+    "url": "git+https://github.com/dich-pixel/caifudeguo-calculators.git"
   },
   "bugs": {
-    "url": "https://github.com/finanzfluss/calculators/issues"
+    "url": "https://github.com/dich-pixel/caifudeguo-calculators/issues"
   },
   "keywords": [
     "calculator",
-    "finanzfluss",
-    "finflow"
+    "caifudeguo"
   ],
   "sideEffects": false,
   "exports": {
