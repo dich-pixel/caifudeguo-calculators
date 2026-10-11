@@ -1,0 +1,69 @@
+// Checks that the AV-Depot calculation core is byte-identical to upstream
+// finanzfluss/calculators commit dcc29a69bdd8a3943d092e4c86ad42bff2767e1a,
+// except for files listed in `allowedChanges` in core-manifest.json.
+// Usage: node caifudeguo/check-core.mjs          (check)
+//        node caifudeguo/check-core.mjs --write  (regenerate manifest; only for a deliberate, reviewed change)
+import { createHash } from 'node:crypto'
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
+
+const root = new URL('..', import.meta.url).pathname
+const manifestPath = join(root, 'caifudeguo/core-manifest.json')
+const coreRoots = [
+  'src/calculators/av-depot.ts',
+  'src/calculators/income-tax.ts',
+  'src/constants/av-depot.ts',
+  'src/utils',
+]
+
+function listFiles(p) {
+  const abs = join(root, p)
+  if (statSync(abs).isFile()) return [p]
+  return readdirSync(abs).flatMap((name) => listFiles(join(p, name)))
+}
+
+const files = coreRoots.flatMap(listFiles).sort()
+const hashes = Object.fromEntries(
+  files.map((f) => [
+    f,
+    createHash('sha256')
+      .update(readFileSync(join(root, f)))
+      .digest('hex'),
+  ]),
+)
+
+if (process.argv.includes('--write')) {
+  const old = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  writeFileSync(
+    manifestPath,
+    JSON.stringify({ ...old, files: hashes }, null, 2) + '\n',
+  )
+  console.log(`core manifest written: ${files.length} files`)
+  process.exit(0)
+}
+
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+const allowed = new Set(Object.keys(manifest.allowedChanges ?? {}))
+const problems = []
+for (const [f, h] of Object.entries(manifest.files)) {
+  if (!(f in hashes)) problems.push(`missing: ${f}`)
+  else if (hashes[f] !== h && !allowed.has(f)) problems.push(`changed: ${f}`)
+}
+for (const f of files)
+  if (!(f in manifest.files))
+    problems.push(`new file in core: ${relative(root, join(root, f))}`)
+
+if (problems.length) {
+  console.error(
+    `core check FAILED (upstream ${manifest.upstreamCommit}):\n  ` +
+      problems.join('\n  '),
+  )
+  console.error(
+    'Only files listed in allowedChanges (with a reason) may differ from upstream.',
+  )
+  process.exit(1)
+}
+const changed = files.filter((f) => hashes[f] !== manifest.files[f])
+console.log(
+  `core check ok: ${files.length} files, ${changed.length} allowed change(s)${changed.length ? ': ' + changed.join(', ') : ''}`,
+)

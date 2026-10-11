@@ -1,0 +1,28 @@
+{
+  "upstream": "https://github.com/finanzfluss/calculators",
+  "upstreamCommit": "dcc29a69bdd8a3943d092e4c86ad42bff2767e1a",
+  "allowedChanges": {},
+  "files": {
+    "src/calculators/av-depot.ts": "081b66ab5319356cd09d7c4df3f01fd9d547d908997e36b462e819f6ab65e33f",
+    "src/calculators/income-tax.ts": "4e382988a4ede30f149454e9df0aabb66991799d551c8e2db623e2f8b1d65c6b",
+    "src/constants/av-depot.ts": "da5d7ab47cf24cb8360daf64c2723eb988d7a8e06a70ea743395dcfafd9449c8",
+    "src/utils/Lohnsteuer/2019.ts": "b4d7c566a14f52923790e17483ca926f02dbb81f76f2bc4281adf082e6b6a670",
+    "src/utils/Lohnsteuer/2020.ts": "a33954006ae5075c60fada14573b9524f99ce35ca6a4ceb9bd8e7ade3141d702",
+    "src/utils/Lohnsteuer/2021.ts": "1c48fc9029d51ee5304ed3299fee88bc1c92a357d86f4ccbf9c5f274a8d9d2a7",
+    "src/utils/Lohnsteuer/2022.ts": "bee86fd25daa1f62c88daf948e247aebf605bdc805c9207325d7c11ea0d168f5",
+    "src/utils/Lohnsteuer/2023.ts": "fc87929045608087c424425c4bf0ee3a8c2dc7706714eb72a5bb86b3f0e9cd02",
+    "src/utils/Lohnsteuer/2024.ts": "40cacf461326d32b656d48175b934f8eb2a9191eb037d68a430efe6c71e38785",
+    "src/utils/Lohnsteuer/2025.ts": "9cc189703ea0d338e037e468cd0ebf6b8797a3a15938533c514dac7f85d2b0cf",
+    "src/utils/Lohnsteuer/2026.ts": "99d2ae842f1ef1ecf7e5077ed5c4ebebcb302ad5991d3caee99fdf78bd7d4d62",
+    "src/utils/Lohnsteuer/README.md": "1217aeafe7b85be7cd180c6e5db1211f416ab10838b3f1f6aeca51423ab61141",
+    "src/utils/Lohnsteuer/index.ts": "8a320037979573e8688928df9d2b79f447e13af76bd3defae53beee6a75e5cc9",
+    "src/utils/Lohnsteuer/shims/BigDecimal.ts": "3308e7f97e7c3ad8dcc43f3f3a4cb9824976fa1783f12dedd923d4d8ca138dea",
+    "src/utils/Lohnsteuer/types.ts": "5ef86056d5355b0b7e82c3eb9d24d8a67bf2d0d115872a3d59a9c857d202e334",
+    "src/utils/calculator.ts": "51e9ea1d0a8c4ad39d9d86801f5cb99f3997e7d0253c66e36ec445e001324a9e",
+    "src/utils/financial.ts": "146762b0dfc57536be448bf7cd55d9117a0e52c723c0b8176053b2c9ed9379ca",
+    "src/utils/formatters.ts": "a84806c9f1d295591130cd90bf9ecbcfacb557f7066ae4288952065097a8c4e5",
+    "src/utils/i18n.ts": "94c49aa4a12162fcdf5718afa986d6dcade250b036913886c0f5a6d9e6e2e367",
+    "src/utils/index.ts": "f81f1e59f280f7ee06dbf2b8fa7435bebb8cf3faba01fb973003a550cafc5a6b",
+    "src/utils/validation.ts": "8182ea8a7a9321b2a92ee6c1d52c3b1a91c41626e4dc1a2afb16e77fd6d54490"
+  }
+}
