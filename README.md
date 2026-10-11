@@ -1,3 +1,30 @@
+# caifudeguo-calculators
+
+> **Modified version / 修改版.** This repository is a fork of
+> [finanzfluss/calculators](https://github.com/finanzfluss/calculators), based on commit
+> [`dcc29a69bdd8a3943d092e4c86ad42bff2767e1a`](https://github.com/finanzfluss/calculators/tree/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a)
+> (2026-10-09). It is used for the calculators on [caifudeguo.de](https://www.caifudeguo.de/).
+> It is not affiliated with or endorsed by Finanzfluss / Finflow GmbH.
+>
+> 本仓库是 finanzfluss/calculators 的 fork，基于上面的 commit，用于 caifudeguo.de 上的计算器，与 Finanzfluss / Finflow GmbH 没有合作或背书关系。
+
+## License / 许可证
+
+GNU Affero General Public License v3.0 (AGPL-3.0), same as upstream. See [LICENSE](./LICENSE).
+Copyright of the original code: Finflow GmbH and the upstream contributors.
+
+## Changes from upstream / 相对原版的改动
+
+Branch `caifudeguo/main` holds all changes; `main` mirrors upstream.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-11 | Added this notice to the README. No code changes yet. |
+
+---
+
+*Original README follows / 以下为原版 README：*
+
   <img src="./.github/calculators-icon.svg" alt="Logo for @finanzfluss/calculators Repository" width="120" height="120">
 
 # @finanzfluss/calculators
