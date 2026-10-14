@@ -27,8 +27,6 @@ Branch `caifudeguo/main` holds all changes; `main` mirrors upstream.
 
 _Original README follows / 以下为原版 README：_
 
-  <img src="./.github/calculators-icon.svg" alt="Logo for @finanzfluss/calculators Repository" width="120" height="120">
-
 # @finanzfluss/calculators
 
 A selection of financial calculators used on the Finanzfluss Website: [https://www.finanzfluss.de/rechner/](https://www.finanzfluss.de/rechner/)

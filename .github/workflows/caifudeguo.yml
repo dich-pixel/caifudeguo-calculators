@@ -13,11 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run check:core
       - run: pnpm vitest run
+      - run: git diff --exit-code dcc29a69bdd8a3943d092e4c86ad42bff2767e1a -- src
