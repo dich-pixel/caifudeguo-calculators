@@ -1,0 +1,238 @@
+/*
+ * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
+ * Based on finanzfluss/calculators (AGPL-3.0). Licensed under AGPL-3.0-only.
+ *
+ * Glue between the form and the unchanged core (src/calculators/av-depot.ts @ dcc29a6).
+ * No calculation rules live here: validation = core zod schema, numbers = core output.
+ */
+import type { ParseError } from './parse'
+import type { StrKey } from './strings'
+import { avDepot } from '../../../src/calculators/av-depot'
+import { AV_CONTRIBUTION_CAP, BERUFSEINSTEIGER_BONUS } from '../../../src/constants/av-depot'
+import { parseCurrency } from '../../../src/utils/formatters'
+import { formatNumberDe } from './format'
+import { startYear } from './params'
+import { parseAmount, parseInteger, parsePercent } from './parse'
+
+export type FieldKind = 'amount' | 'percent' | 'int'
+export type TaxSavingsMode = 'avDepot' | 'secondaryDepot' | 'consume'
+
+export const FIELDS = {
+  age: 'int',
+  retirementAge: 'int',
+  savingsRate: 'amount',
+  zveSavingsPhase: 'amount',
+  zveRetirement: 'amount',
+  etfReturnRate: 'percent',
+  avDepotCosts: 'percent',
+  exemptionOrder: 'amount',
+  baseRate: 'percent',
+  oneTimePayout: 'percent',
+  payoutReturnRate: 'percent',
+  payoutUntilAge: 'int',
+} as const satisfies Record<string, FieldKind>
+
+export type FieldName = keyof typeof FIELDS
+
+export interface FormValues {
+  fields: Record<FieldName, string>
+  taxSavingsMode: TaxSavingsMode
+  kids: string[]
+}
+
+/** Finanzfluss web defaults read 2026-10-14 (plan §2). */
+export const DEFAULTS: FormValues = {
+  fields: {
+    age: '35',
+    retirementAge: '67',
+    savingsRate: '1.800',
+    zveSavingsPhase: '50.000',
+    zveRetirement: '20.000',
+    etfReturnRate: '6,0',
+    avDepotCosts: '0,2',
+    exemptionOrder: '1.000',
+    baseRate: '0,00',
+    oneTimePayout: '0',
+    payoutReturnRate: '3,0',
+    payoutUntilAge: '85',
+  },
+  taxSavingsMode: 'avDepot',
+  kids: [],
+}
+
+/** Plan §8.1: hint above one contract's cap (AV_CONTRIBUTION_CAP = 2 × 6.840 €, src/constants/av-depot.ts:5). */
+export const ONE_CONTRACT_CAP = AV_CONTRIBUTION_CAP / 2
+export const QUICK_AMOUNTS = [120, 1800, AV_CONTRIBUTION_CAP] as const
+
+export interface FieldError {
+  key: StrKey
+  vars?: Record<string, string>
+}
+
+const PARSE_ERR: Record<ParseError, StrKey> = {
+  empty: 'errEmpty',
+  amount: 'errAmount',
+  percent: 'errPercent',
+  int: 'errInt',
+}
+
+export interface Money { avDepot: number, normalDepot: number }
+export interface PayoutMoney { gross: Money, tax: Money, net: Money }
+export interface YearRow {
+  year: number
+  calendarYear: number
+  age: number
+  contribution: Money
+  grossReturn: Money
+  vorabpauschale: Money
+  vorabpauschaleTax: Money
+  capitalEnd: Money
+}
+export interface Result {
+  totalContributions: Money
+  finalCapital: Money
+  firstPayoutYear: PayoutMoney
+  regularPayoutYear: PayoutMoney
+  payoutTotal: PayoutMoney
+  /** regularPayoutYear.net / 12 */
+  monthlyNet: Money
+  years: YearRow[]
+  bonusApplied: boolean
+}
+
+export type Outcome =
+  | { ok: true, result: Result, coreInput: Record<string, unknown> }
+  | { ok: false, errors: Record<string, FieldError> }
+
+function money(p: { avDepot: string, normalDepot: string }): Money {
+  return { avDepot: parseCurrency(p.avDepot), normalDepot: parseCurrency(p.normalDepot) }
+}
+function payout(p: { gross: { avDepot: string, normalDepot: string }, tax: { avDepot: string, normalDepot: string }, net: { avDepot: string, normalDepot: string } }): PayoutMoney {
+  return { gross: money(p.gross), tax: money(p.tax), net: money(p.net) }
+}
+
+function fmtBound(field: string, n: number): string {
+  const kind: FieldKind | undefined = (FIELDS as Record<string, FieldKind>)[field]
+  if (kind === 'amount')
+    return `${formatNumberDe(n)} €`
+  if (kind === 'percent')
+    return `${formatNumberDe(n, n % 1 === 0 ? 0 : 2)} %`
+  return String(n)
+}
+
+/** Field key used by the form for a core zod issue path, e.g. ['childBirthYears', 1] → 'kid-1'. */
+function pathKey(path: PropertyKey[]): string {
+  if (path[0] === 'childBirthYears' && typeof path[1] === 'number')
+    return `kid-${path[1]}`
+  return String(path[0] ?? 'form')
+}
+
+export function evaluate(values: FormValues, today: Date = new Date()): Outcome {
+  const errors: Record<string, FieldError> = {}
+  const raw: Record<string, unknown> = {}
+  for (const [name, kind] of Object.entries(FIELDS) as [FieldName, FieldKind][]) {
+    const text = values.fields[name]
+    const r = kind === 'amount' ? parseAmount(text) : kind === 'percent' ? parsePercent(text) : parseInteger(text)
+    if (r.ok)
+      raw[name] = r.value
+    else errors[name] = { key: PARSE_ERR[r.error] }
+  }
+  const thisYear = today.getFullYear()
+  const kids: number[] = []
+  values.kids.forEach((text, i) => {
+    const r = parseInteger(text)
+    if (!r.ok)
+      errors[`kid-${i}`] = { key: PARSE_ERR[r.error] }
+    else if (r.value > thisYear)
+      errors[`kid-${i}`] = { key: 'errFuture', vars: { year: String(thisYear) } }
+    kids.push(r.ok ? r.value : Number.NaN)
+  })
+  raw.taxSavingsMode = values.taxSavingsMode
+  raw.childBirthYears = kids
+  raw.currentYear = startYear(today)
+
+  // Run the core schema even when some fields failed to parse, so that range errors show for all fields at once.
+  const probe = { ...raw }
+  for (const name of Object.keys(FIELDS)) {
+    if (!(name in probe))
+      probe[name] = Number.NaN
+  }
+  const parsed = avDepot.schema.safeParse(probe)
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const key = pathKey(issue.path)
+      if (errors[key])
+        continue
+      if (key === 'form' || Number.isNaN(probe[key as FieldName]))
+        continue // NaN from a parse error is already reported
+      errors[key] = issueToError(key, issue)
+    }
+  }
+  if (Object.keys(errors).length > 0 || !parsed.success)
+    return { ok: false, errors: Object.keys(errors).length ? errors : { form: { key: 'errInvalid' } } }
+
+  const out = avDepot.calculate(parsed.data)
+  const age = parsed.data.age
+  const start = parsed.data.currentYear
+  const regular = payout(out.regularPayoutYear)
+  return {
+    ok: true,
+    coreInput: raw,
+    result: {
+      totalContributions: money(out.totalContributions),
+      finalCapital: money(out.finalCapital),
+      firstPayoutYear: payout(out.firstPayoutYear),
+      regularPayoutYear: regular,
+      payoutTotal: payout(out.payoutTotal),
+      monthlyNet: { avDepot: regular.net.avDepot / 12, normalDepot: regular.net.normalDepot / 12 },
+      years: out.savingsPerYear.map(y => ({
+        year: y.year,
+        calendarYear: start + y.year - 1,
+        age: age + y.year - 1,
+        contribution: money(y.contribution),
+        grossReturn: money(y.grossReturn),
+        vorabpauschale: money(y.vorabpauschale),
+        vorabpauschaleTax: money(y.vorabpauschaleTax),
+        capitalEnd: money(y.capitalEnd),
+      })),
+      // Mirrors the core condition `savingsYear === 1 && age < 25` (src/calculators/av-depot.ts:591-592) for the note only.
+      bonusApplied: age < 25 && BERUFSEINSTEIGER_BONUS > 0,
+    },
+  }
+}
+
+interface Issue { code: string, message: string, minimum?: unknown, maximum?: unknown, inclusive?: boolean, path: PropertyKey[] }
+
+function issueToError(key: string, issue: Issue): FieldError {
+  if (issue.code === 'too_small')
+    return { key: issue.inclusive === false ? 'errGt' : 'errMin', vars: { min: fmtBound(key, Number(issue.minimum)) } }
+  if (issue.code === 'too_big')
+    return { key: 'errMax', vars: { max: fmtBound(key, Number(issue.maximum)) } }
+  if (issue.code === 'custom') {
+    if (issue.message.startsWith('age must'))
+      return { key: 'errAgeRetire' }
+    if (issue.message.startsWith('retirementAge must'))
+      return { key: 'errRetirePayout' }
+    if (issue.message.includes('etfReturnRate'))
+      return { key: 'errCostsEtf' }
+    if (issue.message.includes('payoutReturnRate'))
+      return { key: 'errCostsPayout' }
+  }
+  if (issue.code === 'invalid_type')
+    return { key: 'errInt' }
+  return { key: 'errInvalid' }
+}
+
+export interface Verdict { kind: 'same' | 'av' | 'normal', diff: number }
+
+/**
+ * Plan §3: D = AV net total − normal net total (unrounded core values).
+ * |D| < 1 % of the larger total (strictly) → "same"; exactly 1 % counts as different.
+ */
+export function verdict(avNet: number, normalNet: number): Verdict {
+  const diff = avNet - normalNet
+  const larger = Math.max(Math.abs(avNet), Math.abs(normalNet))
+  if (Math.abs(diff) < 0.01 * larger)
+    return { kind: 'same', diff }
+  return { kind: diff > 0 ? 'av' : 'normal', diff }
+}

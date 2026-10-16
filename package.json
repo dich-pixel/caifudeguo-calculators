@@ -46,7 +46,10 @@
     "test:coverage": "vitest --coverage",
     "test:types": "tsc --noEmit",
     "release": "bumpp",
-    "check:core": "node caifudeguo/check-core.mjs"
+    "check:core": "node caifudeguo/check-core.mjs",
+    "av:build": "vite build --config caifudeguo/av-ui/vite.config.mjs",
+    "av:dev": "vite --config caifudeguo/av-ui/vite.config.mjs",
+    "wp:zip": "node caifudeguo/wp-plugin/build-zip.mjs"
   },
   "peerDependencies": {
     "@formulajs/formulajs": "^4.5.3",
@@ -64,6 +67,7 @@
     "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "ufo": "^1.6.3",
+    "vite": "7.3.1",
     "vitest": "^4.0.18"
   }
 }
