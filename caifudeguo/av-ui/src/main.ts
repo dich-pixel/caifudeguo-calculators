@@ -172,6 +172,8 @@ function modeRadios(): HTMLElement {
 
 // ---------- results ----------
 
+// Short live result under the savings input (single-column only). aria-hidden: the results status region announces.
+const inlineResult = h('p', { 'class': 'inline-result', 'data-testid': STR.inlineAv.id, 'aria-hidden': 'true' })
 const bar = h('div', { 'class': 'vbar', 'data-testid': 'verdict-bar', 'aria-hidden': 'true' })
 const status = h('div', { 'class': 'status', 'aria-live': 'polite', 'aria-atomic': 'true', 'data-testid': 'result-status' })
 const monthlyBox = h('div', { class: 'monthly' })
@@ -199,7 +201,10 @@ function renderResult(r: Result) {
   const key: StrKey = v.kind === 'av'
     ? 'verdictAv'
     : v.kind === 'normal' ? 'verdictNormal' : rounded0 ? 'verdictEqual' : v.diff > 0 ? 'verdictSame' : 'verdictSameNormal'
-  const barKey: StrKey = v.kind === 'av' ? 'barAv' : v.kind === 'normal' ? 'barNormal' : 'barSame'
+  const sameKey = (av: StrKey, normal: StrKey, equal: StrKey): StrKey => rounded0 ? equal : v.diff > 0 ? av : normal
+  const barKey: StrKey = v.kind === 'av' ? 'barAv' : v.kind === 'normal' ? 'barNormal' : sameKey('barSame', 'barSameNormal', 'barEqual')
+  const inlineKey: StrKey = v.kind === 'av' ? 'inlineAv' : v.kind === 'normal' ? 'inlineNormal' : sameKey('inlineSameAv', 'inlineSameNormal', 'inlineEqual')
+  inlineResult.textContent = t(inlineKey, { x })
   bar.replaceChildren(
     txt('span', barKey, { class: 'bar-verdict' }, { x }),
     txt('span', 'barMonthly', { class: 'bar-monthly' }, { a: formatEuro(r.monthlyNet.avDepot), b: formatEuro(r.monthlyNet.normalDepot) }),
@@ -207,6 +212,7 @@ function renderResult(r: Result) {
   status.replaceChildren(...[
     txt('p', key, { 'class': 'verdict', 'data-verdict': v.kind }, { x }),
     txt('p', 'verdictBasis', { class: 'basis' }),
+    txt('p', 'diffNote', { class: 'basis small' }),
     txt('p', 'sensitivity', { class: 'sensitivity' }),
     r.bonusApplied ? txt('p', 'bonusNote', { class: 'note' }) : null,
   ].filter((n): n is HTMLParagraphElement => n !== null))
@@ -261,6 +267,7 @@ function update() {
   }
   else {
     bar.replaceChildren(txt('span', 'barInvalid', { class: 'bar-verdict' }))
+    inlineResult.textContent = t('inlineInvalid')
     status.replaceChildren(txt('p', 'noResult', { class: 'verdict invalid' }), txt('p', 'sensitivity', { class: 'sensitivity' }))
     monthlyBox.replaceChildren()
     compare.replaceChildren()
@@ -304,7 +311,7 @@ function build() {
 
   const form = h('form', { 'class': 'inputs', 'novalidate': true, 'aria-label': t('title') },
     h('div', { class: 'row2' }, field('age', 'age'), field('retirementAge', 'retirementAge')),
-    field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts)),
+    field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts, inlineResult)),
     field('zveSavingsPhase', 'zveSavings', 'zveHelp'),
     kids,
     h('div', { class: 'joint' }, txt('button', 'joint', { 'type': 'button', 'class': 'placeholder', 'disabled': true, 'aria-disabled': 'true' }), txt('p', 'noticeSingle', { class: 'notice' })),

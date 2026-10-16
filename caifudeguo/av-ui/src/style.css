@@ -120,3 +120,12 @@ details > p { margin: 4px 0 0; }
 .radio label { min-height: 44px; display: flex; align-items: center; flex: 1; }
 .radio input { width: 20px; height: 20px; margin: 0; }
 .toggle { min-height: 44px; }
+
+/* ---- round 3 ---- */
+.inline-result { display: none; }
+@media (max-width: 999px) {
+  .inline-result { display: block; margin: 6px 0 0; font-weight: 700; color: var(--accent); }
+}
+.basis.small { font-size: 0.8rem; color: var(--muted); }
+input[type='text'] { min-height: 44px; }
+.notes a, .notice a { display: inline-flex; align-items: center; min-height: 44px; }

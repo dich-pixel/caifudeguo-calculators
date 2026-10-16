@@ -5,6 +5,8 @@ commit [`dcc29a69bdd8a3943d092e4c86ad42bff2767e1a`](https://github.com/finanzflu
 (dcc29a6), re-verified 2026-10-17.** `src/` in this fork is byte-identical (`pnpm run check:core`, CI
 `git diff --exit-code dcc29a6 -- src`), so the numbers stay valid.
 
+**In plain words: the page runs a mechanically generated copy of the dcc29a6 core in which only `depotPair()` returns raw numbers instead of formatted strings. Everything else is the core's code. `pnpm run check:core` fails if the copy is not exactly the transform of the unchanged core.**
+
 The UI (`caifudeguo/av-ui/src`) parses German input, validates with the core's zod schema and calculates with the core's
 formulas. To get unrounded amounts it uses `src/generated/av-depot-precise.ts`, a mechanical copy of the core produced
 by `scripts/precise-core.mjs`: the only change is that `depotPair()` (`av-depot.ts:192-197`) returns the raw numbers

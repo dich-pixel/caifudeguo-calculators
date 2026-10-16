@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import process from 'node:process'
+import { generate } from './av-ui/scripts/precise-core.mjs'
 
 const root = new URL('..', import.meta.url).pathname
 const manifestPath = join(root, 'caifudeguo/core-manifest.json')
@@ -54,6 +55,12 @@ for (const f of files)
   if (!(f in manifest.files))
     problems.push(`new file in core: ${relative(root, join(root, f))}`)
 
+// The AV page runs a mechanically generated copy of av-depot.ts (only depotPair returns raw numbers).
+// It must equal the transform of the (unchanged) core above.
+const precisePath = 'caifudeguo/av-ui/src/generated/av-depot-precise.ts'
+if (readFileSync(join(root, precisePath), 'utf8') !== generate())
+  problems.push(`stale generated copy: ${precisePath} (run node caifudeguo/av-ui/scripts/precise-core.mjs)`)
+
 if (problems.length) {
   console.error(
     `core check FAILED (upstream ${manifest.upstreamCommit}):\n  ${problems.join('\n  ')}`,
@@ -65,5 +72,5 @@ if (problems.length) {
 }
 const changed = files.filter((f) => hashes[f] !== manifest.files[f])
 console.warn(
-  `core check ok: ${files.length} files, ${changed.length} allowed change(s)${changed.length ? `: ${changed.join(', ')}` : ''}`,
+  `core check ok: ${files.length} files + generated precise copy up to date, ${changed.length} allowed change(s)${changed.length ? `: ${changed.join(', ')}` : ''}`,
 )
