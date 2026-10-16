@@ -339,8 +339,9 @@ function build() {
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
     h('div', { class: 'grid' }, form, results),
-    yearly,
+    // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
+    yearly,
   )
   // Title shows the German term in brackets.
   app.querySelector('h1')!.textContent = `${t('title')}（${STR.title.de}）`
