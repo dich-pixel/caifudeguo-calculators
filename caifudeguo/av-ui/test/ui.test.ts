@@ -1,9 +1,9 @@
 import type { FormValues } from '../src/model'
 import { describe, expect, it } from 'vitest'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { parseCurrency } from '../../../src/utils/formatters'
+import { formatCurrencyAdaptive } from '../../../src/utils/formatters'
 import { formatEuro, formatEuro2, formatNumberDe, formatPercentDe, roundHalfUp } from '../src/format'
-import { DEFAULTS, evaluate, ONE_CONTRACT_CAP, verdict } from '../src/model'
+import { DEFAULTS, evaluate, MONTHLY_FROM_ROUNDED_ANNUAL, ONE_CONTRACT_CAP, verdict } from '../src/model'
 import { PARAMS_CHECK_DATE, startYear } from '../src/params'
 import { parseAmount, parseInteger, parsePercent } from '../src/parse'
 import { t } from '../src/strings'
@@ -118,13 +118,19 @@ describe('start year (T2-05)', () => {
 describe('defaults (T2-02, T2-03, T2-07)', () => {
   it('reproduces the Finanzfluss reference numbers', () => {
     const { result: r } = ok(form())
-    expect(r.finalCapital.avDepot).toBe(228547)
+    expect(formatEuro(r.finalCapital.avDepot)).toBe('228.547\u00A0€')
+    // Rounded once at display (MONTHLY_FROM_ROUNDED_ANNUAL = false): 10.469,795… / 12 = 872,48 → 872 €.
+    expect(MONTHLY_FROM_ROUNDED_ANNUAL).toBe(false)
     expect(formatEuro(r.monthlyNet.avDepot)).toBe('989\u00A0€')
-    expect(formatEuro(r.monthlyNet.normalDepot)).toBe('873\u00A0€')
-    expect(r.payoutTotal.net).toEqual({ avDepot: 213564, normalDepot: 188456 })
+    expect(formatEuro(r.monthlyNet.normalDepot)).toBe('872\u00A0€')
+    // Finanzfluss web / rounded-annual mode: 10.470 / 12 = 872,50 → 873 €.
+    expect(formatEuro(Math.round(r.regularPayoutYear.net.normalDepot) / 12)).toBe('873\u00A0€')
+    expect(formatEuro(r.payoutTotal.net.avDepot)).toBe('213.564\u00A0€')
+    expect(formatEuro(r.payoutTotal.net.normalDepot)).toBe('188.456\u00A0€')
     const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
     expect(v.kind).toBe('av')
-    expect(t('verdictAv', { x: formatEuro(v.diff) })).toBe('按你的假设，AV-Depot 税后共多拿约 25.108\u00A0€。')
+    expect(t('verdictAv', { x: formatEuro(v.diff) })).toBe('按你的假设，AV-Depot 税后共多拿约 25.107\u00A0€。')
+    // Finanzfluss shows 25.108 € = difference of the two already-rounded totals (213.564 − 188.456).
     expect(r.years).toHaveLength(32)
     expect(r.bonusApplied).toBe(false)
   })
@@ -153,16 +159,23 @@ describe('defaults (T2-02, T2-03, T2-07)', () => {
 function expectMatchesCore(v: FormValues) {
   const { result, coreInput } = ok(v)
   const core = avDepot.validateAndCalculate(coreInput)
-  const pair = (p: { avDepot: string, normalDepot: string }) => ({ avDepot: parseCurrency(p.avDepot), normalDepot: parseCurrency(p.normalDepot) })
-  const po = (p: typeof core.payoutTotal) => ({ gross: pair(p.gross), tax: pair(p.tax), net: pair(p.net) })
-  expect(result.finalCapital).toEqual(pair(core.finalCapital))
-  expect(result.totalContributions).toEqual(pair(core.totalContributions))
-  expect(result.firstPayoutYear).toEqual(po(core.firstPayoutYear))
-  expect(result.regularPayoutYear).toEqual(po(core.regularPayoutYear))
-  expect(result.payoutTotal).toEqual(po(core.payoutTotal))
-  expect(result.years.map(y => y.capitalEnd)).toEqual(core.savingsPerYear.map(y => pair(y.capitalEnd)))
-  expect(result.years.map(y => y.contribution)).toEqual(core.savingsPerYear.map(y => pair(y.contribution)))
-  expect(result.years.map(y => y.vorabpauschaleTax)).toEqual(core.savingsPerYear.map(y => pair(y.vorabpauschaleTax)))
+  // The UI's unrounded numbers, formatted with the core's own formatter, must equal the core output exactly.
+  const f = (m: { avDepot: number, normalDepot: number }) => ({ avDepot: formatCurrencyAdaptive(m.avDepot), normalDepot: formatCurrencyAdaptive(m.normalDepot) })
+  const po = (p: { gross: { avDepot: number, normalDepot: number }, tax: { avDepot: number, normalDepot: number }, net: { avDepot: number, normalDepot: number } }) => ({ gross: f(p.gross), tax: f(p.tax), net: f(p.net) })
+  expect(f(result.finalCapital)).toEqual(core.finalCapital)
+  expect(f(result.totalContributions)).toEqual(core.totalContributions)
+  expect(po(result.firstPayoutYear)).toEqual(core.firstPayoutYear)
+  expect(po(result.regularPayoutYear)).toEqual(core.regularPayoutYear)
+  expect(po(result.payoutTotal)).toEqual(core.payoutTotal)
+  expect(result.years.map(y => ({
+    year: y.year,
+    contribution: f(y.contribution),
+    capitalStart: core.savingsPerYear[y.year - 1]!.capitalStart,
+    grossReturn: f(y.grossReturn),
+    vorabpauschale: f(y.vorabpauschale),
+    vorabpauschaleTax: f(y.vorabpauschaleTax),
+    capitalEnd: f(y.capitalEnd),
+  }))).toEqual(core.savingsPerYear)
   return result
 }
 
@@ -282,12 +295,22 @@ describe('berufseinsteigerbonus (T2-18, av-depot.ts:591-592)', () => {
   })
 })
 
+describe('verdict on unrounded values (tester B2)', () => {
+  it('consume, ETF 5,99503 %: |D| just below 1 % → same', () => {
+    const { result: r } = ok(form({ etfReturnRate: '5,99503' }, { taxSavingsMode: 'consume' }))
+    const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
+    expect(v.kind).toBe('same')
+    expect(v.diff).toBeLessThan(0)
+    expectMatchesCore(form({ etfReturnRate: '5,99503' }, { taxSavingsMode: 'consume' }))
+  })
+})
+
 describe('misc', () => {
   it('two-contract hint threshold is 6.840 € (T2-50)', () => {
     expect(ONE_CONTRACT_CAP).toBe(6840)
   })
   it('params date notice (T2-54)', () => {
-    expect(t('noticeParams', { date: PARAMS_CHECK_DATE, sha: 'dcc29a6' })).toBe('参数核对日期：2026-10-16（核心 commit dcc29a6）')
+    expect(t('noticeParams', { date: PARAMS_CHECK_DATE, sha: 'dcc29a6' })).toBe('参数核对日期：2026-10-16（计算参数版本 dcc29a6）')
   })
   it('notice-kids-18 exact text', () => {
     expect(t('noticeKids')).toBe('只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。')

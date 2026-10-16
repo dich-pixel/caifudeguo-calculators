@@ -1,10 +1,17 @@
 # AV-Depot UI — core rules used / 核心规则（带行号）
 
-All calculation rules come from the unchanged core at upstream commit
-[`dcc29a69bdd8a3943d092e4c86ad42bff2767e1a`](https://github.com/finanzfluss/calculators/blob/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a/src/calculators/av-depot.ts)
-(`src/calculators/av-depot.ts`, `src/constants/av-depot.ts`). The UI (`caifudeguo/av-ui/src`) only parses German
-input, calls `avDepot.schema.safeParse` and `avDepot.calculate`, and formats the result. Line numbers below refer to
-that commit; `pnpm run check:core` and the CI `git diff --exit-code dcc29a6 -- src` guarantee they stay valid.
+**All line numbers in this file refer to `src/calculators/av-depot.ts` and `src/constants/av-depot.ts` at upstream
+commit [`dcc29a69bdd8a3943d092e4c86ad42bff2767e1a`](https://github.com/finanzfluss/calculators/blob/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a/src/calculators/av-depot.ts)
+(dcc29a6), re-verified 2026-10-17.** `src/` in this fork is byte-identical (`pnpm run check:core`, CI
+`git diff --exit-code dcc29a6 -- src`), so the numbers stay valid.
+
+The UI (`caifudeguo/av-ui/src`) parses German input, validates with the core's zod schema and calculates with the core's
+formulas. To get unrounded amounts it uses `src/generated/av-depot-precise.ts`, a mechanical copy of the core produced
+by `scripts/precise-core.mjs`: the only change is that `depotPair()` (`av-depot.ts:192-197`) returns the raw numbers
+instead of `formatCurrencyAdaptive()` strings; imports are re-pointed to `src/`. Tests check (1) the generated file
+equals the transform of the current core (`test/precise-core.test.mjs`) and (2) formatting every UI number with the
+core's `formatCurrencyAdaptive` reproduces the core's own output exactly, for 14 input combinations plus all boundary
+cases (`test/ui.test.ts`, `expectMatchesCore`).
 
 ## Input ranges (zod schema, `av-depot.ts:17-78`)
 
@@ -56,7 +63,7 @@ reported after other field errors are fixed.
 - Saving years = `retirementAge − age` (`342`).
 - Tax saving (Sonderausgabenabzug / Günstigerprüfung vs. subsidies) (`362-370`): deduction base =
   `min(contribution, 1.800) + Grundzulage + Kinderzulage`; saving = `max(0, ESt(zvE) − ESt(zvE − base) − Grundzulage − Kinderzulage)`.
-- `taxSavingsMode` (`372-379`): `avDepot` reinvests the saving into the AV account up to 13.680 € total;
+- `taxSavingsMode` (`372-378`): `avDepot` reinvests the saving into the AV account up to 13.680 € total;
   `secondaryDepot` invests it in a normal side depot; `consume` drops it.
 - Überzahlung (`381-392`): inflow above `min(own contribution, 1.800) + subsidies` is tracked separately.
 - Net return in the AV account = ETF return − costs (`343`); no Vorabpauschale inside the AV account.
@@ -76,18 +83,28 @@ reported after other field errors are fixed.
 
 ## What the UI adds (display only, no calculation rules)
 
-- **Precision.** The core returns every amount as a string formatted by `formatCurrencyAdaptive`
-  (`src/utils/formatters.ts:32-47`): amounts with |x| < 1.000 € have 2 decimals, larger amounts are whole euros. The UI
-  parses these strings with the core's `parseCurrency` and uses them unchanged. "Unrounded" in the plan therefore means
-  "at the precision the core outputs"; the UI does no further intermediate rounding.
-- **Monthly net** = core `regularPayoutYear.net` ÷ 12 (Finanzfluss shows the same; reproduces 989 € / 873 €).
-- **Verdict** (`src/model.ts` `verdict`): D = AV net payout total − normal net payout total; `|D| < 1 %` of the larger total
-  (strict) → 两者基本相同; computed before display rounding.
+- **Precision.** The public core output (`avDepot.calculate`) is strings from `formatCurrencyAdaptive`
+  (`src/utils/formatters.ts:32-47`): |x| < 1.000 € with 2 decimals, larger amounts already rounded to whole euros. The UI
+  therefore uses the unrounded numbers of the generated precise copy (see top). Rounding happens only once, for display.
+- **Monthly net** = unrounded `regularPayoutYear.net` ÷ 12, rounded once at display. Switch:
+  `MONTHLY_FROM_ROUNDED_ANNUAL` in `src/model.ts` (default `false`). Defaults: normal 10.469,795… / 12 = 872,48 → **872 €**;
+  AV 11.864,645… / 12 = 988,72 → **989 €**. The Finanzfluss web page shows 873 € because it divides the annual amount that is
+  already rounded to whole euros (10.470 / 12 = 872,50 → 873); setting the constant to `true` reproduces that.
+- **Verdict** (`src/model.ts` `verdict`): D = AV net payout total − normal net payout total, both unrounded;
+  `|D| < 1 %` of the larger total (strict) → 两者基本相同 (still naming the higher side and the amount). The text says
+  "按税后比较". Before this change the verdict used the core's rounded output and could flip within ~1 € of the threshold
+  (tester example: tax saving spent („Konsumieren“), ETF 5,99503 % → rounded values gave „普通账户多拿约 1.883 €“,
+  unrounded |D| is 0,047 € below 1 % → 基本相同). With unrounded values this cannot happen any more; the case is a unit test.
+  Remaining limit: values are IEEE doubles from the core's own arithmetic (incl. its income-tax function, which returns
+  whole euros by law); a flip is only possible if |D| is within floating-point error (~1e-9 €) of exactly 1 %.
+- **D shown** = |D| rounded once (defaults: 25.107 €). Finanzfluss shows 25.108 € = difference of the two rounded totals
+  (213.564 − 188.456).
 - **Rounding for display** (`src/format.ts`): summary amounts whole euros, half up (x,50 → up; negatives away from zero);
-  yearly table 2 decimals.
-- **Two-contract hint**: shown when the parsed amount is > `AV_CONTRIBUTION_CAP / 2` = 6.840 €.
+  yearly table 2 decimals (real cents, also above 1.000 €).
+- **Two-contract hint**: shown when the parsed amount is > `AV_CONTRIBUTION_CAP / 2` = 6.840 € (`constants/av-depot.ts:5`).
+- **Cross-field errors** (age ≥ retirement age etc., `av-depot.ts:63-78`) are shown once, on the field changed last.
 
 ## Reference (defaults, start 2027)
 
-Endkapital AV 228.547 €, normal 163.602 €; monthly net AV 989 €, normal 873 €; net payout total 213.564 € vs 188.456 €;
-D = 25.108 € → matches the Finanzfluss web reference in plan §2 exactly (test `defaults` in `test/ui.test.ts`).
+Endkapital AV 228.547 €, normal 163.602 €; monthly net AV 989 €, normal 872 € (873 € with the web page's double
+rounding); net payout total 213.564 € vs 188.456 €; D = 25.107 € (web: 25.108 €). Test `defaults` in `test/ui.test.ts`.

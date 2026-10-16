@@ -91,3 +91,32 @@ table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nu
 }
 .notes { margin-top: 20px; border-top: 1px solid var(--line); font-size: 0.9rem; }
 a { color: var(--accent); }
+
+/* ---- stage 2 review round ---- */
+.numfmt { font-size: 0.9rem; color: var(--muted); margin: 0 0 8px; }
+.banner .notice { margin: 2px 0; }
+.banner p::before { content: none; }
+.banner > .notice > p::before, .banner > p.notice::before { content: '⚠ '; }
+details { margin-top: 2px; }
+summary { cursor: pointer; color: var(--accent); min-height: 44px; display: flex; align-items: center; }
+details > p { margin: 4px 0 0; }
+.vbar { display: none; }
+@media (max-width: 999px) {
+  .vbar { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; background: #eaf2fb; border: 1px solid #b6cfe9; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
+  .bar-verdict { font-weight: 700; white-space: nowrap; }
+  .bar-monthly { font-size: 0.9rem; white-space: nowrap; }
+}
+.basis { margin: 2px 0 0; font-size: 0.9rem; }
+.cmp td, .mvalue, .yearly td, .yearly th[scope='row'] { white-space: nowrap; }
+@media (max-width: 360px) {
+  .cmp th, .cmp td { font-size: 0.8rem; padding: 4px 3px; }
+  .cmp thead th { font-size: 0.7rem; }
+  .bar-monthly { font-size: 0.8rem; }
+  .yearly td { font-size: 0.8rem; }
+}
+.yearly td::before, .yearly th::before { white-space: normal; }
+.chip { min-height: 44px; min-width: 44px; padding: 0 14px; }
+.linkbtn { min-height: 44px; padding: 0 4px; }
+.radio label { min-height: 44px; display: flex; align-items: center; flex: 1; }
+.radio input { width: 20px; height: 20px; margin: 0; }
+.toggle { min-height: 44px; }

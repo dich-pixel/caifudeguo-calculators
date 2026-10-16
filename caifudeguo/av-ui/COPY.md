@@ -11,92 +11,106 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 
 | data-testid | key | 中文 | German term | source | strings.ts | main.ts |
 | --- | --- | --- | --- | --- | --- | --- |
-| `title` | title | 养老投资账户计算器 | Altersvorsorgedepot | §1 Abs. 1b AltZertG n.F. (BGBl. 2026 I Nr. 156) | 26 | 260 |
-| `subtitle` | subtitle | 对比：同样每年存钱，放进有国家补贴的 AV 账户，和放进普通 ETF 账户（normales Depot），退休后每月各能拿多少。 |  |  | 27 | 292 |
-| `notice-start-2027` | noticeStart | 2027-01-01 起才能开户。 |  |  | 30 | 293 |
-| `notice-lock-65` | noticeLock | 领取开始时间：法律允许和法定养老金（gesetzliche Rente）一起提前开始领取；本计算器（按核心）只算 65–70 岁开始领取；最晚必须在 70 岁开始领取（§1 Abs. 1 S. 1 Nr. 2a AltZertG n.F.）。 | Beginn der Auszahlungsphase | §1 Abs. 1 S. 1 Nr. 2a AltZertG n.F. | 31 | 293 |
-| `notice-schaedlich` | noticeSchaedlich | 提前取出属于有害使用（schädliche Verwendung）：取出的那部分所对应的补贴和多省的税要退还，其中的收益还要交个人所得税。例外：用来买自住房（§92a EStG）、转到另一份合同、领取开始时一次性取出最多 30 %（Teilkapitalauszahlung）。缴费随时可以暂停。依据：§93 Abs. 1 EStG（2027 年起版本）、§92a EStG、§22 Nr. 5 EStG、§1 AltZertG n.F.。 | schädliche Verwendung | §93 Abs. 1 EStG（2027 年起版本） | 32 | 282 |
-| `notice-kids-18` | noticeKids | 只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。 | Kindergeld / Kinderzulage | §85 EStG（2027 年起版本）; §32 Abs. 4 EStG | 33 | 283 |
-| `notice-single-2026` | noticeSingle | 目前只按未婚单人的基本税率（Grundtarif）和 2026 年税表计算，已婚合并报税的结果可能不同。 | Grundtarif | §32a Abs. 1 EStG | 34 | 265 |
-| `notice-params-date` | noticeParams | 参数核对日期：{date}（核心 commit {sha}） |  |  | 35 | 284 |
-| `notice-disclaimer` | noticeDisclaimer | 本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。 | keine Anlage- oder Steuerberatung |  | 36 | 285 |
-| `notice-browser-only` | noticeBrowser | 只在你的浏览器里计算，不上传任何数据，不用 cookie。 |  |  | 37 | 286 |
-| `notice-source-license` | noticeSource | 计算核心来自 finanzfluss/calculators（AGPL-3.0），未作改动。本页面的完整源代码（AGPL-3.0）： |  |  | 38 | 287 |
-| `notice-source-link` | noticeSourceLink | 源代码（fork，固定 commit {sha}） |  |  | 39 | 287 |
-| `notice-not-affiliated` | noticeNotAffiliated | 本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。 |  |  | 40 | 288 |
-| `label-age` | age | 当前年龄 | Alter |  | 43 | 261 |
-| `label-retirementAge` | retirementAge | 退休年龄 | Renteneintrittsalter |  | 44 | 261 |
-| `label-savingsRate` | savingsRate | 每年存入（€） | Sparbetrag |  | 45 | 68 |
-| `help-savingsRate` | savingsHelp | 补贴（Grundzulage）只算前 1.800 €；一份合同每年最多 6.840 €（§1 Abs. 1 S. 1 Nr. 5 AltZertG n.F.），13.680 € 是两份合同合计的上限。 | Grundzulage; Höchstbeitrag je Vertrag | §84 EStG（2027 年起版本）; §1 Abs. 1 S. 1 Nr. 5 AltZertG n.F. | 46 | 262 |
-| `quick-savingsRate` | quickPrefix | 快捷： |  |  | 47 | 68 |
-| `hint-two-contracts` | twoContracts | 超过 6.840 € 需要开两份合同 | Höchstbeitrag je Vertrag | §1 Abs. 1 S. 1 Nr. 5 AltZertG n.F. | 48 | 81 |
-| `label-zveSavingsPhase` | zveSavings | 工作期应税收入（€） | zu versteuerndes Einkommen (zvE) Ansparphase | §2 Abs. 5 EStG | 49 | 263 |
-| `help-zveSavingsPhase` | zveHelp | 扣除各种减免后的应税收入，不是税前工资。 | zu versteuerndes Einkommen | §2 Abs. 5 EStG | 50 | 263 |
-| `label-kids` | kids | 孩子出生年份 | Geburtsjahre der Kinder |  | 51 | 258 |
-| `help-kids` | kidsHelp | 有子女补贴（Kinderzulage）时填写，每个孩子一行；不填就是没有孩子。 | Kinderzulage | §85 EStG（2027 年起版本） | 52 | 258 |
-| `kid-add` | kidAdd | + 添加孩子 |  |  | 53 | 84 |
-| `kid-remove` | kidRemove | 删除 |  |  | 54 | 100 |
-| `label-kid` | kidLabel | 第 {x} 个孩子的出生年份 |  |  | 55 | 100 |
-| `placeholder-joint` | joint | 合并报税（Zusammenveranlagung）· 即将推出 | Zusammenveranlagung | §26b EStG, Splittingtarif §32a Abs. 5 EStG | 57 | 265 |
-| `toggle-more` | more | 更多设置 |  |  | 60 | 245 |
-| `label-zveRetirement` | zveRetirement | 退休期应税收入（€） | zvE Rentenphase | §2 Abs. 5 EStG | 61 | 246 |
-| `label-etfReturnRate` | etfReturnRate | ETF 年收益率（%） | Rendite | Alltagsbegriff, kein Normzitat | 62 | 247 |
-| `label-avDepotCosts` | avDepotCosts | AV 账户费用（% / 年） | Kosten | §1 Abs. 1 S. 1 Nr. 8 AltZertG n.F. | 63 | 248 |
-| `label-exemptionOrder` | exemptionOrder | 储蓄者免税额（€） | Sparerpauschbetrag | §20 Abs. 9 EStG | 64 | 249 |
-| `help-exemptionOrder` | exemptionHelp | 在银行开户时可以通过免税委托（Freistellungsauftrag）直接使用这个额度。 | Freistellungsauftrag | §44a Abs. 2 S. 1 Nr. 1 EStG | 65 | 249 |
-| `label-taxSavingsMode` | taxSavingsMode | 退税去向 | Verwendung der Steuerersparnis | Alltagsbegriff, kein Normzitat | 66 | 135 |
-| `mode-avDepot` | modeAv | 再存进 AV 账户 | Altersvorsorgedepot | Alltagsbegriff, kein Normzitat | 67 | 134 |
-| `mode-secondaryDepot` | modeSecondary | 另开账户投资 | Nebendepot | Alltagsbegriff, kein Normzitat | 68 | 134 |
-| `mode-consume` | modeConsume | 花掉 | Konsumieren | Alltagsbegriff, kein Normzitat | 69 | 134 |
-| `label-baseRate` | baseRate | 基准利率（%） | Basiszins | §18 Abs. 4 InvStG | 70 | 251 |
-| `help-baseRate` | baseRateHelp | 财政部每年公布（Bundesministerium der Finanzen）。 | Basiszins | §18 Abs. 4 InvStG | 71 | 251 |
-| `label-oneTimePayout` | oneTimePayout | 领取开始时一次性取出（最多 30 %） | Teilkapitalauszahlung | §1 Abs. 1 S. 1 Nr. 4 AltZertG n.F.; Besteuerung §22 Nr. 5 EStG | 72 | 252 |
-| `label-payoutReturnRate` | payoutReturnRate | 领取期收益率（%） | Rendite Auszahlphase | Alltagsbegriff, kein Normzitat | 73 | 253 |
-| `label-payoutUntilAge` | payoutUntilAge | 领取到几岁 | Auszahlung bis (mindestens bis 85) | §1 Abs. 1 S. 1 Nr. 4b aa AltZertG n.F. | 74 | 254 |
-| `help-more` | moreHelp | 起始年份不显示，固定取 2027 和今年中较大的一年（与 Finanzfluss 网页相同）。 |  |  | 75 | 255 |
-| `results-heading` | resultsHeading | 结果 |  |  | 78 | 272 |
-| `result-verdict` | verdictSame | 两者基本相同（差额不到 1 %）。 |  |  | 79 | 173 |
-| `result-verdict` | verdictAv | 按你的假设，AV-Depot 税后共多拿约 {x}。 |  |  | 80 | 173 |
-| `result-verdict` | verdictNormal | 按你的假设，普通 ETF 账户税后共多拿约 {x}。 |  |  | 81 | 173 |
-| `result-sensitivity` | sensitivity | 这个结果对退休期收入和收益率的假设很敏感。 |  |  | 82 | 176 |
-| `result-bonus-note` | bonusNote | 已算进新手奖励：开始缴费那一年的年初还不满 25 岁，Grundzulage 一次性多加 200 €（§84 S. 2 EStG n.F.）。「Berufseinsteigerbonus」是俗称，不是法律用语。 | Erhöhung der Grundzulage um 200 € (umgangssprachlich „Berufseinsteigerbonus“) | §84 S. 2 EStG n.F. | 83 | 177 |
-| `result-invalid` | noResult | 输入有误，请先改正标红的项目，改好后自动出结果。 |  |  | 84 | 228 |
-| `col-av` | colAv | AV 账户（Altersvorsorgedepot） | Altersvorsorgedepot | §1 Abs. 1b AltZertG n.F. | 85 | 180 |
-| `col-normal` | colNormal | 普通 ETF 账户（normales Depot） | normales Depot | Alltagsbegriff, kein Normzitat | 86 | 181 |
-| `result-monthly` | monthly | 每月到手（税后） | netto pro Monat | Alltagsbegriff, kein Normzitat | 87 | 153 |
-| `row-totalContributions` | rowContrib | 自己存入合计 | Eigenbeiträge gesamt | Alltagsbegriff, kein Normzitat | 88 | 186 |
-| `row-finalCapital` | rowFinal | 退休时总额 | Endkapital | Alltagsbegriff, kein Normzitat | 89 | 187 |
-| `row-firstPayoutYear` | rowFirst | 首年领取 | erstes Auszahlungsjahr | Alltagsbegriff, kein Normzitat | 90 | 188 |
-| `row-regularPayoutYear` | rowRegular | 之后每年领取 | jedes weitere Jahr | Alltagsbegriff, kein Normzitat | 91 | 189 |
-| `row-payoutTotal` | rowTotal | 领取期合计 | Summe Auszahlphase | Alltagsbegriff, kein Normzitat | 92 | 190 |
-| `label-gross` | gross | 税前 | brutto | Alltagsbegriff, kein Normzitat | 93 | 167 |
-| `label-tax` | tax | 税 | Steuer | Alltagsbegriff, kein Normzitat | 94 | 167 |
-| `label-net` | net | 税后 | netto | Alltagsbegriff, kein Normzitat | 95 | 167 |
-| `result-tax-note` | taxNote | 领取时税（AV 账户：§22 Nr. 5 EStG）按个人所得税边际税率（Grenzsteuersatz）算；普通账户按资本利得税（Abgeltungsteuer）与个税取低者（Günstigerprüfung），先扣部分免税（Teilfreistellung）和储蓄者免税额。超过补贴上限多存的部分（Überzahlung）单独计算。 | Günstigerprüfung | §32d Abs. 6 EStG; Abgeltungsteuer §32d Abs. 1 EStG; Teilfreistellung §20 InvStG; Überzahlung: Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat | 96 | 192 |
-| `placeholder-chart` | chart | 图表（阶段 3）· 即将推出 |  |  | 97 | 274 |
-| `toggle-yearly` | yearly | 逐年明细 |  |  | 100 | 205 |
-| `col-year` | colYear | 年份 |  |  | 101 | 196 |
-| `col-age` | colAge | 年龄 |  |  | 102 | 196 |
-| `col-contribution` | colContribution | 当年存入（含补贴和再投资的退税） |  |  | 103 | 194 |
-| `col-grossReturn` | colReturn | 当年收益 |  |  | 104 | 194 |
-| `col-vorabpauschale` | colVorab | 每年先按 Basiszins × 0,7 算出的假定收益 | Vorabpauschale | §18 Abs. 1 InvStG | 105 | 194 |
-| `col-vorabpauschaleTax` | colVorabTax | 假定收益的税 | Steuer auf die Vorabpauschale | §18 Abs. 1 InvStG | 106 | 194 |
-| `col-capitalEnd` | colEnd | 年末余额 |  |  | 107 | 194 |
-| `yearly-note` | yearlyNote | 金额 1.000 € 以上的项目核心只给到整欧元，所以显示为 ,00。 |  |  | 108 | 205 |
-| `error` | errEmpty | 请填写此项。 |  |  | 111 | – |
-| `error` | errAmount | 格式不对：请用德式写法，例如 1.800 或 1.800,50（点只用作千分位，点后面必须正好 3 位数字）。 |  |  | 112 | – |
-| `error` | errPercent | 格式不对：请输入数字，例如 6,5。 |  |  | 113 | – |
-| `error` | errInt | 请输入整数。 |  |  | 114 | – |
-| `error` | errMin | 不能小于 {min}。 |  |  | 115 | – |
-| `error` | errGt | 必须大于 {min}。 |  |  | 116 | – |
-| `error` | errMax | 不能大于 {max}。 |  |  | 117 | – |
-| `error` | errAgeRetire | 当前年龄必须小于退休年龄。 |  |  | 118 | – |
-| `error` | errRetirePayout | 退休年龄必须小于领取截止年龄。 |  |  | 119 | – |
-| `error` | errCostsEtf | 费用必须低于 ETF 年收益率。 |  |  | 120 | – |
-| `error` | errCostsPayout | 费用必须低于领取期收益率。 |  |  | 121 | – |
-| `error` | errFuture | 出生年份不能晚于今年（{year}）。 |  |  | 122 | – |
-| `error` | errInvalid | 输入无效。 |  |  | 123 | – |
-| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 125 | 281 |
+| `title` | title | 养老投资账户计算器 | Altersvorsorgedepot | §1 Abs. 1b AltZertG n.F. (BGBl. 2026 I Nr. 156) | 26 | 305 |
+| `subtitle` | subtitle | 对比：同样每年存钱，放进有国家补贴的 AV 账户，和放进普通 ETF 账户（normales Depot），退休后每月各能拿多少。 |  |  | 27 | 337 |
+| `notice-number-format` | numberFormat | 本页数字用德式写法：1.800 € = 一千八百欧元，6,0 % = 六点零 % |  |  | 28 | 339 |
+| `notice-start-2027` | noticeStart | 2027-01-01 起才能开户。 |  |  | 31 | 338 |
+| `notice-lock-65` | noticeLock | 最早 65 岁开始领（若更早领法定养老金可同时开始），最晚 70 岁。 | Beginn der Auszahlungsphase | §1 Abs. 1 S. 1 Nr. 2a AltZertG n.F. | 32 | 338 |
+| `notice-lock-65-details` | noticeLockDetails | 本计算器只算 65–70 岁开始领取的情况。依据：§1 Abs. 1 S. 1 Nr. 2a AltZertG n.F.。 |  |  | 33 | 338 |
+| `notice-schaedlich` | noticeSchaedlich | 提前取出（schädliche Verwendung）要退还取出部分对应的补贴和省下的税；自住房、转合同、领取开始时最多 30 % 一次性取出除外；缴费可随时暂停。 | schädliche Verwendung | §93 Abs. 1 EStG（2027 年起版本） | 34 | 327 |
+| `notice-schaedlich-details` | noticeSchaedlichDetails | 提前取出属于有害使用（schädliche Verwendung）：取出的那部分所对应的补贴和多省的税要退还，其中的收益还要交个人所得税。例外：用来买自住房（§92a EStG）、转到另一份合同、领取开始时一次性取出最多 30 %（Teilkapitalauszahlung）。缴费随时可以暂停。依据：§93 Abs. 1 EStG（2027 年起版本）、§92a EStG、§22 Nr. 5 EStG、§1 AltZertG n.F.。 |  |  | 35 | 327 |
+| `notice-kids-18` | noticeKids | 只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。 | Kindergeld / Kinderzulage | §85 Abs. 1 EStG（2027 年起版本）; §32 Abs. 4 EStG | 36 | 328 |
+| `notice-kids-18-details` | noticeKidsDetails | 子女补贴（Kinderzulage）发给领取 Kindergeld 的那位家长。依据：§85 Abs. 1 EStG（2027 年起版本）、§32 Abs. 4 EStG。 | Kinderzulage | §85 Abs. 1 EStG（2027 年起版本） | 37 | 328 |
+| `notice-details` | noticeDetailsSummary | 详情与依据 |  |  | 38 | 282 |
+| `notice-single-2026` | noticeSingle | 目前只按未婚单人的基本税率（Grundtarif）和 2026 年税表计算，已婚合并报税的结果可能不同。 | Grundtarif | §32a Abs. 1 EStG | 39 | 310 |
+| `notice-params-date` | noticeParams | 参数核对日期：{date}（计算参数版本 {sha}） |  |  | 40 | 329 |
+| `notice-disclaimer` | noticeDisclaimer | 本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。 | keine Anlage- oder Steuerberatung |  | 41 | 330 |
+| `notice-browser-only` | noticeBrowser | 只在你的浏览器里计算，不上传任何数据，不用 cookie。 |  |  | 42 | 331 |
+| `notice-source-license` | noticeSource | 计算方法来自 finanzfluss/calculators（AGPL-3.0），未作改动。本页面的完整源代码（AGPL-3.0）： |  |  | 43 | 332 |
+| `notice-source-link` | noticeSourceLink | 源代码（fork，固定 commit {sha}） |  |  | 44 | 332 |
+| `notice-not-affiliated` | noticeNotAffiliated | 本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。 |  |  | 45 | 333 |
+| `label-age` | age | 当前年龄 | Alter |  | 48 | 44 |
+| `label-retirementAge` | retirementAge | 退休年龄 | Renteneintrittsalter |  | 49 | 44 |
+| `label-savingsRate` | savingsRate | 每年存入（€） | Sparbetrag |  | 50 | 90 |
+| `help-savingsRate` | savingsHelp | 补贴（Grundzulage）只算前 1.800 €；一份合同每年最多 6.840 €（§1 Abs. 1 S. 1 Nr. 5 AltZertG n.F.），13.680 € 是两份合同合计的上限。 | Grundzulage; Höchstbeitrag je Vertrag | 1.800 €: §84 / §10a Abs. 1 EStG（2027 年起版本）; 6.840 €: §1 Abs. 1 S. 1 Nr. 5 AltZertG n.F. | 51 | 307 |
+| `quick-savingsRate` | quickPrefix | 快捷： |  |  | 52 | 90 |
+| `hint-two-contracts` | twoContracts | 超过 6.840 € 需要开两份合同 | Höchstbeitrag je Vertrag | §1 Abs. 1 S. 1 Nr. 5 AltZertG n.F. | 53 | 104 |
+| `label-zveSavingsPhase` | zveSavings | 工作期应税收入（€） | zu versteuerndes Einkommen (zvE) Ansparphase | §2 Abs. 5 EStG | 54 | 308 |
+| `help-zveSavingsPhase` | zveHelp | 扣除各种减免后的应税收入，不是税前工资。 | zu versteuerndes Einkommen | §2 Abs. 5 EStG | 55 | 308 |
+| `label-kids` | kids | 孩子出生年份 | Geburtsjahre der Kinder |  | 56 | 303 |
+| `help-kids` | kidsHelp | 有子女补贴（Kinderzulage）时填写，每个孩子一行；不填就是没有孩子。 | Kinderzulage | §85 EStG（2027 年起版本） | 57 | 303 |
+| `kid-add` | kidAdd | + 添加孩子 |  |  | 58 | 107 |
+| `kid-remove` | kidRemove | 删除 |  |  | 59 | 123 |
+| `label-kid` | kidLabel | 第 {x} 个孩子的出生年份 |  |  | 60 | 123 |
+| `placeholder-joint` | joint | 合并报税（Zusammenveranlagung）· 即将推出 | Zusammenveranlagung | §26b EStG, Splittingtarif §32a Abs. 5 EStG | 62 | 310 |
+| `toggle-more` | more | 更多设置 |  |  | 65 | 290 |
+| `label-zveRetirement` | zveRetirement | 退休期应税收入（€） | zvE Rentenphase | §2 Abs. 5 EStG | 66 | 291 |
+| `label-etfReturnRate` | etfReturnRate | ETF 年收益率（%） | Rendite | Alltagsbegriff, kein Normzitat | 67 | 46 |
+| `label-avDepotCosts` | avDepotCosts | AV 账户费用（% / 年） | Kosten | §1 Abs. 1 S. 1 Nr. 8 AltZertG n.F. | 68 | 46 |
+| `label-exemptionOrder` | exemptionOrder | 储蓄者免税额（€） | Sparerpauschbetrag | §20 Abs. 9 EStG | 69 | 294 |
+| `help-exemptionOrder` | exemptionHelp | 在银行开户时可以通过免税委托（Freistellungsauftrag）直接使用这个额度。 | Freistellungsauftrag | §44a Abs. 2 S. 1 Nr. 1 EStG | 70 | 294 |
+| `label-taxSavingsMode` | taxSavingsMode | 退税去向 | Verwendung der Steuerersparnis | Alltagsbegriff, kein Normzitat | 71 | 158 |
+| `mode-avDepot` | modeAv | 再存进 AV 账户 | Altersvorsorgedepot | Alltagsbegriff, kein Normzitat | 72 | 157 |
+| `mode-secondaryDepot` | modeSecondary | 另开账户投资 | Nebendepot | Alltagsbegriff, kein Normzitat | 73 | 157 |
+| `mode-consume` | modeConsume | 花掉 | Konsumieren | Alltagsbegriff, kein Normzitat | 74 | 157 |
+| `label-baseRate` | baseRate | 基准利率（%） | Basiszins | §18 Abs. 4 InvStG | 75 | 296 |
+| `help-baseRate` | baseRateHelp | 财政部每年公布（Bundesministerium der Finanzen）。 | Basiszins | §18 Abs. 4 InvStG | 76 | 296 |
+| `label-oneTimePayout` | oneTimePayout | 领取开始时一次性取出（最多 30 %） | Teilkapitalauszahlung | §1 Abs. 1 S. 1 Nr. 4 AltZertG n.F.; Besteuerung §22 Nr. 5 EStG | 77 | 297 |
+| `label-payoutReturnRate` | payoutReturnRate | 领取期收益率（%） | Rendite Auszahlphase | Alltagsbegriff, kein Normzitat | 78 | 47 |
+| `label-payoutUntilAge` | payoutUntilAge | 领取到几岁 | Auszahlung bis (mindestens bis 85) | §1 Abs. 1 S. 1 Nr. 4b aa AltZertG n.F. | 79 | 45 |
+| `help-more` | moreHelp | 起始年份不显示，固定取 2027 和今年中较大的一年（与 Finanzfluss 网页相同）。 |  |  | 80 | 300 |
+| `results-heading` | resultsHeading | 结果 |  |  | 83 | 317 |
+| `result-verdict` | verdictSame | 两者基本相同：AV-Depot 多约 {x}，不到税后总额的 1 %（指两者中较大的领取期税后合计）。 |  |  | 84 | 201 |
+| `result-verdict` | verdictSameNormal | 两者基本相同：普通 ETF 账户多约 {x}，不到税后总额的 1 %（指两者中较大的领取期税后合计）。 |  |  | 85 | 201 |
+| `result-verdict` | verdictEqual | 两者基本相同：差额不到 1 €。 |  |  | 86 | 201 |
+| `result-verdict` | verdictAv | 按你的假设，AV-Depot 税后共多拿约 {x}。 |  |  | 87 | 200 |
+| `result-verdict` | verdictNormal | 按你的假设，普通 ETF 账户税后共多拿约 {x}。 |  |  | 88 | 201 |
+| `result-basis` | verdictBasis | 按税后比较（领取期税后合计）。 |  |  | 89 | 209 |
+| `verdict-bar-text` | barAv | AV 多拿约 {x} |  |  | 90 | 202 |
+| `verdict-bar-text` | barNormal | 普通账户多拿约 {x} |  |  | 91 | 202 |
+| `verdict-bar-text` | barSame | 基本相同（相差约 {x}） |  |  | 92 | 202 |
+| `verdict-bar-text` | barInvalid | 输入有误，暂无结果 |  |  | 93 | 263 |
+| `verdict-bar-monthly` | barMonthly | 每月到手（税后）：AV {a} · 普通 {b} |  |  | 94 | 205 |
+| `result-sensitivity` | sensitivity | 这个结果对退休期收入和收益率的假设很敏感。 |  |  | 95 | 210 |
+| `result-bonus-note` | bonusNote | 已算进新手奖励：按你输入的年龄判断（法律规定是开始缴费那一年年初还不满 25 岁），Grundzulage 一次性多加 200 €（§84 S. 2 EStG n.F.）。「Berufseinsteigerbonus」是 BMF FAQ 用语，不是法律用语。 | Erhöhung der Grundzulage um 200 € (BMF-Bezeichnung „Berufseinsteigerbonus“) | §84 S. 2 EStG n.F. | 96 | 211 |
+| `result-invalid` | noResult | 输入有误，请先改正标红的项目，改好后自动出结果。 |  |  | 97 | 264 |
+| `col-av` | colAv | AV 账户（Altersvorsorgedepot） | Altersvorsorgedepot | §1 Abs. 1b AltZertG n.F. | 98 | 214 |
+| `col-normal` | colNormal | 普通 ETF 账户（normales Depot） | normales Depot | Alltagsbegriff, kein Normzitat | 99 | 215 |
+| `result-monthly` | monthly | 每月到手（税后） | netto pro Monat | Alltagsbegriff, kein Normzitat | 100 | 177 |
+| `row-totalContributions` | rowContrib | 自己存入合计（税前） | Eigenbeiträge gesamt | Alltagsbegriff, kein Normzitat | 101 | 220 |
+| `row-finalCapital` | rowFinal | 退休时总额（税前） | Endkapital | Alltagsbegriff, kein Normzitat | 102 | 221 |
+| `row-firstPayoutYear` | rowFirst | 首年领取 | erstes Auszahlungsjahr | Alltagsbegriff, kein Normzitat | 103 | 222 |
+| `row-regularPayoutYear` | rowRegular | 之后每年领取 | jedes weitere Jahr | Alltagsbegriff, kein Normzitat | 104 | 223 |
+| `row-payoutTotal` | rowTotal | 领取期合计 | Summe Auszahlphase | Alltagsbegriff, kein Normzitat | 105 | 224 |
+| `label-gross` | gross | 税前 | brutto | Alltagsbegriff, kein Normzitat | 106 | 191 |
+| `label-tax` | tax | 税 | Steuer | Alltagsbegriff, kein Normzitat | 107 | 191 |
+| `label-net` | net | 税后 | netto | Alltagsbegriff, kein Normzitat | 108 | 191 |
+| `result-tax-note` | taxNote | 领取时税（AV 账户：§22 Nr. 5 EStG）按个人所得税边际税率（Grenzsteuersatz）算；普通账户按资本利得税（Abgeltungsteuer）与个税取低者（Günstigerprüfung），先扣部分免税（Teilfreistellung）和储蓄者免税额。超过补贴上限多存的部分（Überzahlung）单独计算。 | Günstigerprüfung | §32d Abs. 6 EStG; Abgeltungsteuer §32d Abs. 1 EStG; Teilfreistellung §20 InvStG; Überzahlung: Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat | 109 | 226 |
+| `placeholder-chart` | chart | 图表即将推出 |  |  | 110 | 319 |
+| `toggle-yearly` | yearly | 逐年明细 |  |  | 113 | 239 |
+| `col-year` | colYear | 年份 |  |  | 114 | 230 |
+| `col-age` | colAge | 年龄 |  |  | 115 | 230 |
+| `col-contribution` | colContribution | 当年存入（含补贴和再投资的退税） |  |  | 116 | 228 |
+| `col-grossReturn` | colReturn | 当年收益 |  |  | 117 | 228 |
+| `col-vorabpauschale` | colVorab | 每年先按 Basiszins × 0,7 算出的假定收益 | Vorabpauschale | §18 Abs. 1 InvStG | 118 | 228 |
+| `col-vorabpauschaleTax` | colVorabTax | 假定收益的税 | Steuer auf die Vorabpauschale | §18 Abs. 1 InvStG | 119 | 228 |
+| `col-capitalEnd` | colEnd | 年末余额 |  |  | 120 | 228 |
+| `yearly-note` | yearlyNote | 表中金额精确到分（2 位小数，1.000 € 以下和以上都一样）；上方汇总数字四舍五入到整欧元。 |  |  | 121 | 239 |
+| `yearly-contribution-note` | yearlyContribNote | 「当年存入」包含国家补贴和再投入 AV 账户的退税，所以和上面只算你自己存的钱的「自己存入合计」不同。 |  |  | 122 | 239 |
+| `error` | errEmpty | 请填写此项。 |  |  | 125 | – |
+| `error` | errAmount | 格式不对：请用德式写法，例如 1.800 或 1.800,50（点只用作千分位，点后面必须正好 3 位数字）。 |  |  | 126 | – |
+| `error` | errPercent | 格式不对：请输入数字，例如 6,5。 |  |  | 127 | – |
+| `error` | errInt | 请输入整数。 |  |  | 128 | – |
+| `error` | errMin | 不能小于 {min}。 |  |  | 129 | – |
+| `error` | errGt | 必须大于 {min}。 |  |  | 130 | – |
+| `error` | errMax | 不能大于 {max}。 |  |  | 131 | – |
+| `error` | errAgeRetire | 当前年龄必须小于退休年龄。 |  |  | 132 | – |
+| `error` | errRetirePayout | 退休年龄必须小于领取截止年龄。 |  |  | 133 | – |
+| `error` | errCostsEtf | 费用必须低于 ETF 年收益率。 |  |  | 134 | – |
+| `error` | errCostsPayout | 费用必须低于领取期收益率。 |  |  | 135 | – |
+| `error` | errFuture | 出生年份不能晚于今年（{year}）。 |  |  | 136 | – |
+| `error` | errInvalid | 输入无效。 |  |  | 137 | – |
+| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 139 | 326 |
 
 ## Werbung/Anzeige (§5a Abs. 4 UWG)
 

@@ -5,7 +5,7 @@
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
-import { formatEuro, formatEuro2, formatNumberDe } from './format'
+import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, QUICK_AMOUNTS, verdict } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
@@ -37,6 +37,27 @@ function txt<K extends keyof HTMLElementTagNameMap>(tag: K, key: StrKey, attrs: 
 const state: FormValues = structuredClone(DEFAULTS)
 const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
+let lastChanged = ''
+
+/** Cross-field errors: shown once, on whichever of the two fields the user changed last (UI placement only). */
+const CROSS_FIELD: Partial<Record<StrKey, [string, string]>> = {
+  errAgeRetire: ['age', 'retirementAge'],
+  errRetirePayout: ['retirementAge', 'payoutUntilAge'],
+  errCostsEtf: ['avDepotCosts', 'etfReturnRate'],
+  errCostsPayout: ['avDepotCosts', 'payoutReturnRate'],
+}
+
+function placeCrossField(errors: Record<string, FieldError>): Record<string, FieldError> {
+  const out = { ...errors }
+  for (const [key, e] of Object.entries(errors)) {
+    const pair = CROSS_FIELD[e.key]
+    if (pair && pair.includes(lastChanged) && key !== lastChanged && !out[lastChanged]) {
+      delete out[key]
+      out[lastChanged] = e
+    }
+  }
+  return out
+}
 
 // ---------- inputs ----------
 
@@ -56,12 +77,13 @@ function field(name: FieldName, labelKey: StrKey, helpKey?: StrKey, extra?: Node
   input.value = state.fields[name]
   input.addEventListener('input', () => {
     state.fields[name] = input.value
+    lastChanged = name
     update()
   })
   inputs.set(name, input)
   const err = h('p', { 'id': `err-${name}`, 'class': 'err', 'data-testid': `error-${name}`, 'aria-live': 'polite' })
   errorEls.set(name, err)
-  return h('div', { class: 'field' }, txt('label', labelKey, { for: id }), input, extra ?? null, helpKey ? txt('p', helpKey, { id: `help-${name}`, class: 'help' }) : null, err)
+  return h('div', { class: 'field' }, txt('label', labelKey, { for: id }), input, err, extra ?? null, helpKey ? txt('p', helpKey, { id: `help-${name}`, class: 'help' }) : null)
 }
 
 function savingsQuick(): HTMLElement {
@@ -70,6 +92,7 @@ function savingsQuick(): HTMLElement {
     const b = h('button', { 'type': 'button', 'class': 'chip', 'data-testid': `quick-${amount}` }, formatNumberDe(amount))
     b.addEventListener('click', () => {
       state.fields.savingsRate = formatNumberDe(amount)
+      lastChanged = 'savingsRate'
       inputs.get('savingsRate')!.value = state.fields.savingsRate
       update()
     })
@@ -149,6 +172,7 @@ function modeRadios(): HTMLElement {
 
 // ---------- results ----------
 
+const bar = h('div', { 'class': 'vbar', 'data-testid': 'verdict-bar', 'aria-hidden': 'true' })
 const status = h('div', { 'class': 'status', 'aria-live': 'polite', 'aria-atomic': 'true', 'data-testid': 'result-status' })
 const monthlyBox = h('div', { class: 'monthly' })
 const compare = h('div', { class: 'compare' })
@@ -170,9 +194,19 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
 
 function renderResult(r: Result) {
   const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
-  const key: StrKey = v.kind === 'same' ? 'verdictSame' : v.kind === 'av' ? 'verdictAv' : 'verdictNormal'
+  const x = formatEuro(Math.abs(v.diff))
+  const rounded0 = roundHalfUp(Math.abs(v.diff)) === 0
+  const key: StrKey = v.kind === 'av'
+    ? 'verdictAv'
+    : v.kind === 'normal' ? 'verdictNormal' : rounded0 ? 'verdictEqual' : v.diff > 0 ? 'verdictSame' : 'verdictSameNormal'
+  const barKey: StrKey = v.kind === 'av' ? 'barAv' : v.kind === 'normal' ? 'barNormal' : 'barSame'
+  bar.replaceChildren(
+    txt('span', barKey, { class: 'bar-verdict' }, { x }),
+    txt('span', 'barMonthly', { class: 'bar-monthly' }, { a: formatEuro(r.monthlyNet.avDepot), b: formatEuro(r.monthlyNet.normalDepot) }),
+  )
   status.replaceChildren(...[
-    txt('p', key, { 'class': 'verdict', 'data-verdict': v.kind }, { x: formatEuro(Math.abs(v.diff)) }),
+    txt('p', key, { 'class': 'verdict', 'data-verdict': v.kind }, { x }),
+    txt('p', 'verdictBasis', { class: 'basis' }),
     txt('p', 'sensitivity', { class: 'sensitivity' }),
     r.bonusApplied ? txt('p', 'bonusNote', { class: 'note' }) : null,
   ].filter((n): n is HTMLParagraphElement => n !== null))
@@ -202,7 +236,7 @@ function renderResult(r: Result) {
     ...cols.map(([k, f]) => h('td', { 'class': 'av', 'data-label': `AV · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).avDepot))),
     ...cols.map(([k, f]) => h('td', { 'class': 'normal', 'data-label': `${t('colNormal').split('（')[0]} · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).normalDepot))),
   ))
-  yearlyBody.replaceChildren(h('table', { 'class': 'yearly', 'data-testid': 'yearly-table' }, h('thead', {}, head), h('tbody', {}, ...rows)), txt('p', 'yearlyNote', { class: 'help' }))
+  yearlyBody.replaceChildren(txt('p', 'yearlyNote', { class: 'help' }), txt('p', 'yearlyContribNote', { class: 'help' }), h('table', { 'class': 'yearly', 'data-testid': 'yearly-table' }, h('thead', {}, head), h('tbody', {}, ...rows)))
 }
 
 function showError(key: string, e: FieldError | undefined) {
@@ -218,13 +252,15 @@ function update() {
   const amount = parseAmount(state.fields.savingsRate)
   twoContracts.hidden = !(amount.ok && amount.value > ONE_CONTRACT_CAP)
   const outcome = evaluate(state)
+  const errors = outcome.ok ? {} : placeCrossField(outcome.errors)
   for (const key of errorEls.keys())
-    showError(key, outcome.ok ? undefined : outcome.errors[key])
+    showError(key, errors[key])
   document.body.classList.toggle('invalid', !outcome.ok)
   if (outcome.ok) {
     renderResult(outcome.result)
   }
   else {
+    bar.replaceChildren(txt('span', 'barInvalid', { class: 'bar-verdict' }))
     status.replaceChildren(txt('p', 'noResult', { class: 'verdict invalid' }), txt('p', 'sensitivity', { class: 'sensitivity' }))
     monthlyBox.replaceChildren()
     compare.replaceChildren()
@@ -236,6 +272,15 @@ function update() {
 }
 
 // ---------- page ----------
+
+/** Notice: one sentence visible, details + legal basis in a collapsible <details>. */
+function notice(key: StrKey, detailsKey?: StrKey, tag: 'div' | 'p' = 'div'): HTMLElement {
+  if (!detailsKey)
+    return txt(tag, key, { class: 'notice' })
+  return h('div', { 'class': 'notice', 'data-testid': STR[key].id },
+    h('p', {}, t(key)),
+    h('details', {}, txt('summary', 'noticeDetailsSummary'), txt('p', detailsKey)))
+}
 
 function link(href: string, text: string, testid?: string): HTMLAnchorElement {
   return h('a', { href, 'target': '_blank', 'rel': 'noopener noreferrer', 'data-testid': testid }, text)
@@ -279,8 +324,8 @@ function build() {
   const sha = forkCommit()
   const notes = h('footer', { 'class': 'notes', 'aria-labelledby': 'notes-h' },
     txt('h2', 'notesHeading', { id: 'notes-h' }),
-    txt('p', 'noticeSchaedlich', { class: 'notice' }),
-    txt('p', 'noticeKids', { class: 'notice' }),
+    notice('noticeSchaedlich', 'noticeSchaedlichDetails'),
+    notice('noticeKids', 'noticeKidsDetails'),
     h('p', { 'class': 'notice', 'data-testid': STR.noticeParams.id }, link(CORE_COMMIT_URL, t('noticeParams', { date: PARAMS_CHECK_DATE, sha: CORE_COMMIT_SHORT }))),
     txt('p', 'noticeDisclaimer', { class: 'notice' }),
     txt('p', 'noticeBrowser', { class: 'notice' }),
@@ -290,7 +335,9 @@ function build() {
 
   const app = h('main', { class: 'app' },
     h('header', {}, txt('h1', 'title', {}, {}), txt('p', 'subtitle', { class: 'subtitle' }),
-      h('div', { 'class': 'banner', 'role': 'note' }, txt('p', 'noticeStart'), txt('p', 'noticeLock'))),
+      h('div', { 'class': 'banner', 'role': 'note' }, txt('p', 'noticeStart', { class: 'notice' }), notice('noticeLock', 'noticeLockDetails'))),
+    txt('p', 'numberFormat', { class: 'numfmt' }),
+    bar,
     h('div', { class: 'grid' }, form, results),
     yearly,
     notes,

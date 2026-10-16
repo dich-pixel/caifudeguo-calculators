@@ -9,8 +9,9 @@ import type { ParseError } from './parse'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
 import { AV_CONTRIBUTION_CAP, BERUFSEINSTEIGER_BONUS } from '../../../src/constants/av-depot'
-import { parseCurrency } from '../../../src/utils/formatters'
+import { formatCurrencyAdaptive, parseCurrency } from '../../../src/utils/formatters'
 import { formatNumberDe } from './format'
+import { avDepotPrecise } from './generated/av-depot-precise'
 import { startYear } from './params'
 import { parseAmount, parseInteger, parsePercent } from './parse'
 
@@ -94,7 +95,7 @@ export interface Result {
   firstPayoutYear: PayoutMoney
   regularPayoutYear: PayoutMoney
   payoutTotal: PayoutMoney
-  /** regularPayoutYear.net / 12 */
+  /** regularPayoutYear.net / 12 (see MONTHLY_FROM_ROUNDED_ANNUAL) */
   monthlyNet: Money
   years: YearRow[]
   bonusApplied: boolean
@@ -104,10 +105,20 @@ export type Outcome =
   | { ok: true, result: Result, coreInput: Record<string, unknown> }
   | { ok: false, errors: Record<string, FieldError> }
 
-function money(p: { avDepot: string, normalDepot: string }): Money {
-  return { avDepot: parseCurrency(p.avDepot), normalDepot: parseCurrency(p.normalDepot) }
+/**
+ * Monthly net payout (plan §3 / tester D1, user decision 2026-10-17: round only once, at display).
+ * false (default): unrounded annual net ÷ 12 → defaults show 872 € (normal) / 989 € (AV).
+ * true: core-rounded annual net (whole euros) ÷ 12, like the Finanzfluss web page → 873 € / 989 €.
+ */
+export const MONTHLY_FROM_ROUNDED_ANNUAL = false
+
+function money(p: { avDepot: number, normalDepot: number }): Money {
+  return { avDepot: p.avDepot, normalDepot: p.normalDepot }
 }
-function payout(p: { gross: { avDepot: string, normalDepot: string }, tax: { avDepot: string, normalDepot: string }, net: { avDepot: string, normalDepot: string } }): PayoutMoney {
+function roundedLikeCore(v: number): number {
+  return parseCurrency(formatCurrencyAdaptive(v))
+}
+function payout(p: { gross: Money, tax: Money, net: Money }): PayoutMoney {
   return { gross: money(p.gross), tax: money(p.tax), net: money(p.net) }
 }
 
@@ -171,7 +182,8 @@ export function evaluate(values: FormValues, today: Date = new Date()): Outcome 
   if (Object.keys(errors).length > 0 || !parsed.success)
     return { ok: false, errors: Object.keys(errors).length ? errors : { form: { key: 'errInvalid' } } }
 
-  const out = avDepot.calculate(parsed.data)
+  // Same schema and formulas as the core; numbers unrounded (see scripts/precise-core.mjs).
+  const out = avDepotPrecise.calculate(parsed.data)
   const age = parsed.data.age
   const start = parsed.data.currentYear
   const regular = payout(out.regularPayoutYear)
@@ -184,7 +196,9 @@ export function evaluate(values: FormValues, today: Date = new Date()): Outcome 
       firstPayoutYear: payout(out.firstPayoutYear),
       regularPayoutYear: regular,
       payoutTotal: payout(out.payoutTotal),
-      monthlyNet: { avDepot: regular.net.avDepot / 12, normalDepot: regular.net.normalDepot / 12 },
+      monthlyNet: MONTHLY_FROM_ROUNDED_ANNUAL
+        ? { avDepot: roundedLikeCore(regular.net.avDepot) / 12, normalDepot: roundedLikeCore(regular.net.normalDepot) / 12 }
+        : { avDepot: regular.net.avDepot / 12, normalDepot: regular.net.normalDepot / 12 },
       years: out.savingsPerYear.map(y => ({
         year: y.year,
         calendarYear: start + y.year - 1,
