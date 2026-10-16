@@ -32,7 +32,8 @@ License URI: https://www.gnu.org/licenses/agpl-3.0.html
 == License / 许可证 ==
 
 GNU Affero General Public License v3.0 (AGPL-3.0-only)，见 LICENSE。
-计算核心来自 finanzfluss/calculators（AGPL-3.0，Copyright Finflow GmbH and contributors），未作改动，固定在 commit dcc29a69bdd8a3943d092e4c86ad42bff2767e1a。
+计算核心来自 finanzfluss/calculators（AGPL-3.0，Copyright Finflow GmbH and contributors），固定在 commit dcc29a69bdd8a3943d092e4c86ad42bff2767e1a。页面运行的是这份计算代码的机器生成副本，只改了输出取整（计算方法不变）。
+Machine-generated copy; only output rounding changed, calculation method unchanged.
 本插件与 Finanzfluss / Finflow GmbH 无关。
 
 Corresponding source / 对应源代码：见 SOURCE.txt（fork 的固定 commit 链接）和插件内的 source/ 文件夹（同一 commit 的完整源代码归档）。

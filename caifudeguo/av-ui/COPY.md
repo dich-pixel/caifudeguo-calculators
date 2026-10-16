@@ -26,7 +26,7 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `notice-params-date` | noticeParams | 参数核对日期：{date}（计算参数版本 {sha}） |  |  | 40 | 317 |
 | `notice-disclaimer` | noticeDisclaimer | 本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。 | keine Anlage- oder Steuerberatung |  | 41 | 318 |
 | `notice-browser-only` | noticeBrowser | 只在你的浏览器里计算，不上传任何数据，不用 cookie。 |  |  | 42 | 319 |
-| `notice-source-license` | noticeSource | 计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，唯一改动：depotPair 直接返回未取整的金额。本页面的完整源代码（AGPL-3.0）： |  |  | 43 | 320 |
+| `notice-source-license` | noticeSource | 计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，只改了输出取整（计算方法不变）。本页面的完整源代码（AGPL-3.0）： |  |  | 43 | 320 |
 | `notice-source-link` | noticeSourceLink | 源代码（fork，固定 commit {sha}） |  |  | 44 | 320 |
 | `notice-not-affiliated` | noticeNotAffiliated | 本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。 |  |  | 45 | 321 |
 | `label-age` | age | 当前年龄 | Alter |  | 48 | 294 |

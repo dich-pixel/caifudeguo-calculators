@@ -44,7 +44,7 @@ writeFileSync(join(plugin, 'SOURCE.txt'), [
   `Archive:    source/${srcName} (git archive of that commit)`,
   'Build:      pnpm install --frozen-lockfile && pnpm run wp:zip',
   '            (page: caifudeguo/av-ui, plugin: caifudeguo/wp-plugin)',
-  'Calculation core (unchanged): https://github.com/finanzfluss/calculators/tree/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a',
+  'Calculation core (machine-generated copy in the page; only output rounding changed, calculation method unchanged): https://github.com/finanzfluss/calculators/tree/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a',
   '',
 ].join('\n'))
 

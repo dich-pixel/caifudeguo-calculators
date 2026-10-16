@@ -40,7 +40,7 @@ export const STR = {
   noticeParams: s('notice-params-date', '参数核对日期：{date}（计算参数版本 {sha}）'),
   noticeDisclaimer: s('notice-disclaimer', '本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。', 'keine Anlage- oder Steuerberatung'),
   noticeBrowser: s('notice-browser-only', '只在你的浏览器里计算，不上传任何数据，不用 cookie。'),
-  noticeSource: s('notice-source-license', '计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，唯一改动：depotPair 直接返回未取整的金额。本页面的完整源代码（AGPL-3.0）：'),
+  noticeSource: s('notice-source-license', '计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，只改了输出取整（计算方法不变）。本页面的完整源代码（AGPL-3.0）：'),
   noticeSourceLink: s('notice-source-link', '源代码（fork，固定 commit {sha}）'),
   noticeNotAffiliated: s('notice-not-affiliated', '本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。'),
 

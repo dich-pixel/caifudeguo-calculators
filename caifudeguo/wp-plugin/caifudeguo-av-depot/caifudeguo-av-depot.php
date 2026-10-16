@@ -11,7 +11,8 @@
  * License URI:       https://www.gnu.org/licenses/agpl-3.0.html
  *
  * Copyright (C) 2026 Rich Dr (caifudeguo.de).
- * Calculation core: finanzfluss/calculators (AGPL-3.0), Copyright Finflow GmbH and contributors, unchanged.
+ * Calculation core: finanzfluss/calculators (AGPL-3.0) commit dcc29a6, Copyright Finflow GmbH and contributors.
+ * Machine-generated copy; only output rounding changed, calculation method unchanged.
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Affero General Public License version 3 as published by the Free Software Foundation.

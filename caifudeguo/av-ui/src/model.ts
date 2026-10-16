@@ -2,7 +2,7 @@
  * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
  * Based on finanzfluss/calculators (AGPL-3.0). Licensed under AGPL-3.0-only.
  *
- * Glue between the form and the unchanged core (src/calculators/av-depot.ts @ dcc29a6).
+ * Glue between the form and the core (src/calculators/av-depot.ts @ dcc29a6, unchanged; numbers via the generated precise copy).
  * No calculation rules live here: validation = core zod schema, numbers = core output.
  */
 import type { ParseError } from './parse'
