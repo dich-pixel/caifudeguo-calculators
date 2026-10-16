@@ -250,3 +250,33 @@ export function verdict(avNet: number, normalNet: number): Verdict {
     return { kind: 'same', diff }
   return { kind: diff > 0 ? 'av' : 'normal', diff }
 }
+
+/** Cross-field errors and the two fields they concern (core refinements, av-depot.ts:63-78). */
+const CROSS_FIELD: Partial<Record<StrKey, [string, string]>> = {
+  errAgeRetire: ['age', 'retirementAge'],
+  errRetirePayout: ['retirementAge', 'payoutUntilAge'],
+  errCostsEtf: ['avDepotCosts', 'etfReturnRate'],
+  errCostsPayout: ['avDepotCosts', 'payoutReturnRate'],
+}
+
+/**
+ * UI placement only: a cross-field error is shown once, on whichever of its two fields the user changed last
+ * (default: the field the core reports it on). Precedence: a range or format error on either field of the pair
+ * (e.g. age 70 → 不能大于 67。) is shown alone; the cross-field error is dropped (zod still reports both).
+ */
+export function placeCrossField(errors: Record<string, FieldError>, lastChanged: string): Record<string, FieldError> {
+  const out = { ...errors }
+  for (const [key, e] of Object.entries(errors)) {
+    const pair = CROSS_FIELD[e.key]
+    // Precedence: a range/format error on either field of the pair suppresses the cross-field error.
+    if (pair && pair.some(f => f !== key && errors[f] && !CROSS_FIELD[errors[f]!.key])) {
+      delete out[key]
+      continue
+    }
+    if (pair && pair.includes(lastChanged) && key !== lastChanged && !out[lastChanged]) {
+      delete out[key]
+      out[lastChanged] = e
+    }
+  }
+  return out
+}

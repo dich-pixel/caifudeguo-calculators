@@ -6,7 +6,7 @@
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
-import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, QUICK_AMOUNTS, verdict } from './model'
+import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
 import { STR, t } from './strings'
@@ -39,25 +39,6 @@ const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
 let lastChanged = ''
 
-/** Cross-field errors: shown once, on whichever of the two fields the user changed last (UI placement only). */
-const CROSS_FIELD: Partial<Record<StrKey, [string, string]>> = {
-  errAgeRetire: ['age', 'retirementAge'],
-  errRetirePayout: ['retirementAge', 'payoutUntilAge'],
-  errCostsEtf: ['avDepotCosts', 'etfReturnRate'],
-  errCostsPayout: ['avDepotCosts', 'payoutReturnRate'],
-}
-
-function placeCrossField(errors: Record<string, FieldError>): Record<string, FieldError> {
-  const out = { ...errors }
-  for (const [key, e] of Object.entries(errors)) {
-    const pair = CROSS_FIELD[e.key]
-    if (pair && pair.includes(lastChanged) && key !== lastChanged && !out[lastChanged]) {
-      delete out[key]
-      out[lastChanged] = e
-    }
-  }
-  return out
-}
 
 // ---------- inputs ----------
 
@@ -258,7 +239,7 @@ function update() {
   const amount = parseAmount(state.fields.savingsRate)
   twoContracts.hidden = !(amount.ok && amount.value > ONE_CONTRACT_CAP)
   const outcome = evaluate(state)
-  const errors = outcome.ok ? {} : placeCrossField(outcome.errors)
+  const errors = outcome.ok ? {} : placeCrossField(outcome.errors, lastChanged)
   for (const key of errorEls.keys())
     showError(key, errors[key])
   document.body.classList.toggle('invalid', !outcome.ok)

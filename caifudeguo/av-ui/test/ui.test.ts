@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { avDepot } from '../../../src/calculators/av-depot'
 import { formatCurrencyAdaptive } from '../../../src/utils/formatters'
 import { formatEuro, formatEuro2, formatNumberDe, formatPercentDe, roundHalfUp } from '../src/format'
-import { DEFAULTS, evaluate, MONTHLY_FROM_ROUNDED_ANNUAL, ONE_CONTRACT_CAP, verdict } from '../src/model'
+import { DEFAULTS, evaluate, MONTHLY_FROM_ROUNDED_ANNUAL, ONE_CONTRACT_CAP, placeCrossField, verdict } from '../src/model'
 import { PARAMS_CHECK_DATE, startYear } from '../src/params'
 import { parseAmount, parseInteger, parsePercent } from '../src/parse'
 import { t } from '../src/strings'
@@ -302,6 +302,28 @@ describe('verdict on unrounded values (tester B2)', () => {
     expect(v.kind).toBe('same')
     expect(v.diff).toBeLessThan(0)
     expectMatchesCore(form({ etfReturnRate: '5,99503' }, { taxSavingsMode: 'consume' }))
+  })
+})
+
+describe('age error placement (one error, one field)', () => {
+  const shown = (fields: Partial<FormValues['fields']>, last: string) => {
+    const e = placeCrossField(errs(form(fields)), last)
+    return Object.fromEntries(Object.entries(e).map(([k, v]) => [k, t(v.key, v.vars)]))
+  }
+  it('age 70 / retirement 67, age changed → only the range error on age', () => {
+    expect(shown({ age: '70', retirementAge: '67' }, 'age')).toEqual({ age: '不能大于 67。' })
+  })
+  it('age 17 → only the below-18 range error', () => {
+    expect(shown({ age: '17', retirementAge: '67' }, 'age')).toEqual({ age: '不能小于 18。' })
+  })
+  it('age 66 / retirement 65, age changed → only the cross-field error, on age', () => {
+    expect(shown({ age: '66', retirementAge: '65' }, 'age')).toEqual({ age: '当前年龄必须小于退休年龄。' })
+  })
+  it('age 66 / retirement 65, retirement changed → only the cross-field error, on retirement age', () => {
+    expect(shown({ age: '66', retirementAge: '65' }, 'retirementAge')).toEqual({ retirementAge: '当前年龄必须小于退休年龄。' })
+  })
+  it('retirement 64 changed → only its range error', () => {
+    expect(shown({ age: '66', retirementAge: '64' }, 'retirementAge')).toEqual({ retirementAge: '不能小于 65。' })
   })
 })
 

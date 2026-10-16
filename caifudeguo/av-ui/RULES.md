@@ -43,7 +43,7 @@ The UI passes `currentYear = max(2027, today's year)` explicitly (`src/params.ts
 default, so that tests can fix "today". UI-only input check (no calculation rule): a child birth year after the current
 calendar year is rejected (TESTPLAN T2-16); the core itself only requires ≥ 1900.
 
-Note: zod refinements (cross-field rules) only run once every single field is valid, so e.g. "age ≥ retirement age" is
+Note: zod may report a cross-field error together with a range error; the UI then shows only the range error, so e.g. "age ≥ retirement age" is
 reported after other field errors are fixed.
 
 ## Subsidies — `calculateZulagen` (`av-depot.ts:573-602`)
