@@ -290,6 +290,6 @@ describe('misc', () => {
     expect(t('noticeParams', { date: PARAMS_CHECK_DATE, sha: 'dcc29a6' })).toBe('参数核对日期：2026-10-16（核心 commit dcc29a6）')
   })
   it('notice-kids-18 exact text', () => {
-    expect(t('noticeKids')).toBe('本计算器只算到孩子 18 岁。实际上孩子还在领 Kindergeld 的，补贴可以领到 25 岁（新 §85 EStG、§32 Abs. 4 EStG），所以结果偏保守。')
+    expect(t('noticeKids')).toBe('只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。')
   })
 })

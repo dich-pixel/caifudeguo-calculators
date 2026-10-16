@@ -39,6 +39,14 @@ function generate() {
   }
   out.push(
     '',
+    '## Werbung/Anzeige (§5a Abs. 4 UWG)',
+    '',
+    'The page currently contains no affiliate, referral or promotional links, so no „Werbung/Anzeige“ label is shown.',
+    'Any future affiliate/referral link (on the page or next to the iframe) must be accompanied by a visible',
+    '„Werbung“ or „Anzeige“ label (add it to src/strings.ts with its own data-testid). See also wp-plugin readme.txt.',
+    '',
+    'Sources: BGBl. 2026 I Nr. 156 (Altersvorsorgereformgesetz); „n.F.“ = version in force from 2027.',
+    '',
     '## Composite strings built in main.ts',
     '',
     '- Page `<title>` (`index.html`): `title` + `（Altersvorsorgedepot）· caifudeguo.de`.',

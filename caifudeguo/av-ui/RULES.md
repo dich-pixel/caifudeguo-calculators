@@ -8,27 +8,27 @@ that commit; `pnpm run check:core` and the CI `git diff --exit-code dcc29a6 -- s
 
 ## Input ranges (zod schema, `av-depot.ts:17-78`)
 
-| Field              | UI label                          | Rule                                                                        | Line  |
-| ------------------ | --------------------------------- | --------------------------------------------------------------------------- | ----- |
-| `age`              | 当前年龄 (Alter)                  | integer, 18–67                                                              | 19    |
-| `retirementAge`    | 退休年龄 (Renteneintrittsalter)   | integer, 65–70                                                              | 20    |
-| `zveSavingsPhase`  | 工作期应税收入                    | ≥ 0                                                                         | 21    |
-| `zveRetirement`    | 退休期应税收入                    | ≥ 0                                                                         | 22    |
-| `savingsRate`      | 每年存入 (Sparbetrag)             | 120 – `AV_CONTRIBUTION_CAP` = 13.680 (`constants/av-depot.ts:5`, 2 × 6.840) | 23    |
-| `etfReturnRate`    | ETF 年收益率 (Rendite)            | > 0, ≤ 100 (%)                                                              | 24-28 |
-| `avDepotCosts`     | AV 账户费用 (Kosten)              | 0–100 (%)                                                                   | 29-33 |
-| `exemptionOrder`   | 储蓄者免税额 (Sparerpauschbetrag) | 0–1.000, default 1.000                                                      | 34    |
-| `taxSavingsMode`   | 退税去向                          | `avDepot` / `secondaryDepot` / `consume`                                    | 35    |
-| `baseRate`         | 基准利率 (Basiszins)              | 0–100 (%), default 0                                                        | 36-41 |
-| `oneTimePayout`    | 一次性提取 (Einmalauszahlung)     | 0–30 (%)                                                                    | 42-46 |
-| `payoutReturnRate` | 领取期收益率                      | > 0, ≤ 100 (%)                                                              | 47-51 |
-| `payoutUntilAge`   | 领取到几岁 (Auszahlung bis)       | integer, 85–120                                                             | 52    |
-| `childBirthYears`  | 孩子出生年份                      | array of integers ≥ 1900                                                    | 53-56 |
-| `currentYear`      | (hidden) start year               | integer ≥ 2027, default `max(2027, current year)`                           | 57-61 |
-| cross-field        |                                   | `age < retirementAge`                                                       | 63-66 |
-| cross-field        |                                   | `retirementAge < payoutUntilAge`                                            | 67-70 |
-| cross-field        |                                   | `avDepotCosts < etfReturnRate`                                              | 71-74 |
-| cross-field        |                                   | `avDepotCosts < payoutReturnRate`                                           | 75-78 |
+| Field              | UI label                                                                         | Rule                                                                        | Line  |
+| ------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----- |
+| `age`              | 当前年龄 (Alter)                                                                 | integer, 18–67                                                              | 19    |
+| `retirementAge`    | 退休年龄 (Renteneintrittsalter)                                                  | integer, 65–70                                                              | 20    |
+| `zveSavingsPhase`  | 工作期应税收入                                                                   | ≥ 0                                                                         | 21    |
+| `zveRetirement`    | 退休期应税收入                                                                   | ≥ 0                                                                         | 22    |
+| `savingsRate`      | 每年存入 (Sparbetrag)                                                            | 120 – `AV_CONTRIBUTION_CAP` = 13.680 (`constants/av-depot.ts:5`, 2 × 6.840) | 23    |
+| `etfReturnRate`    | ETF 年收益率 (Rendite)                                                           | > 0, ≤ 100 (%)                                                              | 24-28 |
+| `avDepotCosts`     | AV 账户费用 (Kosten)                                                             | 0–100 (%)                                                                   | 29-33 |
+| `exemptionOrder`   | 储蓄者免税额 (Sparerpauschbetrag)                                                | 0–1.000, default 1.000                                                      | 34    |
+| `taxSavingsMode`   | 退税去向                                                                         | `avDepot` / `secondaryDepot` / `consume`                                    | 35    |
+| `baseRate`         | 基准利率 (Basiszins)                                                             | 0–100 (%), default 0                                                        | 36-41 |
+| `oneTimePayout`    | 领取开始时一次性取出 (Teilkapitalauszahlung, §1 Abs. 1 S. 1 Nr. 4 AltZertG n.F.) | 0–30 (%)                                                                    | 42-46 |
+| `payoutReturnRate` | 领取期收益率                                                                     | > 0, ≤ 100 (%)                                                              | 47-51 |
+| `payoutUntilAge`   | 领取到几岁 (Auszahlung bis)                                                      | integer, 85–120                                                             | 52    |
+| `childBirthYears`  | 孩子出生年份                                                                     | array of integers ≥ 1900                                                    | 53-56 |
+| `currentYear`      | (hidden) start year                                                              | integer ≥ 2027, default `max(2027, current year)`                           | 57-61 |
+| cross-field        |                                                                                  | `age < retirementAge`                                                       | 63-66 |
+| cross-field        |                                                                                  | `retirementAge < payoutUntilAge`                                            | 67-70 |
+| cross-field        |                                                                                  | `avDepotCosts < etfReturnRate`                                              | 71-74 |
+| cross-field        |                                                                                  | `avDepotCosts < payoutReturnRate`                                           | 75-78 |
 
 The UI passes `currentYear = max(2027, today's year)` explicitly (`src/params.ts` `startYear`), identical to the core
 default, so that tests can fix "today". UI-only input check (no calculation rule): a child birth year after the current
@@ -43,7 +43,7 @@ reported after other field errors are fixed.
   minimum is also 120).
 - **Grundzulage** (`588-590`): 50 % of the first 360 € + 25 % of the part between 360 € and `AV_SUBSIDIZED_CAP` = 1.800 €
   (`constants/av-depot.ts:4`) → max 180 + 360 = 540 € per year. Contributions above 1.800 € get no further Grundzulage.
-- **Berufseinsteigerbonus** (`591-592`): `BERUFSEINSTEIGER_BONUS` = 200 € (`constants/av-depot.ts:8`) once, in savings
+- **Erhöhung der Grundzulage um 200 € (§84 S. 2 EStG n.F.; colloquially „Berufseinsteigerbonus“; law: not yet 25 at the start of the contribution year — the core approximates this with the entered age `< 25`)** (`591-592`): `BERUFSEINSTEIGER_BONUS` = 200 € (`constants/av-depot.ts:8`) once, in savings
   year 1, if `age < 25` (age 24 → yes, 25 → no). The UI shows the note `result-bonus-note` under exactly this condition
   (`src/model.ts`, mirrors line 592; the amount itself comes from the core).
 - **Kinderzulage** (`593-599`): calendar year = `currentYear + savingsYear − 1`; for each child with
