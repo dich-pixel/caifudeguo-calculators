@@ -4,8 +4,9 @@
 // Usage: node caifudeguo/check-core.mjs          (check)
 //        node caifudeguo/check-core.mjs --write  (regenerate manifest; only for a deliberate, reviewed change)
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import process from 'node:process'
 
 const root = new URL('..', import.meta.url).pathname
 const manifestPath = join(root, 'caifudeguo/core-manifest.json')
@@ -36,9 +37,9 @@ if (process.argv.includes('--write')) {
   const old = JSON.parse(readFileSync(manifestPath, 'utf8'))
   writeFileSync(
     manifestPath,
-    JSON.stringify({ ...old, files: hashes }, null, 2) + '\n',
+    `${JSON.stringify({ ...old, files: hashes }, null, 2)}\n`,
   )
-  console.log(`core manifest written: ${files.length} files`)
+  console.warn(`core manifest written: ${files.length} files`)
   process.exit(0)
 }
 
@@ -55,8 +56,7 @@ for (const f of files)
 
 if (problems.length) {
   console.error(
-    `core check FAILED (upstream ${manifest.upstreamCommit}):\n  ` +
-      problems.join('\n  '),
+    `core check FAILED (upstream ${manifest.upstreamCommit}):\n  ${problems.join('\n  ')}`,
   )
   console.error(
     'Only files listed in allowedChanges (with a reason) may differ from upstream.',
@@ -64,6 +64,6 @@ if (problems.length) {
   process.exit(1)
 }
 const changed = files.filter((f) => hashes[f] !== manifest.files[f])
-console.log(
-  `core check ok: ${files.length} files, ${changed.length} allowed change(s)${changed.length ? ': ' + changed.join(', ') : ''}`,
+console.warn(
+  `core check ok: ${files.length} files, ${changed.length} allowed change(s)${changed.length ? `: ${changed.join(', ')}` : ''}`,
 )
