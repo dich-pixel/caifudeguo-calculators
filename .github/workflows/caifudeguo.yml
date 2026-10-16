@@ -25,4 +25,5 @@ jobs:
       - run: pnpm run check:core
       - run: pnpm run test:types
       - run: pnpm vitest run
+      - run: pnpm run av:build
       - run: git diff --exit-code dcc29a69bdd8a3943d092e4c86ad42bff2767e1a -- src
