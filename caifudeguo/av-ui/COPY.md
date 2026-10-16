@@ -114,12 +114,13 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `error` | errGt | 必须大于 {min}。 |  |  | 139 | – |
 | `error` | errMax | 不能大于 {max}。 |  |  | 140 | – |
 | `error` | errAgeRetire | 当前年龄必须小于退休年龄。 |  |  | 141 | – |
-| `error` | errRetirePayout | 退休年龄必须小于领取截止年龄。 |  |  | 142 | – |
-| `error` | errCostsEtf | 费用必须低于 ETF 年收益率。 |  |  | 143 | – |
-| `error` | errCostsPayout | 费用必须低于领取期收益率。 |  |  | 144 | – |
-| `error` | errFuture | 出生年份不能晚于今年（{year}）。 |  |  | 145 | – |
-| `error` | errInvalid | 输入无效。 |  |  | 146 | – |
-| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 148 | 314 |
+| `error` | errRetireAge | 退休年龄必须大于当前年龄。 |  |  | 142 | – |
+| `error` | errRetirePayout | 退休年龄必须小于领取截止年龄。 |  |  | 143 | – |
+| `error` | errCostsEtf | 费用必须低于 ETF 年收益率。 |  |  | 144 | – |
+| `error` | errCostsPayout | 费用必须低于领取期收益率。 |  |  | 145 | – |
+| `error` | errFuture | 出生年份不能晚于今年（{year}）。 |  |  | 146 | – |
+| `error` | errInvalid | 输入无效。 |  |  | 147 | – |
+| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 149 | 314 |
 
 ## Werbung/Anzeige (§5a Abs. 4 UWG)
 

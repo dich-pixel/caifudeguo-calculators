@@ -139,6 +139,7 @@ export const STR = {
   errGt: s('error', '必须大于 {min}。'),
   errMax: s('error', '不能大于 {max}。'),
   errAgeRetire: s('error', '当前年龄必须小于退休年龄。'),
+  errRetireAge: s('error', '退休年龄必须大于当前年龄。'),
   errRetirePayout: s('error', '退休年龄必须小于领取截止年龄。'),
   errCostsEtf: s('error', '费用必须低于 ETF 年收益率。'),
   errCostsPayout: s('error', '费用必须低于领取期收益率。'),

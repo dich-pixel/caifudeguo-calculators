@@ -278,5 +278,8 @@ export function placeCrossField(errors: Record<string, FieldError>, lastChanged:
       out[lastChanged] = e
     }
   }
+  // Wording follows the field it is shown on.
+  if (out.retirementAge?.key === 'errAgeRetire')
+    out.retirementAge = { key: 'errRetireAge' }
   return out
 }

@@ -313,6 +313,11 @@ describe('age error placement (one error, one field)', () => {
   it('age 70 / retirement 67, age changed → only the range error on age', () => {
     expect(shown({ age: '70', retirementAge: '67' }, 'age')).toEqual({ age: '不能大于 67。' })
   })
+  it('age 68 / retirement 67 → only the range error on age, whichever field changed last (tester N4)', () => {
+    expect(shown({ age: '68', retirementAge: '67' }, 'age')).toEqual({ age: '不能大于 67。' })
+    expect(shown({ age: '68', retirementAge: '67' }, 'retirementAge')).toEqual({ age: '不能大于 67。' })
+    expect(shown({ age: '70', retirementAge: '67' }, 'retirementAge')).toEqual({ age: '不能大于 67。' })
+  })
   it('age 17 → only the below-18 range error', () => {
     expect(shown({ age: '17', retirementAge: '67' }, 'age')).toEqual({ age: '不能小于 18。' })
   })
@@ -320,7 +325,7 @@ describe('age error placement (one error, one field)', () => {
     expect(shown({ age: '66', retirementAge: '65' }, 'age')).toEqual({ age: '当前年龄必须小于退休年龄。' })
   })
   it('age 66 / retirement 65, retirement changed → only the cross-field error, on retirement age', () => {
-    expect(shown({ age: '66', retirementAge: '65' }, 'retirementAge')).toEqual({ retirementAge: '当前年龄必须小于退休年龄。' })
+    expect(shown({ age: '66', retirementAge: '65' }, 'retirementAge')).toEqual({ retirementAge: '退休年龄必须大于当前年龄。' })
   })
   it('retirement 64 changed → only its range error', () => {
     expect(shown({ age: '66', retirementAge: '64' }, 'retirementAge')).toEqual({ retirementAge: '不能小于 65。' })
