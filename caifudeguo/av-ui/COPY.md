@@ -120,7 +120,22 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `error` | errCostsPayout | 费用必须低于领取期收益率。 |  |  | 145 | – |
 | `error` | errFuture | 出生年份不能晚于今年（{year}）。 |  |  | 146 | – |
 | `error` | errInvalid | 输入无效。 |  |  | 147 | – |
-| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 149 | 314 |
+| `cmp3-kind` | kindAv | AV 多拿 |  |  | 150 | – |
+| `cmp3-kind` | kindSame | 两者基本相同 |  |  | 151 | – |
+| `cmp3-kind` | kindNormal | 普通账户多拿 |  |  | 152 | – |
+| `cmp3-flip` | flipMark | 在 {x}–{y} € 之间变成『{k}』 |  |  | 153 | – |
+| `cmp3-summary-sensitivity` | sensNone | 在 120–13.680 € 之间，结论都是『{k}』。 |  |  | 154 | – |
+| `cmp3-summary-sensitivity` | sensPrefix | 按你现在的其他输入， |  |  | 155 | – |
+| `cmp3-summary-sensitivity` | sensStart | 120 € 时{k}， |  |  | 156 | – |
+| `cmp3-summary-sensitivity` | sensFirst | 在 {x}–{y} € 之间变成{k} |  |  | 157 | – |
+| `cmp3-summary-sensitivity` | sensAgain | 在 {x}–{y} € 之间又变成{k} |  |  | 158 | – |
+| `cmp3-summary-sensitivity` | sensMore | ，详见下表 |  |  | 159 | – |
+| `cmp3-summary-max` | maxAv | 在这些档位里，差额最大的是 {a} €（AV 多拿约 {x}，税后） |  |  | 160 | – |
+| `cmp3-summary-max` | maxSame | 在这些档位里，差额最大的是 {a} €（两者基本相同，AV 多约 {x}，税后） |  |  | 161 | – |
+| `cmp3-summary-max` | maxAllNormal | 在这些档位里，普通账户都多拿 |  |  | 162 | – |
+| `cmp3-summary-max` | maxNoAv | 在这些档位里，AV 都没有多拿（普通账户多拿或两者基本相同） |  |  | 163 | – |
+| `cmp3-summary-marginal` | marginalHigher | 超过这个数，多存的部分放普通 ETF 账户税后回报更高。 |  |  | 164 | – |
+| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 166 | 314 |
 
 ## Werbung/Anzeige (§5a Abs. 4 UWG)
 

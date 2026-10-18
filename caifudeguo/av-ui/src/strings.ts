@@ -146,6 +146,23 @@ export const STR = {
   errFuture: s('error', '出生年份不能晚于今年（{year}）。'),
   errInvalid: s('error', '输入无效。'),
 
+  // stage 3: comparison of savings amounts (PLAN_stage3.md b3, e, f6)
+  kindAv: s('cmp3-kind', 'AV 多拿'),
+  kindSame: s('cmp3-kind', '两者基本相同'),
+  kindNormal: s('cmp3-kind', '普通账户多拿'),
+  flipMark: s('cmp3-flip', '在 {x}–{y} € 之间变成『{k}』'),
+  sensNone: s('cmp3-summary-sensitivity', '在 120–13.680 € 之间，结论都是『{k}』。'),
+  sensPrefix: s('cmp3-summary-sensitivity', '按你现在的其他输入，'),
+  sensStart: s('cmp3-summary-sensitivity', '120 € 时{k}，'),
+  sensFirst: s('cmp3-summary-sensitivity', '在 {x}–{y} € 之间变成{k}'),
+  sensAgain: s('cmp3-summary-sensitivity', '在 {x}–{y} € 之间又变成{k}'),
+  sensMore: s('cmp3-summary-sensitivity', '，详见下表'),
+  maxAv: s('cmp3-summary-max', '在这些档位里，差额最大的是 {a} €（AV 多拿约 {x}，税后）'),
+  maxSame: s('cmp3-summary-max', '在这些档位里，差额最大的是 {a} €（两者基本相同，AV 多约 {x}，税后）'),
+  maxAllNormal: s('cmp3-summary-max', '在这些档位里，普通账户都多拿'),
+  maxNoAv: s('cmp3-summary-max', '在这些档位里，AV 都没有多拿（普通账户多拿或两者基本相同）'),
+  marginalHigher: s('cmp3-summary-marginal', '超过这个数，多存的部分放普通 ETF 账户税后回报更高。'),
+
   notesHeading: s('notes-heading', '提示 · 免责 · 来源'),
 } satisfies Record<string, UiString>
 
