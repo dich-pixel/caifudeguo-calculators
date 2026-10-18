@@ -170,3 +170,9 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .kink { fill: #fff; stroke: var(--fg); stroke-width: 1.5; }
 .cmp3-svg .cap { stroke: var(--normal); stroke-width: 1.5; }
 .cmp3-figure figcaption { font-size: 0.9rem; margin-top: 4px; }
+
+/* ---- stage 3: narrow-screen error banner ---- */
+.err-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border: 2px solid var(--err); border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
+.err-banner p { margin: 0; color: var(--err); font-weight: 700; }
+.err-banner[hidden] { display: none; }
+@media (min-width: 1000px) { .err-banner { display: none; } }

@@ -212,6 +212,10 @@ export const STR = {
   chartKink: s('cmp3-marker', '拐点 {a} €'),
   chartTableFirst: s('cmp3-chart-caption', '具体数字以表格为准。'),
 
+  // stage 3: narrow-screen error banner (plan f3)
+  errBanner: s('form-error-banner', '请先改正标红的项目'),
+  errJump: s('form-error-jump', '跳到第一个标红项'),
+
   notesHeading: s('notes-heading', '提示 · 免责 · 来源'),
 } satisfies Record<string, UiString>
 

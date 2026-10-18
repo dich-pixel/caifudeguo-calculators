@@ -144,6 +144,23 @@ function modeRadios(): HTMLElement {
   return fs
 }
 
+// ---------- narrow-screen error banner (plan f3; hidden ≥ 1000 px by CSS) ----------
+
+const errJump = txt('button', 'errJump', { type: 'button', class: 'chip' })
+const errBanner = h('div', { class: 'err-banner', hidden: true }, txt('p', 'errBanner'), errJump)
+errJump.addEventListener('click', () => {
+  const target = document.querySelector<HTMLInputElement>('input[aria-invalid="true"]')
+  if (!target)
+    return
+  const region = target.closest<HTMLElement>('[hidden]')
+  if (region) {
+    const btn = document.querySelector<HTMLButtonElement>(`[aria-controls="${region.id}"]`)
+    btn?.click()
+  }
+  target.focus()
+  target.scrollIntoView({ block: 'center' })
+})
+
 // ---------- results ----------
 
 // Short live result under the savings input (single-column only). aria-hidden: the results status region announces.
@@ -249,6 +266,7 @@ function update() {
   for (const key of errorEls.keys())
     showError(key, errors[key])
   document.body.classList.toggle('invalid', !outcome.ok)
+  errBanner.hidden = outcome.ok
   if (outcome.ok) {
     renderResult(outcome.result)
   }
@@ -298,6 +316,7 @@ function build() {
     txt('span', 'kids', { id: 'kids-label', class: 'label' }), kidsList, kidAddBtn, txt('p', 'kidsHelp', { id: 'help-kids', class: 'help' }))
 
   const form = h('form', { 'class': 'inputs', 'novalidate': true, 'aria-label': t('title') },
+    errBanner,
     h('div', { class: 'row2' }, field('age', 'age'), field('retirementAge', 'retirementAge')),
     field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts, inlineResult)),
     field('zveSavingsPhase', 'zveSavings', 'zveHelp'),

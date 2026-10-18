@@ -31,3 +31,14 @@ describe('g4 wording', () => {
       expect(src(f)).not.toMatch(/setAttribute\('style'|\.style\.|innerHTML|style=/)
   })
 })
+
+describe('g8 narrow error banner', () => {
+  it('wording and behaviour hooks', () => {
+    expect(t('errBanner')).toBe('请先改正标红的项目')
+    expect(t('errJump')).toBe('跳到第一个标红项')
+    const main = src('main.ts')
+    expect(main).toContain('input[aria-invalid="true"]')
+    expect(main).toMatch(/errBanner\.hidden = outcome\.ok/)
+    expect(src('style.css')).toMatch(/@media \(min-width: 1000px\) \{ \.err-banner \{ display: none; \} \}/)
+  })
+})
