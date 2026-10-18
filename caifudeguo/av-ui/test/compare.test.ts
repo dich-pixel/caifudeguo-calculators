@@ -276,7 +276,12 @@ describe('t3-68 round time (Node 22.14.0 gate)', () => {
       sweep(v, evaluate, { today: TODAY, main })
       total += performance.now() - t0
     }
-    expect(total / 5).toBeLessThanOrEqual(650)
+    const avg = total / 5
+    console.warn(`t3-68: sweep average ${avg.toFixed(1)} ms over 5 rounds (17 core runs)`)
+    // Plan e/h: the 650 ms gate is measured on the box (Node 22.14.0). GitHub runners are slower; CI only records it.
+    const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}
+    if (!env.CI)
+      expect(avg).toBeLessThanOrEqual(650)
   })
 })
 
