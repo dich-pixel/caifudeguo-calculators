@@ -283,3 +283,23 @@ export function placeCrossField(errors: Record<string, FieldError>, lastChanged:
     out.retirementAge = { key: 'errRetireAge' }
   return out
 }
+
+/**
+ * Stage 3 (plan f4, Q4, g2 Q-T1): kid rows count once touched (typed into or blurred). Untouched rows are left
+ * out of the calculation and show no error. Returns the values to evaluate and a map from evaluated kid index
+ * to form row index.
+ */
+export function withTouchedKids(values: FormValues, touched: boolean[]): { values: FormValues, rowOf: number[] } {
+  const rowOf = values.kids.map((_, i) => i).filter(i => touched[i])
+  return { values: { ...values, kids: rowOf.map(i => values.kids[i]!) }, rowOf }
+}
+
+/** Error keys kid-j (evaluated index) → kid-i (form row). */
+export function remapKidErrors(errors: Record<string, FieldError>, rowOf: number[]): Record<string, FieldError> {
+  const out: Record<string, FieldError> = {}
+  for (const [k, e] of Object.entries(errors)) {
+    const m = /^kid-(\d+)$/.exec(k)
+    out[m ? `kid-${rowOf[Number(m[1])]}` : k] = e
+  }
+  return out
+}

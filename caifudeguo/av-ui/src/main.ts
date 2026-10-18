@@ -9,7 +9,7 @@ import { createCmp3 } from './cmp3'
 import { foerderung, foerderungKey, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
-import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
+import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
 import { STR, t } from './strings'
@@ -20,6 +20,8 @@ const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
 let lastChanged = ''
 const cmp3 = createCmp3()
+/** Kid rows touched (typed into or blurred); untouched rows are not calculated (plan f4). */
+const kidTouched: boolean[] = []
 
 
 // ---------- inputs ----------
@@ -79,13 +81,21 @@ function renderKids(focusIndex?: number) {
     const key = `kid-${i}`
     const input = h('input', { 'id': `in-${key}`, 'type': 'text', 'inputmode': 'numeric', 'autocomplete': 'off', 'aria-describedby': `err-${key}`, 'data-testid': `input-${key}` })
     input.value = value
+    input.addEventListener('blur', () => {
+      if (!kidTouched[i]) {
+        kidTouched[i] = true
+        update()
+      }
+    })
     input.addEventListener('input', () => {
       state.kids[i] = input.value
+      kidTouched[i] = true
       update()
     })
     const remove = h('button', { 'type': 'button', 'class': 'linkbtn', 'data-testid': `kid-remove-${i}`, 'aria-label': `${t('kidRemove')}：${t('kidLabel', { x: i + 1 })}` }, t('kidRemove'))
     remove.addEventListener('click', () => {
       state.kids.splice(i, 1)
+      kidTouched.splice(i, 1)
       renderKids()
       kidAddBtn.focus()
       update()
@@ -100,6 +110,7 @@ function renderKids(focusIndex?: number) {
 }
 kidAddBtn.addEventListener('click', () => {
   state.kids.push('')
+  kidTouched.push(false)
   renderKids(state.kids.length - 1)
   update()
 })
@@ -168,7 +179,7 @@ function foerderungNotes(): HTMLElement[] {
 
 /** Kid rows that go into the calculation. */
 function countedKids(): string[] {
-  return state.kids
+  return withTouchedKids(state, kidTouched).values.kids
 }
 
 function renderResult(r: Result) {
@@ -232,8 +243,9 @@ function showError(key: string, e: FieldError | undefined) {
 function update() {
   const amount = parseAmount(state.fields.savingsRate)
   twoContracts.hidden = !(amount.ok && amount.value > ONE_CONTRACT_CAP)
-  const outcome = evaluate(state)
-  const errors = outcome.ok ? {} : placeCrossField(outcome.errors, lastChanged)
+  const counted = withTouchedKids(state, kidTouched)
+  const outcome = evaluate(counted.values)
+  const errors = outcome.ok ? {} : placeCrossField(remapKidErrors(outcome.errors, counted.rowOf), lastChanged)
   for (const key of errorEls.keys())
     showError(key, errors[key])
   document.body.classList.toggle('invalid', !outcome.ok)
@@ -251,7 +263,7 @@ function update() {
     if (formErr)
       status.append(h('p', { 'class': 'err', 'data-testid': 'error-form' }, t(formErr.key, formErr.vars)))
   }
-  cmp3.update(state, outcome.ok ? outcome.result : null)
+  cmp3.update(counted.values, outcome.ok ? outcome.result : null)
 }
 
 // ---------- page ----------
