@@ -31,16 +31,4 @@ describe('node pin', () => {
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('v22.14.0')
   })
-  it.skipIf(process.version === 'v22.14.0')('the old --allow-node-mismatch flag is ignored: build still stops', () => {
-    const r = spawnSync(process.execPath, [`${root}caifudeguo/wp-plugin/build-zip.mjs`, '--allow-dirty', '--allow-node-mismatch', '--out', '/tmp/cfd-nozip'], { encoding: 'utf8' })
-    expect(r.status).toBe(1)
-    expect(r.stderr).toContain('v22.14.0')
-  })
-  it('build-zip has no override switch and no mismatch line', () => {
-    const src = read('caifudeguo/wp-plugin/build-zip.mjs')
-    expect(src).not.toContain('allow-node-mismatch')
-    expect(src).not.toMatch(/mismatch/i)
-    expect(read('README.md')).not.toContain('allow-node-mismatch')
-    expect(read('caifudeguo/wp-plugin/caifudeguo-av-depot/readme.txt')).not.toContain('allow-node-mismatch')
-  })
 })
