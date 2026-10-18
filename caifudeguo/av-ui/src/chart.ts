@@ -93,7 +93,13 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
   const narrow = width < 400
   // Label placement away from the line: centred above a peak; on a slope shifted to the open side.
   const ys = rows.map(r => g.y(r.diff))
-  const label = (i: number, above: boolean, gap: number) => {
+  // Keep a label inside the SVG: estimated width (12 px CJK, 7 px other), shifted and anchored at its left edge.
+  const fit = (a: { 'x': number, 'y': number, 'text-anchor': string }, text: string) => {
+    const w = [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 12 : 7), 0)
+    const left = a['text-anchor'] === 'start' ? a.x : a['text-anchor'] === 'end' ? a.x - w : a.x - w / 2
+    return { ...a, 'x': Math.max(2, Math.min(left, width - 2 - w)), 'text-anchor': 'start' }
+  }
+  const label = (i: number, above: boolean, gap: number, text: string) => {
     const y = ys[i]!
     const prev = ys[i - 1] ?? y
     const next = ys[i + 1] ?? y
@@ -101,7 +107,7 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
     const peak = y <= prev && y <= next
     const anchor = peak ? 'middle' : (above === rising ? 'end' : 'start')
     const dx = anchor === 'middle' ? 0 : anchor === 'end' ? -8 : 8
-    return { 'x': g.xs[i]! + dx, 'y': above ? y - gap : y + gap + 9, 'text-anchor': anchor }
+    return fit({ 'x': g.xs[i]! + dx, 'y': above ? y - gap : y + gap + 9, 'text-anchor': anchor }, text)
   }
   rows.forEach((r, i) => {
     const x = g.xs[i]!
@@ -112,12 +118,12 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
     const kink = r.tier && (r.amount === 360 || r.amount === 1800)
     // labels above the point (on a slope shifted to the open side); a user label on a kink is stacked above it
     if (r.user)
-      pt.append(el('text', { ...label(i, true, kink ? 24 : 10), class: 'user-label' }, t('cmp3UserTag')))
+      pt.append(el('text', { ...label(i, true, kink ? 24 : 10, t('cmp3UserTag')), class: 'user-label' }, t('cmp3UserTag')))
     svg.append(pt)
     if (kink) {
       const m = el('g', { 'data-testid': `cmp3-marker-${r.amount}` })
       m.append(el('rect', { x: x - 5, y: y - 5, width: 10, height: 10, class: 'kink' }))
-      m.append(el('text', label(i, true, 10), t('chartKink', { a: formatNumberDe(r.amount) })))
+      m.append(el('text', label(i, true, 10, t('chartKink', { a: formatNumberDe(r.amount) })), t('chartKink', { a: formatNumberDe(r.amount) })))
       svg.append(m)
     }
     if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow))

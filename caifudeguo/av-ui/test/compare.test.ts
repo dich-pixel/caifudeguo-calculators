@@ -166,14 +166,14 @@ describe('b3 / f6 sentences', () => {
   it('defaults', () => {
     const [a, b, c, f] = sens(form())
     expect(a).toBe('按你现在的其他输入，在 6.840–8.400 € 之间变成两者基本相同，在 10.000–13.680 € 之间又变成普通账户多拿。')
-    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（AV 多拿约 25.107\u00A0€，税后）')
+    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（AV 多拿约 25.107\u00A0€，税后）。')
     expect(c).toBe(true)
     expect(f).toEqual(['在 6.840–8.400 € 之间变成『两者基本相同』', '在 10.000–13.680 € 之间变成『普通账户多拿』'])
   })
   it('retirement 40.000 (4 flips)', () => {
     const [a, b, c] = sens(form({ zveRetirement: '40.000' }))
     expect(a).toBe('按你现在的其他输入，120 € 时普通账户多拿，在 360–600 € 之间变成两者基本相同，在 1.200–1.800 € 之间又变成 AV 多拿，在 2.400–3.600 € 之间又变成两者基本相同，详见下表。')
-    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（AV 多拿约 7.409\u00A0€，税后）')
+    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（AV 多拿约 7.409\u00A0€，税后）。')
     expect(c).toBe(true)
   })
   it('kids 2', () => {
@@ -190,21 +190,21 @@ describe('b3 / f6 sentences', () => {
   it('30.000 + 30.000: max tier is "same"', () => {
     const [a, b, c] = sens(form({ zveSavingsPhase: '30.000', zveRetirement: '30.000' }))
     expect(a).toBe('按你现在的其他输入，在 360–600 € 之间变成两者基本相同，在 2.400–3.600 € 之间又变成普通账户多拿。')
-    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（两者基本相同，AV 多约 846\u00A0€，税后）')
+    expect(b).toBe('在这些档位里，差额最大的是 1.800 €（两者基本相同，AV 多约 846\u00A0€，税后）。')
     expect(c).toBe(true)
   })
   it('retirement 48.000 / 60.000', () => {
     const [a, b, c] = sens(form({ zveRetirement: '48.000' }))
     expect(a).toBe('按你现在的其他输入，120 € 时普通账户多拿，在 1.200–1.800 € 之间变成两者基本相同，在 1.800–2.400 € 之间又变成普通账户多拿。')
-    expect(b).toBe('在这些档位里，AV 都没有多拿（普通账户多拿或两者基本相同）')
+    expect(b).toBe('在这些档位里，AV 都没有多拿（普通账户多拿或两者基本相同）。')
     expect(c).toBe(false)
     const [d, e, g] = sens(form({ zveRetirement: '60.000' }))
     expect(d).toBe('在 120–13.680 € 之间，结论都是『普通账户多拿』。')
-    expect(e).toBe('在这些档位里，普通账户都多拿')
+    expect(e).toBe('在这些档位里，普通账户都多拿。')
     expect(g).toBe(false)
   })
   it('consume: max at 360', () => {
-    expect(sens(form({}, { taxSavingsMode: 'consume' }))[1]).toBe('在这些档位里，差额最大的是 360 €（AV 多拿约 2.823\u00A0€，税后）')
+    expect(sens(form({}, { taxSavingsMode: 'consume' }))[1]).toBe('在这些档位里，差额最大的是 360 €（AV 多拿约 2.823\u00A0€，税后）。')
   })
   it('t3-95 fixed tiers do not depend on the user amount', () => {
     const base = sens(form({ savingsRate: '1.800' }))
@@ -292,8 +292,11 @@ describe('g3: Förderung row in the main result', () => {
     expect(t(foerderungKey('avDepot'))).toBe('补贴和退税合计')
     expect(t(foerderungKey('secondaryDepot'))).toBe('补贴和退税合计（退税存进另一个普通账户）')
     expect(t(foerderungKey('consume'))).toBe('补贴合计（不含退税）')
-    expect(t('foerBonus')).toBe('25 岁以前开始存的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。')
+    expect(t('foerBonus')).toBe('开始存钱那年年初未满 25 岁的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。')
     expect(t('foerKids')).toBe('假设孩子的补贴记在你名下。')
+    expect(t('foerPeriod')).toBe('补贴和退税都是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。')
+    expect(t('foerPeriodConsume')).toBe('补贴是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。')
+    expect(t('chartCap')).toBe('一份合同每年的上限')
   })
   it('t3-40 main-result value = the user row of the table, no extra core run', async () => {
     const { foerderung } = await import('../src/compare')

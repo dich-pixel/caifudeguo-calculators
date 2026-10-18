@@ -76,7 +76,10 @@ export function createCmp3(): Cmp3View {
       h('span', { class: 'cap-verdict' }, verdictSentence(s.userRow.avNet, s.userRow.normalNet)), ' ',
       h('span', { class: 'cap-sensitivity' }, sensitivityText(s)), ' ',
       txt('span', 'chartTableFirst')))
-    let lastWidth = -1
+    // Draw before inserting (width of the open region = box width), so the chart never disappears for a frame.
+    let lastWidth = Math.floor(region.clientWidth)
+    if (lastWidth > 0)
+      box.append(drawChart(s.rows, lastWidth))
     observer = new ResizeObserver(() => {
       const w = Math.floor(box.clientWidth)
       if (w > 0 && w !== lastWidth) {
@@ -106,11 +109,17 @@ export function createCmp3(): Cmp3View {
     if (!main) {
       data = null
       setBusy(false)
+      // T3-84: the invalid text is shown but not announced (field error + result status already are)
+      summary.removeAttribute('aria-live')
       summary.replaceChildren(txt('p', 'cmp3Invalid'))
       region.replaceChildren(txt('p', 'cmp3Invalid'))
       return
     }
     const snapshot = structuredClone(values)
+    if (!summary.hasAttribute('aria-live')) {
+      summary.replaceChildren()
+      summary.setAttribute('aria-live', 'polite')
+    }
     timer = setTimeout(() => {
       if (my !== token)
         return
@@ -191,7 +200,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
   }
   const notes: (StrKey | null)[] = [
     'cmp3DiffNote',
-    'foerPeriod',
+    values.taxSavingsMode === 'consume' ? 'foerPeriodConsume' : 'foerPeriod',
     'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,
     'cmp3SplitUnder',

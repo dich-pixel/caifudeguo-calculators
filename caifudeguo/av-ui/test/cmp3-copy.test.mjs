@@ -42,3 +42,21 @@ describe('g8 narrow error banner', () => {
     expect(src('style.css')).toMatch(/@media \(min-width: 1000px\) \{ \.err-banner \{ display: none; \} \}/)
   })
 })
+
+describe('g12 testids and live regions', () => {
+  it('t3-93: footnotes and the recalculating status have their own testids', async () => {
+    const { STR } = await import('../src/strings.ts')
+    const ids = Object.values(STR).map(v => v.id)
+    expect(ids.filter(id => id.startsWith('cmp3-split-'))).toEqual([])
+    expect(ids.filter(id => id === 'cmp3-status')).toHaveLength(1)
+    expect(STR.cmp3Rebusy.id).toBe('cmp3-status-recalc')
+    expect([STR.cmp3SplitUnder.id, STR.cmp3SplitNote.id, STR.cmp3SplitNoteSecondary.id, STR.cmp3SplitLe1800.id, STR.cmp3SplitLt120.id])
+      .toEqual(['cmp3-splitnote-under', 'cmp3-splitnote-approx', 'cmp3-splitnote-secondary', 'cmp3-splitnote-le1800', 'cmp3-splitnote-lt120'])
+  })
+  it('t3-84: the invalid text in the comparison block is not in a live region', () => {
+    const cmp = src('cmp3.ts')
+    const invalid = cmp.indexOf("summary.replaceChildren(txt('p', 'cmp3Invalid'))")
+    expect(cmp.lastIndexOf("summary.removeAttribute('aria-live')", invalid)).toBeGreaterThan(cmp.lastIndexOf('if (!main)', invalid))
+    expect(cmp).toContain("summary.setAttribute('aria-live', 'polite')")
+  })
+})
