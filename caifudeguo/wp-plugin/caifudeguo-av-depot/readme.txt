@@ -38,7 +38,7 @@ Machine-generated copy; only output rounding changed, calculation method unchang
 
 Corresponding source / 对应源代码：见 SOURCE.txt（fork 的固定 commit 链接）和插件内的 source/ 文件夹（同一 commit 的完整源代码归档）。
 
-Build / 打包：必须用 Node 22.14.0（.nvmrc）：`PATH=/exec-daemon:$PATH pnpm run wp:zip`，或 `nvm use && pnpm run wp:zip`，或 `npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs`。其他版本会报错停下（`--allow-node-mismatch` 可跳过，SOURCE.txt 会记录实际版本）。
+Build / 打包：必须用 Node 22.14.0（.nvmrc）：`nvm use && pnpm run wp:zip`，或 `npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs`。其他版本会报错停下（`--allow-node-mismatch` 可跳过，SOURCE.txt 会记录实际版本）。
 
 == Changelog ==
 

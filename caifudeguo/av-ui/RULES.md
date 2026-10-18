@@ -106,6 +106,40 @@ reported after other field errors are fixed.
 - **Two-contract hint**: shown when the parsed amount is > `AV_CONTRIBUTION_CAP / 2` = 6.840 € (`constants/av-depot.ts:5`).
 - **Cross-field errors** (age ≥ retirement age etc., `av-depot.ts:63-78`) are shown once, on the field changed last.
 
+## Stage 3: comparison of savings amounts / 阶段 3：不同存钱额的比较
+
+Plan: `PLAN_stage3.md` (v2, approved 2026-10-18). Lines below: `compare.ts` = `src/compare.ts`, core lines = dcc29a6.
+
+- **Tiers** (`compare.ts:17`): 120 · 300 · 360 · 600 · 1.200 · 1.800 · 2.400 · 3.600 · 6.840 · 8.400 · 10.000 · 13.680 €,
+  plus the user's amount (inserted by size, merged when equal). Real kinks in the core: 120 € minimum (`av-depot.ts:23`),
+  300 € Kinderzulage cap (`597`), 360 € Grundzulage 50 % → 25 % (`589-590`), 1.800 € subsidy/deduction cap (`590`, `363`;
+  Überzahlung = `ownContribToAv` above 1.800, `380-382`), 13.680 € input cap (`const.ts:5`). 6.840 € is not a kink in the
+  core (only the comment at `const.ts:5`); the chart draws a dashed line and rows above it show `hint-two-contracts`.
+- **One full core run per amount** (`sweep`, `compare.ts:166`): `evaluate()` with the user's other inputs, only
+  `savingsRate` replaced. Every number in the table is a field of that run, unrounded; rounding once at display.
+- **Förderung** (`foerderung`, `compare.ts:94`) = Σ `savingsPerYear[].contribution.avDepot` − `totalContributions.avDepot`.
+  Label by tax-saving mode (`foerderungKey`, `compare.ts:90`): with `secondaryDepot` the sum contains the tax saving
+  because the core adds the side account's inflow to `contribution.avDepot` (`428-441`).
+- **Verdict per row** = stage-2 `verdict()` (`model.ts:246-252`). **Flips, largest difference, 多存 1 €** use only the 12
+  fixed tiers (plan b3): flip = tier whose verdict differs from the previous tier; largest difference = tier with the
+  largest D if any tier is „AV 多拿“, else „普通账户都多拿“ / „AV 都没有多拿…“; 多存 1 € = Δ`payoutTotal.net` ÷
+  Δ`totalContributions` against the nearest fixed tier at least 100 € lower (`baseTier`, `compare.ts:152`; user row the
+  same, never used as a base). „回报更高“ only if every tier after k has AV < normal and k is not the last tier.
+- **b2 column** (`compare.ts:166`, `fillSplit`): S(a) = `payoutTotal.net.avDepot`(1.800 €) + `payoutTotal.net.normalDepot`(a − 1.800 €),
+  „—“ for a ≤ 1.800 € and for a remainder < 120 €. Approximate (plan b2): never used for verdicts, flips, chart or summary.
+- **Sentences** (`compare.ts:283-325`): f6 sensitivity sentence (at most 3 flips, then „，详见下表“), summary line 2,
+  figcaption sentence 1 = the stage-2 verdict sentence for the user's amount.
+- **Scheduling** (`cmp3.ts:33`): main result immediately; the comparison round starts 300 ms after the last input, one
+  core run per `setTimeout 0` (`pendingAmounts` / `prefetch`, `compare.ts:120-137`), newer input cancels the round.
+  Cache: results per amount while all other inputs are unchanged (`compare.ts:99-117`); the user row reuses the main
+  result. Core runs per round ≤ 17 (only savingsRate changed: 0 or 1). Marks `cmp3-round-start` / `cmp3-round-end`,
+  `data-round` on summary and table container, updated when a round finishes.
+- **Chart** (`chart.ts:67`): inline SVG, D per row, evenly spaced; band = ±1 % × larger net total (same rule as `verdict()`).
+- **Kid rows** (`model.ts:292-305`): rows count once typed into or blurred; untouched rows are not calculated.
+- **Narrow error banner** (`main.ts:150`): < 1000 px; the button expands „更多设置“ if needed and focuses the first
+  `aria-invalid="true"` input.
+- No new formulas beyond these sums, differences and quotients of core outputs; `src/` unchanged (`pnpm run check:core`).
+
 ## Reference (defaults, start 2027)
 
 Endkapital AV 228.547 €, normal 163.602 €; monthly net AV 989 €, normal 872 € (873 € with the web page's double

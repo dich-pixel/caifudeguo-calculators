@@ -1,5 +1,5 @@
 // Builds caifudeguo-av-depot-<version>-<shortsha>.zip (WordPress plugin) from a clean git checkout.
-// Usage (Node 22.14.0 required, see .nvmrc): PATH=/exec-daemon:$PATH pnpm run wp:zip [-- --out <dir>] [-- --allow-dirty] [-- --allow-node-mismatch]
+// Usage (Node 22.14.0 required, see .nvmrc): pnpm run wp:zip [-- --out <dir>] [-- --allow-dirty] [-- --allow-node-mismatch]
 //   or: /exec-daemon/node caifudeguo/wp-plugin/build-zip.mjs   |   nvm use && pnpm run wp:zip
 // Copyright (C) 2026 Rich Dr (caifudeguo.de). AGPL-3.0-only.
 import { Buffer } from 'node:buffer'
@@ -18,7 +18,7 @@ const outDir = outIdx >= 0 ? args[outIdx + 1] : join(root, '..', 'wp-release')
 const EXPECTED_NODE = 'v22.14.0'
 const nodeMismatch = process.version !== EXPECTED_NODE
 if (nodeMismatch && !args.includes('--allow-node-mismatch')) {
-  console.error(`Node ${process.version} is running, but the release zip must be built with ${EXPECTED_NODE} (zlib decides the zip bytes).\nUse: PATH=/exec-daemon:$PATH pnpm run wp:zip, or nvm use, or npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs (override: --allow-node-mismatch)`)
+  console.error(`Node ${process.version} is running, but the release zip must be built with ${EXPECTED_NODE} (zlib decides the zip bytes).\nUse: nvm use && pnpm run wp:zip, or npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs (build box: see README, 2026-10-18 stage 3 row) (override: --allow-node-mismatch)`)
   process.exit(1)
 }
 const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
