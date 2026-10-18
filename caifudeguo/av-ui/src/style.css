@@ -59,7 +59,7 @@ button { font: inherit; cursor: pointer; }
 .status .verdict.invalid { color: var(--err); }
 .status .sensitivity { margin: 2px 0 8px; color: var(--muted); }
 .status .note { margin: 0 0 8px; font-size: 0.9rem; }
-.monthly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+div.monthly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .mbox { border: 2px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; }
 .mbox.av { border-color: var(--av); }
 .mbox.normal { border-color: var(--normal); }
