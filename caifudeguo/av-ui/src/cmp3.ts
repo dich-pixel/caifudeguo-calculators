@@ -9,7 +9,7 @@ import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { drawChart } from './chart'
-import { amountId, flipText, foerderungKey, kindName, maxText, sensitivityText, sweep, verdictSentence } from './compare'
+import { amountId, flipText, foerderungKey, kindName, maxText, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { formatEuro, formatNumberDe } from './format'
 import { ONE_CONTRACT_CAP } from './model'
@@ -88,22 +88,59 @@ export function createCmp3(): Cmp3View {
     observer.observe(box)
   }
 
+  // Scheduling (plan e): debounce 300 ms, one core run per macrotask, newer input cancels the running round.
+  let round = 0
+  const status = txt('p', 'cmp3Rebusy', { class: 'cmp3-status', hidden: true })
+  section.insertBefore(status, toggle)
+  let token = 0
+  function setBusy(busy: boolean) {
+    summary.setAttribute('aria-busy', String(busy))
+    region.classList.toggle('busy', busy)
+    region.setAttribute('aria-busy', String(busy))
+    status.hidden = !busy || !data
+  }
+
   function update(values: FormValues, main: Result | null) {
     clearTimeout(timer)
+    const my = ++token
     if (!main) {
       data = null
+      setBusy(false)
       summary.replaceChildren(txt('p', 'cmp3Invalid'))
       region.replaceChildren(txt('p', 'cmp3Invalid'))
       return
     }
     const snapshot = structuredClone(values)
     timer = setTimeout(() => {
-      const result = sweep(snapshot, undefined, { main })
-      if (!result)
+      if (my !== token)
         return
-      data = { values: snapshot, result }
-      renderSummary()
-      renderRegion()
+      const n = ++round
+      performance.mark('cmp3-round-start')
+      if (!data)
+        summary.replaceChildren(txt('p', 'cmp3Busy'))
+      setBusy(true)
+      const queue = pendingAmounts(snapshot, { main })
+      const step = () => {
+        if (my !== token)
+          return
+        const a = queue.shift()
+        if (a !== undefined) {
+          prefetch(snapshot, a)
+          timer = setTimeout(step, 0)
+          return
+        }
+        const result = sweep(snapshot, undefined, { main })
+        if (!result)
+          return
+        data = { values: snapshot, result }
+        renderSummary()
+        renderRegion()
+        summary.setAttribute('data-round', String(n))
+        region.setAttribute('data-round', String(n))
+        setBusy(false)
+        performance.mark('cmp3-round-end')
+      }
+      timer = setTimeout(step, 0)
     }, DEBOUNCE_MS)
   }
 

@@ -105,6 +105,37 @@ export function clearSweepCache() {
   cache = null
 }
 
+/** Same cache reset rule as sweep(); stores the main result for the user's amount. */
+function cacheFor(values: FormValues, today: Date, main?: Result): Map<number, Result> {
+  const key = otherInputsKey(values, today)
+  if (!cache || cache.key !== key)
+    cache = { key, results: new Map() }
+  const ua = parseAmount(values.fields.savingsRate)
+  if (main && ua.ok)
+    cache.results.set(ua.value, main)
+  return cache.results
+}
+
+/** Amounts sweep() still needs a core run for (plan e: lets the UI run one per macrotask). */
+export function pendingAmounts(values: FormValues, opts: SweepOptions = {}): number[] {
+  const results = cacheFor(values, opts.today ?? new Date(), opts.main)
+  const ua = parseAmount(values.fields.savingsRate)
+  if (!ua.ok)
+    return []
+  const all = [ua.value, ...TIERS, ...[...TIERS, ua.value].map(a => round2(a - SPLIT_AV)).filter(r => r >= MIN_RATE)]
+  return [...new Set(all)].filter(a => !results.has(a))
+}
+
+/** Run the core once for `amount` and keep the result in the cache. */
+export function prefetch(values: FormValues, amount: number, evaluateFn: EvaluateFn = evaluate, today: Date = new Date()): void {
+  const results = cacheFor(values, today)
+  if (results.has(amount))
+    return
+  const o = evaluateFn({ ...values, fields: { ...values.fields, savingsRate: amountText(amount) } }, today)
+  if (o.ok)
+    results.set(amount, o.result)
+}
+
 function marginal(r: CmpRow, base: CmpRow | undefined): Marginal | null {
   if (!base)
     return null
@@ -137,10 +168,7 @@ export function sweep(values: FormValues, evaluateFn: EvaluateFn = evaluate, opt
   const userAmount = parseAmount(values.fields.savingsRate)
   if (!userAmount.ok)
     return null
-  const key = otherInputsKey(values, today)
-  if (!cache || cache.key !== key)
-    cache = { key, results: new Map() }
-  const results = cache.results
+  const results = cacheFor(values, today, opts.main)
   const run = (a: number): Result | null => {
     const hit = results.get(a)
     if (hit)
@@ -152,8 +180,6 @@ export function sweep(values: FormValues, evaluateFn: EvaluateFn = evaluate, opt
     return o.result
   }
   const ua = userAmount.value
-  if (opts.main)
-    results.set(ua, opts.main)
   const userResult = run(ua)
   if (!userResult)
     return null

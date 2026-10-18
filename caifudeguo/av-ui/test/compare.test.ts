@@ -303,3 +303,35 @@ describe('g3: Förderung row in the main result', () => {
     expect([f('24', '66', 'avDepot'), f('25', '67', 'avDepot')]).toEqual([34304, 34104])
   })
 })
+
+describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
+  const { pendingAmounts, prefetch } = await import('../src/compare')
+  it('one prefetch per pending amount, then sweep needs 0 core runs', () => {
+    const v = form({ age: '18', savingsRate: '12.000' }, { kids: ['2020', '2023'] })
+    const main = ref(v, 12000)
+    const queue = pendingAmounts(v, { main, today: TODAY })
+    expect(queue).toHaveLength(17)
+    expect(queue).not.toContain(12000)
+    const spy = vi.fn(evaluate)
+    for (const a of queue) prefetch(v, a, spy, TODAY)
+    expect(spy).toHaveBeenCalledTimes(17)
+    const spy2 = vi.fn(evaluate)
+    const chunked = run(v, spy2, main)
+    expect(spy2).not.toHaveBeenCalled()
+    clearSweepCache()
+    expect(chunked.rows.map(r => r.diff)).toEqual(run(v, evaluate, main).rows.map(r => r.diff))
+  })
+  it('only savingsRate changed: 0 or 1 pending', () => {
+    const v = form({ savingsRate: '5.000' })
+    run(v, evaluate, ref(v, 5000))
+    const w = form({ savingsRate: '3.200' })
+    expect(pendingAmounts(w, { main: ref(w, 3200), today: TODAY })).toEqual([1400])
+    const x = form({ savingsRate: '2.400' })
+    expect(pendingAmounts(x, { main: ref(x, 2400), today: TODAY })).toEqual([])
+  })
+  it('another input changed: cache is dropped', () => {
+    run(form(), evaluate, ref(form(), 1800))
+    const v = form({ age: '40' })
+    expect(pendingAmounts(v, { main: ref(v, 1800), today: TODAY }).length).toBe(15) // 11 tiers + 5.040/6.600/8.200/11.880
+  })
+})
