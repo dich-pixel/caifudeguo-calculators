@@ -8,7 +8,7 @@
  */
 import type { FormValues, Result, TaxSavingsMode, Verdict } from './model'
 import type { StrKey } from './strings'
-import { formatEuro, formatNumberDe } from './format'
+import { formatEuro, formatNumberDe, roundHalfUp } from './format'
 import { evaluate, verdict } from './model'
 import { parseAmount } from './parse'
 import { t } from './strings'
@@ -286,4 +286,14 @@ export function maxText(s: SweepResult): string {
   if (m.type === 'noAv')
     return t('maxNoAv')
   return t(m.kind === 'av' ? 'maxAv' : 'maxSame', { a: formatNumberDe(m.amount), x: formatEuro(m.diff) })
+}
+
+/** Main verdict sentence for the user's own amount (stage 2 wording; also the first figcaption sentence, plan c). */
+export function verdictSentence(avNet: number, normalNet: number): string {
+  const v = verdict(avNet, normalNet)
+  const rounded0 = roundHalfUp(Math.abs(v.diff)) === 0
+  const key: StrKey = v.kind === 'av'
+    ? 'verdictAv'
+    : v.kind === 'normal' ? 'verdictNormal' : rounded0 ? 'verdictEqual' : v.diff > 0 ? 'verdictSame' : 'verdictSameNormal'
+  return t(key, { x: formatEuro(Math.abs(v.diff)) })
 }

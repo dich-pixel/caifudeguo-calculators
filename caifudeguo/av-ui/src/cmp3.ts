@@ -8,7 +8,8 @@
 import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
-import { amountId, flipText, foerderungKey, kindName, maxText, sensitivityText, sweep } from './compare'
+import { drawChart } from './chart'
+import { amountId, flipText, foerderungKey, kindName, maxText, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { formatEuro, formatNumberDe } from './format'
 import { ONE_CONTRACT_CAP } from './model'
@@ -64,10 +65,27 @@ export function createCmp3(): Cmp3View {
     )
   }
 
+  let observer: ResizeObserver | undefined
   function renderRegion() {
+    observer?.disconnect()
     if (!data || !open())
       return
-    region.replaceChildren(...table(data.values, data.result))
+    const s = data.result
+    const box = h('div', { class: 'cmp3-chart-box' })
+    const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'cmp3-chart' }, box, h('figcaption', {},
+      h('span', { class: 'cap-verdict' }, verdictSentence(s.userRow.avNet, s.userRow.normalNet)), ' ',
+      h('span', { class: 'cap-sensitivity' }, sensitivityText(s)), ' ',
+      txt('span', 'chartTableFirst')))
+    let lastWidth = -1
+    observer = new ResizeObserver(() => {
+      const w = Math.floor(box.clientWidth)
+      if (w > 0 && w !== lastWidth) {
+        lastWidth = w
+        box.replaceChildren(drawChart(s.rows, w))
+      }
+    })
+    region.replaceChildren(figure, ...table(data.values, s))
+    observer.observe(box)
   }
 
   function update(values: FormValues, main: Result | null) {

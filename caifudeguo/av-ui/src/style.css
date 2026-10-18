@@ -155,3 +155,18 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table tr.user > th, .cmp3-table tr.user > td:not(.split) { background: none; }
   .cmp3-table tr.user { border: 2px solid var(--accent); }
 }
+.cmp3-figure { margin: 0 0 12px; }
+.cmp3-chart-box { width: 100%; min-height: 200px; }
+.cmp3-svg { display: block; }
+.cmp3-svg text { font-size: 12px; fill: var(--fg); }
+.cmp3-svg text.title { font-weight: 700; }
+.cmp3-svg .grid { stroke: var(--line); stroke-width: 1; }
+.cmp3-svg .zero { stroke: var(--fg); stroke-width: 1.5; }
+.cmp3-svg .band { fill: #b6cfe9; fill-opacity: 0.45; stroke: #6f9ccc; stroke-width: 1; stroke-dasharray: 2 2; }
+.cmp3-svg .line { fill: none; stroke: var(--av); stroke-width: 2.5; }
+.cmp3-svg .pt { fill: var(--av); }
+.cmp3-svg .pt.user { fill: #fff; stroke: var(--fg); stroke-width: 2.5; }
+.cmp3-svg .user-label { font-weight: 700; }
+.cmp3-svg .kink { fill: #fff; stroke: var(--fg); stroke-width: 1.5; }
+.cmp3-svg .cap { stroke: var(--normal); stroke-width: 1.5; }
+.cmp3-figure figcaption { font-size: 0.9rem; margin-top: 4px; }

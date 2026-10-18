@@ -203,6 +203,15 @@ export const STR = {
   cmp3SplitLt120: s('cmp3-split-lt120', '—：剩下的不到 120 €，计算核心最低要 120 €（av-depot.ts:23），所以不算。'),
   cmp3Share: s('cmp3-share', '（{p} %）'),
 
+  // stage 3: chart (PLAN_stage3.md c)
+  chartTitle: s('cmp3-chart-title', '税后差额（AV − 普通，领取期合计，€）'),
+  chartXAxis: s('cmp3-chart-xaxis', '档位（不按比例）'),
+  chartYAxis: s('cmp3-chart-yaxis', '税后差额（€）'),
+  chartBand: s('cmp3-chart-band', '浅色带 = 两者基本相同'),
+  chartCap: s('cmp3-marker-6840', '一份合同的上限'),
+  chartKink: s('cmp3-marker', '拐点 {a} €'),
+  chartTableFirst: s('cmp3-chart-caption', '具体数字以表格为准。'),
+
   notesHeading: s('notes-heading', '提示 · 免责 · 来源'),
 } satisfies Record<string, UiString>
 

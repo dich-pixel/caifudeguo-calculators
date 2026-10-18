@@ -6,7 +6,7 @@
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
 import { createCmp3 } from './cmp3'
-import { foerderung, foerderungKey } from './compare'
+import { foerderung, foerderungKey, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
@@ -175,9 +175,6 @@ function renderResult(r: Result) {
   const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
   const x = formatEuro(Math.abs(v.diff))
   const rounded0 = roundHalfUp(Math.abs(v.diff)) === 0
-  const key: StrKey = v.kind === 'av'
-    ? 'verdictAv'
-    : v.kind === 'normal' ? 'verdictNormal' : rounded0 ? 'verdictEqual' : v.diff > 0 ? 'verdictSame' : 'verdictSameNormal'
   const sameKey = (av: StrKey, normal: StrKey, equal: StrKey): StrKey => rounded0 ? equal : v.diff > 0 ? av : normal
   const barKey: StrKey = v.kind === 'av' ? 'barAv' : v.kind === 'normal' ? 'barNormal' : sameKey('barSame', 'barSameNormal', 'barEqual')
   const inlineKey: StrKey = v.kind === 'av' ? 'inlineAv' : v.kind === 'normal' ? 'inlineNormal' : sameKey('inlineSameAv', 'inlineSameNormal', 'inlineEqual')
@@ -187,7 +184,7 @@ function renderResult(r: Result) {
     txt('span', 'barMonthly', { class: 'bar-monthly' }, { a: formatEuro(r.monthlyNet.avDepot), b: formatEuro(r.monthlyNet.normalDepot) }),
   )
   status.replaceChildren(...[
-    txt('p', key, { 'class': 'verdict', 'data-verdict': v.kind }, { x }),
+    h('p', { 'class': 'verdict', 'data-verdict': v.kind, 'data-testid': STR.verdictAv.id }, verdictSentence(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)),
     txt('p', 'verdictBasis', { class: 'basis' }),
     txt('p', 'diffNote', { class: 'basis small' }),
     txt('p', 'sensitivity', { class: 'sensitivity' }),

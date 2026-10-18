@@ -1,9 +1,9 @@
 // Stage 3 g4: wording of the comparison block = plan text (PLAN_stage3.md a, b, b2), no style attributes.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { t } from '../src/strings'
+import { t } from '../src/strings.ts'
 
-const src = (f: string) => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8')
+const src = f => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8')
 
 describe('g4 wording', () => {
   it('plan texts', () => {
