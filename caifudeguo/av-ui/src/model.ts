@@ -283,3 +283,41 @@ export function placeCrossField(errors: Record<string, FieldError>, lastChanged:
     out.retirementAge = { key: 'errRetireAge' }
   return out
 }
+
+/** data-testid of the node that shows this error string. `{n}` is the child index. */
+export function errorDomTestIds(key: StrKey): string[] | undefined {
+  const ids = (names: string[]) => names.map(name => `error-${name}`)
+  const amount = Object.entries(FIELDS).filter(([, kind]) => kind === 'amount').map(([name]) => name)
+  const percent = Object.entries(FIELDS).filter(([, kind]) => kind === 'percent').map(([name]) => name)
+  const ints = Object.entries(FIELDS).filter(([, kind]) => kind === 'int').map(([name]) => name)
+  const every = [...Object.keys(FIELDS), 'kid-{n}']
+  switch (key) {
+    case 'errEmpty':
+    case 'errMin':
+    case 'errMax':
+    case 'errGt':
+      return ids(every)
+    case 'errAmount':
+      return ids(amount)
+    case 'errPercent':
+      return ids(percent)
+    case 'errInt':
+      return ids([...ints, 'kid-{n}'])
+    case 'errAgeRetire':
+      return ['error-age', 'error-retirementAge']
+    case 'errRetireAge':
+      return ['error-retirementAge']
+    case 'errRetirePayout':
+      return ['error-retirementAge', 'error-payoutUntilAge']
+    case 'errCostsEtf':
+      return ['error-avDepotCosts', 'error-etfReturnRate']
+    case 'errCostsPayout':
+      return ['error-avDepotCosts', 'error-payoutReturnRate']
+    case 'errFuture':
+      return ['error-kid-{n}']
+    case 'errInvalid':
+      return ['error-form']
+    default:
+      return undefined
+  }
+}

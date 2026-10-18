@@ -4,12 +4,12 @@
  * Source: https://github.com/dich-pixel/caifudeguo-calculators
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
-import type { StrKey } from './strings'
+import type { StrKey, YEARLY_COL_KEYS } from './strings'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
-import { STR, t } from './strings'
+import { detailsToggleTestId, documentTitle, h1Text, payoutPartTestId, STR, t, yearlyHeadTestId, yearlyHeadText } from './strings'
 import './style.css'
 
 type Attrs = Record<string, string | boolean | undefined>
@@ -111,7 +111,7 @@ function renderKids(focusIndex?: number) {
     const err = h('p', { 'id': `err-${key}`, 'class': 'err', 'data-testid': `error-${key}`, 'aria-live': 'polite' })
     inputs.set(key, input)
     errorEls.set(key, err)
-    kidsList.append(h('div', { class: 'kid-row' }, h('label', { 'for': `in-${key}`, 'data-testid': STR.kidLabel.id }, t('kidLabel', { x: i + 1 })), h('div', { class: 'kid-controls' }, input, remove), err))
+    kidsList.append(h('div', { class: 'kid-row' }, h('label', { 'for': `in-${key}`, 'data-testid': `label-kid-${i}` }, t('kidLabel', { x: i + 1 })), h('div', { class: 'kid-controls' }, input, remove), err))
   })
   if (focusIndex !== undefined)
     inputs.get(`kid-${focusIndex}`)?.focus()
@@ -171,8 +171,8 @@ function compareRows(rowKey: StrKey, m: Money, id: string): HTMLElement {
 
 function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
   const head = h('tr', { class: 'group' }, h('th', { 'scope': 'rowgroup', 'colspan': '3', 'data-testid': STR[rowKey].id }, t(rowKey)))
-  const parts: [StrKey, Money, string][] = [['gross', p.gross, 'gross'], ['tax', p.tax, 'tax'], ['net', p.net, 'net']]
-  return [head, ...parts.map(([k, m, s]) => h('tr', { class: `sub ${s}` }, h('th', { scope: 'row' }, t(k)), cell(m.avDepot, `cell-${id}-${s}-av`), cell(m.normalDepot, `cell-${id}-${s}-normal`)))]
+  const parts: ['gross' | 'tax' | 'net', Money, 'gross' | 'tax' | 'net'][] = [['gross', p.gross, 'gross'], ['tax', p.tax, 'tax'], ['net', p.net, 'net']]
+  return [head, ...parts.map(([k, m, s]) => h('tr', { class: `sub ${s}` }, h('th', { 'scope': 'row', 'data-testid': payoutPartTestId(k, id) }, t(k)), cell(m.avDepot, `cell-${id}-${s}-av`), cell(m.normalDepot, `cell-${id}-${s}-normal`)))]
 }
 
 function renderResult(r: Result) {
@@ -212,16 +212,15 @@ function renderResult(r: Result) {
     ),
   ), txt('p', 'taxNote', { class: 'help' }))
 
-  const cols: [StrKey, string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
-  const label = (k: StrKey) => STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
+  const cols: [typeof YEARLY_COL_KEYS[number], string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
   const head = h('tr', {}, txt('th', 'colYear', { scope: 'col' }), txt('th', 'colAge', { scope: 'col' }),
-    ...cols.map(([k]) => h('th', { scope: 'col', class: 'av' }, `AV · ${label(k)}`)),
-    ...cols.map(([k]) => h('th', { scope: 'col', class: 'normal' }, `${t('colNormal').split('（')[0]} · ${label(k)}`)))
+    ...cols.map(([k]) => h('th', { 'scope': 'col', 'class': 'av', 'data-testid': yearlyHeadTestId('av', k) }, yearlyHeadText('av', k))),
+    ...cols.map(([k]) => h('th', { 'scope': 'col', 'class': 'normal', 'data-testid': yearlyHeadTestId('normal', k) }, yearlyHeadText('normal', k))))
   const rows = r.years.map(y => h('tr', { 'data-testid': 'yearly-row' },
     h('th', { 'scope': 'row', 'data-label': t('colYear') }, String(y.calendarYear)),
     h('td', { 'data-label': t('colAge') }, String(y.age)),
-    ...cols.map(([k, f]) => h('td', { 'class': 'av', 'data-label': `AV · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).avDepot))),
-    ...cols.map(([k, f]) => h('td', { 'class': 'normal', 'data-label': `${t('colNormal').split('（')[0]} · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).normalDepot))),
+    ...cols.map(([k, f]) => h('td', { 'class': 'av', 'data-label': yearlyHeadText('av', k) }, formatEuro2((y[f as keyof typeof y] as Money).avDepot))),
+    ...cols.map(([k, f]) => h('td', { 'class': 'normal', 'data-label': yearlyHeadText('normal', k) }, formatEuro2((y[f as keyof typeof y] as Money).normalDepot))),
   ))
   yearlyBody.replaceChildren(txt('p', 'yearlyNote', { class: 'help' }), txt('p', 'yearlyContribNote', { class: 'help' }), h('table', { 'class': 'yearly', 'data-testid': 'yearly-table' }, h('thead', {}, head), h('tbody', {}, ...rows)))
 }
@@ -261,13 +260,13 @@ function update() {
 
 // ---------- page ----------
 
-/** Notice: one sentence visible, details + legal basis in a collapsible <details>. */
-function notice(key: StrKey, detailsKey?: StrKey, tag: 'div' | 'p' = 'div'): HTMLElement {
-  if (!detailsKey)
-    return txt(tag, key, { class: 'notice' })
-  return h('div', { 'class': 'notice', 'data-testid': STR[key].id },
-    h('p', {}, t(key)),
-    h('details', {}, txt('summary', 'noticeDetailsSummary'), txt('p', detailsKey)))
+/** Notice: the required sentence has its own data-testid; the legal basis is a collapsible details block. */
+function notice(key: 'noticeLock' | 'noticeSchaedlich' | 'noticeKids', detailsKey: StrKey): HTMLElement {
+  return h('div', { class: 'notice' },
+    h('p', { 'data-testid': STR[key].id }, t(key)),
+    h('details', {},
+      h('summary', { 'data-testid': detailsToggleTestId(key) }, t('noticeDetailsSummary')),
+      txt('p', detailsKey)))
 }
 
 function link(href: string, text: string, testid?: string): HTMLAnchorElement {
@@ -321,8 +320,10 @@ function build() {
     txt('p', 'noticeNotAffiliated', { class: 'notice' }),
   )
 
+  document.title = documentTitle()
+  document.querySelector('title')?.setAttribute('data-testid', 'document-title')
   const app = h('main', { class: 'app' },
-    h('header', {}, txt('h1', 'title', {}, {}), txt('p', 'subtitle', { class: 'subtitle' }),
+    h('header', {}, h('h1', { 'data-testid': STR.title.id }, h1Text()), txt('p', 'subtitle', { class: 'subtitle' }),
       h('div', { 'class': 'banner', 'role': 'note' }, txt('p', 'noticeStart', { class: 'notice' }), notice('noticeLock', 'noticeLockDetails'))),
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
@@ -332,7 +333,6 @@ function build() {
     yearly,
   )
   // Title shows the German term in brackets.
-  app.querySelector('h1')!.textContent = `${t('title')}（${STR.title.de}）`
   document.body.append(app)
   update()
 }
