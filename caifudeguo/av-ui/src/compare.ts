@@ -6,7 +6,7 @@
  * Every tier is one full core run (evaluate → avDepotPrecise.calculate) with the user's other inputs; only
  * savingsRate changes. No formulas besides sums/differences/quotients of core outputs named in the plan.
  */
-import type { FormValues, Result, Verdict } from './model'
+import type { FormValues, Result, TaxSavingsMode, Verdict } from './model'
 import type { StrKey } from './strings'
 import { formatEuro, formatNumberDe } from './format'
 import { evaluate, verdict } from './model'
@@ -84,6 +84,11 @@ export function amountId(a: number): string {
     return String(a)
   const cents = Math.round(a * 100)
   return `${Math.floor(cents / 100)}_${String(cents % 100).padStart(2, '0')}`
+}
+
+/** Label of the Förderung column/row, depends on where the tax saving goes (plan b, f5). */
+export function foerderungKey(mode: TaxSavingsMode): StrKey {
+  return mode === 'avDepot' ? 'foerAv' : mode === 'secondaryDepot' ? 'foerSecondary' : 'foerConsume'
 }
 
 export function foerderung(r: Result): number {

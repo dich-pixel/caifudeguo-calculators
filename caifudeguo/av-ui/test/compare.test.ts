@@ -279,3 +279,27 @@ describe('t3-68 round time (Node 22.14.0 gate)', () => {
     expect(total / 5).toBeLessThanOrEqual(650)
   })
 })
+
+describe('g3: Förderung row in the main result', () => {
+  it('t3-39 label follows the tax-saving mode', async () => {
+    const { foerderungKey } = await import('../src/compare')
+    const { t } = await import('../src/strings')
+    expect(t(foerderungKey('avDepot'))).toBe('补贴和退税合计')
+    expect(t(foerderungKey('secondaryDepot'))).toBe('补贴和退税合计（退税存进另一个普通账户）')
+    expect(t(foerderungKey('consume'))).toBe('补贴合计（不含退税）')
+    expect(t('foerBonus')).toBe('25 岁以前开始存的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。')
+    expect(t('foerKids')).toBe('假设孩子的补贴记在你名下。')
+  })
+  it('t3-40 main-result value = the user row of the table, no extra core run', async () => {
+    const { foerderung } = await import('../src/compare')
+    const v = form({ savingsRate: '9.000' })
+    const main = ref(v, 9000)
+    expect(foerderung(main)).toBe(run(v, evaluate, main).userRow.foerderung)
+  })
+  it('t3-41 200 € bonus: 24/66 vs 25/67', async () => {
+    const { foerderung } = await import('../src/compare')
+    const f = (age: string, ret: string, mode: 'avDepot' | 'consume') => roundHalfUp(foerderung(ref(form({ age, retirementAge: ret }, { taxSavingsMode: mode }), 1800)))
+    expect([f('24', '66', 'consume'), f('25', '67', 'consume')]).toEqual([22880, 22680])
+    expect([f('24', '66', 'avDepot'), f('25', '67', 'avDepot')]).toEqual([34304, 34104])
+  })
+})

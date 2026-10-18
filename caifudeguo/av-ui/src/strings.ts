@@ -146,6 +146,15 @@ export const STR = {
   errFuture: s('error', '出生年份不能晚于今年（{year}）。'),
   errInvalid: s('error', '输入无效。'),
 
+  // stage 3: Förderung row/column (PLAN_stage3.md b „Förderung 列名“, f5)
+  foerAv: s('row-foerderung', '补贴和退税合计', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerSecondary: s('row-foerderung', '补贴和退税合计（退税存进另一个普通账户）', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerConsume: s('row-foerderung', '补贴合计（不含退税）', 'Zulagen', '§§83–85 EStG（2027 年起版本）'),
+  foerPeriod: s('foerderung-period', '补贴和退税都是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。'),
+  foerBonus: s('foerderung-bonus-note', '25 岁以前开始存的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。', 'Erhöhung der Grundzulage', '§84 S. 2 EStG n.F.'),
+  foerKids: s('foerderung-kids-note', '假设孩子的补贴记在你名下。', 'Kinderzulage', '§85 EStG（2027 年起版本）'),
+  dash: s('dash', '—'),
+
   // stage 3: comparison of savings amounts (PLAN_stage3.md b3, e, f6)
   kindAv: s('cmp3-kind', 'AV 多拿'),
   kindSame: s('cmp3-kind', '两者基本相同'),

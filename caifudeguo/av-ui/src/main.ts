@@ -5,6 +5,7 @@
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
+import { foerderung, foerderungKey } from './compare'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
@@ -175,6 +176,20 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
   return [head, ...parts.map(([k, m, s]) => h('tr', { class: `sub ${s}` }, h('th', { scope: 'row' }, t(k)), cell(m.avDepot, `cell-${id}-${s}-av`), cell(m.normalDepot, `cell-${id}-${s}-normal`)))]
 }
 
+/** Notes under the Förderung row/column (plan b, f5). Kids note only when the calculation includes a child. */
+function foerderungNotes(): HTMLElement[] {
+  return [
+    txt('p', 'foerPeriod', { class: 'help' }),
+    txt('p', 'foerBonus', { class: 'help' }),
+    countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
+  ].filter((n): n is HTMLParagraphElement => n !== null)
+}
+
+/** Kid rows that go into the calculation. */
+function countedKids(): string[] {
+  return state.kids
+}
+
 function renderResult(r: Result) {
   const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
   const x = formatEuro(Math.abs(v.diff))
@@ -205,12 +220,13 @@ function renderResult(r: Result) {
     h('thead', {}, h('tr', {}, h('td', {}), txt('th', 'colAv', { scope: 'col' }), txt('th', 'colNormal', { scope: 'col' }))),
     h('tbody', {},
       compareRows('rowContrib', r.totalContributions, 'totalContributions'),
+      h('tr', { 'class': 'foerderung', 'data-testid': 'row-foerderung' }, h('th', { scope: 'row' }, t(foerderungKey(state.taxSavingsMode))), cell(foerderung(r), 'cell-foerderung-av'), h('td', { 'data-testid': 'cell-foerderung-normal' }, t('dash'))),
       compareRows('rowFinal', r.finalCapital, 'finalCapital'),
       ...payoutRows('rowFirst', r.firstPayoutYear, 'firstPayoutYear'),
       ...payoutRows('rowRegular', r.regularPayoutYear, 'regularPayoutYear'),
       ...payoutRows('rowTotal', r.payoutTotal, 'payoutTotal'),
     ),
-  ), txt('p', 'taxNote', { class: 'help' }))
+  ), txt('p', 'taxNote', { class: 'help' }), ...foerderungNotes())
 
   const cols: [StrKey, string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
   const label = (k: StrKey) => STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
