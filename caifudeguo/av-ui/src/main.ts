@@ -5,7 +5,9 @@
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
+import { createCmp3 } from './cmp3'
 import { foerderung, foerderungKey } from './compare'
+import { h, txt } from './dom'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
@@ -13,32 +15,11 @@ import { parseAmount } from './parse'
 import { STR, t } from './strings'
 import './style.css'
 
-type Attrs = Record<string, string | boolean | undefined>
-type Child = Node | string | null | undefined | false
-
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag)
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === false)
-      continue
-    el.setAttribute(k, v === true ? '' : v)
-  }
-  for (const c of children) {
-    if (c !== null && c !== undefined && c !== false)
-      el.append(c)
-  }
-  return el
-}
-
-/** Element showing STR[key] with its data-testid. */
-function txt<K extends keyof HTMLElementTagNameMap>(tag: K, key: StrKey, attrs: Attrs = {}, vars: Record<string, string | number> = {}): HTMLElementTagNameMap[K] {
-  return h(tag, { 'data-testid': STR[key].id, ...attrs }, t(key, vars))
-}
-
 const state: FormValues = structuredClone(DEFAULTS)
 const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
 let lastChanged = ''
+const cmp3 = createCmp3()
 
 
 // ---------- inputs ----------
@@ -273,6 +254,7 @@ function update() {
     if (formErr)
       status.append(h('p', { 'class': 'err', 'data-testid': 'error-form' }, t(formErr.key, formErr.vars)))
   }
+  cmp3.update(state, outcome.ok ? outcome.result : null)
 }
 
 // ---------- page ----------
@@ -320,7 +302,6 @@ function build() {
   const results = h('section', { 'class': 'results', 'aria-labelledby': 'results-h' },
     txt('h2', 'resultsHeading', { id: 'results-h' }),
     status, monthlyBox, compare,
-    txt('div', 'chart', { 'class': 'placeholder chart', 'aria-disabled': 'true' }),
   )
 
   const yearly = h('section', { class: 'yearly-sec' }, toggle('yearly', 'yearly-region', yearlyBody), yearlyBody)
@@ -343,6 +324,7 @@ function build() {
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
     h('div', { class: 'grid' }, form, results),
+    cmp3.section,
     // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
     yearly,
