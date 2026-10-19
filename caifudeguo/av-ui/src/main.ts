@@ -5,39 +5,23 @@
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
+import { createCmp3 } from './cmp3'
+import { foerderung, foerderungKey, verdictSentence } from './compare'
+import { h, txt } from './dom'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
-import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, verdict } from './model'
+import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
 import { STR, t } from './strings'
 import './style.css'
 
-type Attrs = Record<string, string | boolean | undefined>
-type Child = Node | string | null | undefined | false
-
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag)
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === undefined || v === false)
-      continue
-    el.setAttribute(k, v === true ? '' : v)
-  }
-  for (const c of children) {
-    if (c !== null && c !== undefined && c !== false)
-      el.append(c)
-  }
-  return el
-}
-
-/** Element showing STR[key] with its data-testid. */
-function txt<K extends keyof HTMLElementTagNameMap>(tag: K, key: StrKey, attrs: Attrs = {}, vars: Record<string, string | number> = {}): HTMLElementTagNameMap[K] {
-  return h(tag, { 'data-testid': STR[key].id, ...attrs }, t(key, vars))
-}
-
 const state: FormValues = structuredClone(DEFAULTS)
 const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
 let lastChanged = ''
+const cmp3 = createCmp3()
+/** Kid rows touched (typed into or blurred); untouched rows are not calculated (plan f4). */
+const kidTouched: boolean[] = []
 
 
 // ---------- inputs ----------
@@ -97,13 +81,21 @@ function renderKids(focusIndex?: number) {
     const key = `kid-${i}`
     const input = h('input', { 'id': `in-${key}`, 'type': 'text', 'inputmode': 'numeric', 'autocomplete': 'off', 'aria-describedby': `err-${key}`, 'data-testid': `input-${key}` })
     input.value = value
+    input.addEventListener('blur', () => {
+      if (!kidTouched[i]) {
+        kidTouched[i] = true
+        update()
+      }
+    })
     input.addEventListener('input', () => {
       state.kids[i] = input.value
+      kidTouched[i] = true
       update()
     })
     const remove = h('button', { 'type': 'button', 'class': 'linkbtn', 'data-testid': `kid-remove-${i}`, 'aria-label': `${t('kidRemove')}：${t('kidLabel', { x: i + 1 })}` }, t('kidRemove'))
     remove.addEventListener('click', () => {
       state.kids.splice(i, 1)
+      kidTouched.splice(i, 1)
       renderKids()
       kidAddBtn.focus()
       update()
@@ -118,6 +110,7 @@ function renderKids(focusIndex?: number) {
 }
 kidAddBtn.addEventListener('click', () => {
   state.kids.push('')
+  kidTouched.push(false)
   renderKids(state.kids.length - 1)
   update()
 })
@@ -151,6 +144,23 @@ function modeRadios(): HTMLElement {
   return fs
 }
 
+// ---------- narrow-screen error banner (plan f3; hidden ≥ 1000 px by CSS) ----------
+
+const errJump = txt('button', 'errJump', { type: 'button', class: 'chip' })
+const errBanner = h('div', { class: 'err-banner', hidden: true }, txt('p', 'errBanner'), errJump)
+errJump.addEventListener('click', () => {
+  const target = document.querySelector<HTMLInputElement>('input[aria-invalid="true"]')
+  if (!target)
+    return
+  const region = target.closest<HTMLElement>('[hidden]')
+  if (region) {
+    const btn = document.querySelector<HTMLButtonElement>(`[aria-controls="${region.id}"]`)
+    btn?.click()
+  }
+  target.focus()
+  target.scrollIntoView({ block: 'center' })
+})
+
 // ---------- results ----------
 
 // Short live result under the savings input (single-column only). aria-hidden: the results status region announces.
@@ -175,13 +185,24 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
   return [head, ...parts.map(([k, m, s]) => h('tr', { class: `sub ${s}` }, h('th', { scope: 'row' }, t(k)), cell(m.avDepot, `cell-${id}-${s}-av`), cell(m.normalDepot, `cell-${id}-${s}-normal`)))]
 }
 
+/** Notes under the Förderung row/column (plan b, f5). Kids note only when the calculation includes a child. */
+function foerderungNotes(): HTMLElement[] {
+  return [
+    txt('p', 'resultSubsidyFootnote', { class: 'help' }),
+    txt('p', 'foerBonus', { class: 'help' }),
+    countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
+  ].filter((n): n is HTMLParagraphElement => n !== null)
+}
+
+/** Kid rows that go into the calculation. */
+function countedKids(): string[] {
+  return withTouchedKids(state, kidTouched).values.kids
+}
+
 function renderResult(r: Result) {
   const v = verdict(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)
   const x = formatEuro(Math.abs(v.diff))
   const rounded0 = roundHalfUp(Math.abs(v.diff)) === 0
-  const key: StrKey = v.kind === 'av'
-    ? 'verdictAv'
-    : v.kind === 'normal' ? 'verdictNormal' : rounded0 ? 'verdictEqual' : v.diff > 0 ? 'verdictSame' : 'verdictSameNormal'
   const sameKey = (av: StrKey, normal: StrKey, equal: StrKey): StrKey => rounded0 ? equal : v.diff > 0 ? av : normal
   const barKey: StrKey = v.kind === 'av' ? 'barAv' : v.kind === 'normal' ? 'barNormal' : sameKey('barSame', 'barSameNormal', 'barEqual')
   const inlineKey: StrKey = v.kind === 'av' ? 'inlineAv' : v.kind === 'normal' ? 'inlineNormal' : sameKey('inlineSameAv', 'inlineSameNormal', 'inlineEqual')
@@ -191,7 +212,7 @@ function renderResult(r: Result) {
     txt('span', 'barMonthly', { class: 'bar-monthly' }, { a: formatEuro(r.monthlyNet.avDepot), b: formatEuro(r.monthlyNet.normalDepot) }),
   )
   status.replaceChildren(...[
-    txt('p', key, { 'class': 'verdict', 'data-verdict': v.kind }, { x }),
+    h('p', { 'class': 'verdict', 'data-verdict': v.kind, 'data-testid': STR.verdictAv.id }, verdictSentence(r.payoutTotal.net.avDepot, r.payoutTotal.net.normalDepot)),
     txt('p', 'verdictBasis', { class: 'basis' }),
     txt('p', 'diffNote', { class: 'basis small' }),
     txt('p', 'sensitivity', { class: 'sensitivity' }),
@@ -205,12 +226,13 @@ function renderResult(r: Result) {
     h('thead', {}, h('tr', {}, h('td', {}), txt('th', 'colAv', { scope: 'col' }), txt('th', 'colNormal', { scope: 'col' }))),
     h('tbody', {},
       compareRows('rowContrib', r.totalContributions, 'totalContributions'),
+      h('tr', { 'class': 'foerderung', 'data-testid': 'row-foerderung' }, h('th', { scope: 'row' }, t(foerderungKey(state.taxSavingsMode))), cell(foerderung(r), 'cell-foerderung-av'), h('td', { 'data-testid': 'cell-foerderung-normal' }, t('dash'))),
       compareRows('rowFinal', r.finalCapital, 'finalCapital'),
       ...payoutRows('rowFirst', r.firstPayoutYear, 'firstPayoutYear'),
       ...payoutRows('rowRegular', r.regularPayoutYear, 'regularPayoutYear'),
       ...payoutRows('rowTotal', r.payoutTotal, 'payoutTotal'),
     ),
-  ), txt('p', 'taxNote', { class: 'help' }))
+  ), txt('p', 'taxNote', { class: 'help' }), ...foerderungNotes())
 
   const cols: [StrKey, string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
   const label = (k: StrKey) => STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
@@ -238,11 +260,13 @@ function showError(key: string, e: FieldError | undefined) {
 function update() {
   const amount = parseAmount(state.fields.savingsRate)
   twoContracts.hidden = !(amount.ok && amount.value > ONE_CONTRACT_CAP)
-  const outcome = evaluate(state)
-  const errors = outcome.ok ? {} : placeCrossField(outcome.errors, lastChanged)
+  const counted = withTouchedKids(state, kidTouched)
+  const outcome = evaluate(counted.values)
+  const errors = outcome.ok ? {} : placeCrossField(remapKidErrors(outcome.errors, counted.rowOf), lastChanged)
   for (const key of errorEls.keys())
     showError(key, errors[key])
   document.body.classList.toggle('invalid', !outcome.ok)
+  errBanner.hidden = outcome.ok
   if (outcome.ok) {
     renderResult(outcome.result)
   }
@@ -257,6 +281,7 @@ function update() {
     if (formErr)
       status.append(h('p', { 'class': 'err', 'data-testid': 'error-form' }, t(formErr.key, formErr.vars)))
   }
+  cmp3.update(counted.values, outcome.ok ? outcome.result : null)
 }
 
 // ---------- page ----------
@@ -291,6 +316,7 @@ function build() {
     txt('span', 'kids', { id: 'kids-label', class: 'label' }), kidsList, kidAddBtn, txt('p', 'kidsHelp', { id: 'help-kids', class: 'help' }))
 
   const form = h('form', { 'class': 'inputs', 'novalidate': true, 'aria-label': t('title') },
+    errBanner,
     h('div', { class: 'row2' }, field('age', 'age'), field('retirementAge', 'retirementAge')),
     field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts, inlineResult)),
     field('zveSavingsPhase', 'zveSavings', 'zveHelp'),
@@ -304,7 +330,6 @@ function build() {
   const results = h('section', { 'class': 'results', 'aria-labelledby': 'results-h' },
     txt('h2', 'resultsHeading', { id: 'results-h' }),
     status, monthlyBox, compare,
-    txt('div', 'chart', { 'class': 'placeholder chart', 'aria-disabled': 'true' }),
   )
 
   const yearly = h('section', { class: 'yearly-sec' }, toggle('yearly', 'yearly-region', yearlyBody), yearlyBody)
@@ -327,6 +352,7 @@ function build() {
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
     h('div', { class: 'grid' }, form, results),
+    cmp3.section,
     // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
     yearly,

@@ -116,7 +116,6 @@ export const STR = {
   tax: s('label-tax', '税', 'Steuer', 'Alltagsbegriff, kein Normzitat'),
   net: s('label-net', '税后', 'netto', 'Alltagsbegriff, kein Normzitat'),
   taxNote: s('result-tax-note', '领取时税（AV 账户：§22 Nr. 5 EStG）按个人所得税边际税率（Grenzsteuersatz）算；普通账户按资本利得税（Abgeltungsteuer）与个税取低者（Günstigerprüfung），先扣部分免税（Teilfreistellung）和储蓄者免税额。超过补贴上限多存的部分（Überzahlung）单独计算。', 'Günstigerprüfung', `§32d Abs. 6 EStG; Abgeltungsteuer §32d Abs. 1 EStG; Teilfreistellung §20 InvStG; Überzahlung: ${  TBD}`),
-  chart: s('placeholder-chart', '图表即将推出'),
 
   // yearly table
   yearly: s('toggle-yearly', '逐年明细'),
@@ -145,6 +144,80 @@ export const STR = {
   errCostsPayout: s('error', '费用必须低于领取期收益率。'),
   errFuture: s('error', '出生年份不能晚于今年（{year}）。'),
   errInvalid: s('error', '输入无效。'),
+
+  // stage 3: Förderung row/column (PLAN_stage3.md b „Förderung 列名“, f5)
+  foerAv: s('row-foerderung', '国家补贴*', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerSecondary: s('row-foerderung', '国家补贴*', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerConsume: s('row-foerderung', '国家补贴*', 'Zulagen', '§§83–85 EStG（2027 年起版本）'),
+  foerBonus: s('foerderung-bonus-note', '开始存钱那年年初未满 25 岁的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。', 'Erhöhung der Grundzulage', '§84 S. 2 EStG n.F.'),
+  foerKids: s('foerderung-kids-note', '假设孩子的补贴记在你名下。', 'Kinderzulage', '§85 EStG（2027 年起版本）'),
+  dash: s('dash', '—'),
+
+  // stage 3: comparison of savings amounts (PLAN_stage3.md b3, e, f6)
+  kindAv: s('cmp3-kind', 'AV 多拿'),
+  kindSame: s('cmp3-kind', '两者基本相同'),
+  kindNormal: s('cmp3-kind', '普通账户多拿'),
+  flipMark: s('cmp3-flip', '在 {x}–{y} € 之间变成『{k}』'),
+  sensNone: s('cmp3-summary-sensitivity', '在 120–13.680 € 之间，结论都是『{k}』。'),
+  sensPrefix: s('cmp3-summary-sensitivity', '按你现在的其他输入，'),
+  sensStart: s('cmp3-summary-sensitivity', '120 € 时{k}，'),
+  sensFirst: s('cmp3-summary-sensitivity', '在 {x}–{y} € 之间变成{k}'),
+  sensAgain: s('cmp3-summary-sensitivity', '在 {x}–{y} € 之间又变成{k}'),
+  sensMore: s('cmp3-summary-sensitivity', '，详见下表'),
+  maxAv: s('cmp3-summary-max', '在这些档位里，差额最大的是 {a} €（AV 多拿约 {x}，税后）。'),
+  maxSame: s('cmp3-summary-max', '在这些档位里，差额最大的是 {a} €（两者基本相同，AV 多约 {x}，税后）。'),
+  maxAllNormal: s('cmp3-summary-max', '在这些档位里，普通账户都多拿。'),
+  maxNoAv: s('cmp3-summary-max', '在这些档位里，AV 都没有多拿（普通账户多拿或两者基本相同）。'),
+  marginalHigher: s('cmp3-summary-marginal', '超过这个数，多存的部分放普通 ETF 账户税后回报更高。'),
+
+  // stage 3: comparison block UI (PLAN_stage3.md a, b, b2, e)
+  cmp3Heading: s('cmp3-heading', '不同存钱额的比较'),
+  cmp3Single: s('cmp3-single', '按单人报税（Grundtarif）', 'Grundtarif', '§32a Abs. 1 EStG'),
+  cmp3Toggle: s('cmp3-toggle', '不同存钱额的比较（表格 + 曲线）'),
+  cmp3Invalid: s('cmp3-status', '输入有误，暂无比较'),
+  cmp3Busy: s('cmp3-summary-busy', '正在计算…'),
+  cmp3Rebusy: s('cmp3-status-recalc', '正在重新计算…'),
+  cmp3Intro: s('cmp3-intro', '其他输入都按你现在填的值；按单人报税计算。'),
+  cmp3ColAmount: s('cmp3-col-amount', '每年自己存入（税前，没算补贴）', 'Sparbetrag', 'Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat'),
+  cmp3ColFoer: s('cmp3-col-foerderung', '国家补贴*'),
+  // Footnote under the comparison table.
+  subsidyFootnote: s('cmp3-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。'),
+  // Footnote under the main result (without the 『合计』 sentence).
+  resultSubsidyFootnote: s('result-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。'),
+  cmp3ColAv: s('cmp3-col-av', 'AV-Depot 领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
+  cmp3ColNormal: s('cmp3-col-normal', '普通 ETF 账户领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
+  cmp3ColDiff: s('cmp3-col-diff', '差额（税后，AV − 普通）'),
+  cmp3ColVerdict: s('cmp3-col-verdict', '结论（按税后）'),
+  cmp3ColMarginal: s('cmp3-col-marginal', '每多存 1 €，整个领取期税后一共多拿约 … €（没有按时间折算）'),
+  cmp3ColMonthly: s('cmp3-col-monthly', '每月到手（税后）', 'netto pro Monat', 'Alltagsbegriff, kein Normzitat'),
+  cmp3ColSplit: s('cmp3-col-split', 'AV 存 1.800 €，其余放普通 ETF 账户（领取期合计，税后）（约数）'),
+  cmp3MarginalCell: s('cmp3-cell-marginal', 'AV 约 {a} € · 普通 约 {b} €'),
+  cmp3MonthlyCell: s('cmp3-cell-monthly', 'AV {a} · 普通 {b}'),
+  cmp3UserTag: s('cmp3-user-tag', '你的金额'),
+  cmp3Label360: s('cmp3-label-360', '360 € 以上的部分每存 1 € 补 0,25 €（前 360 € 仍是每 1 € 补 0,50 €）', 'Grundzulage', '§84 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge'),
+  cmp3Label1800: s('cmp3-label-1800', '补贴和抵税都到顶：超过 1.800 € 的部分没有补贴，也不能抵税，领钱时按另一套规则交税', 'Grundzulage; Sonderausgabenabzug', '§84 / §10a Abs. 1 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge'),
+  cmp3Note1800Reinvest: s('cmp3-note-1800-reinvest', '选『再存进 AV』时，再存进去的退税也算在超出的部分里。'),
+  cmp3Note13680: s('cmp3-note-13680', '存入 13.680 € 时，选『存回 AV』和『另存普通账户』结果相同，选『花掉』不同（这是计算核心的处理办法，不是法律规定）。'),
+  cmp3DiffNote: s('cmp3-diff-note', '差额按未取整的金额计算，可能和两个合计相减差 1 €；百分比 = 差额 ÷ 两者中较大的领取期税后合计。'),
+  cmp3SplitUnder: s('cmp3-splitnote-under', '按你的收入和收益率假设计算，换了假设结果可能不同。'),
+  cmp3SplitNote: s('cmp3-splitnote-approx', '分两次计算后相加。普通账户那部分的税没有把 AV 领取的钱算进收入，所以这一列可能偏高，退休后收入越低偏得越多（例如退休后收入 10.000 € 时约 3,4 %；工作期收入 30.000 € 时约 3,5 %）。'),
+  cmp3SplitNoteSecondary: s('cmp3-splitnote-secondary', '选『另开账户投资』时，储蓄者免税额（Sparerpauschbetrag）重复算了一次。', 'Sparerpauschbetrag', '§20 Abs. 9 EStG'),
+  cmp3SplitLe1800: s('cmp3-splitnote-le1800', '—：每年存入不超过 1.800 € 时，这一列和『全部存进 AV』相同。'),
+  cmp3SplitLt120: s('cmp3-splitnote-lt120', '—：剩下的不到 120 €，计算器只能算每年至少 120 € 的金额，所以这一格不显示。'),
+  cmp3Share: s('cmp3-share', '（{p} %）'),
+
+  // stage 3: chart (PLAN_stage3.md c)
+  chartTitle: s('cmp3-chart-title', '税后差额（AV − 普通，领取期合计，€）'),
+  chartXAxis: s('cmp3-chart-xaxis', '档位（不按比例）'),
+  chartYAxis: s('cmp3-chart-yaxis', '税后差额（€）'),
+  chartBand: s('cmp3-chart-band', '浅色带 = 两者基本相同'),
+  chartCap: s('cmp3-marker-6840', '一份合同每年的上限'),
+  chartKink: s('cmp3-marker', '拐点 {a} €'),
+  chartTableFirst: s('cmp3-chart-caption', '具体数字以表格为准。'),
+
+  // stage 3: narrow-screen error banner (plan f3)
+  errBanner: s('form-error-banner', '请先改正标红的项目'),
+  errJump: s('form-error-jump', '跳到第一个标红项'),
 
   notesHeading: s('notes-heading', '提示 · 免责 · 来源'),
 } satisfies Record<string, UiString>

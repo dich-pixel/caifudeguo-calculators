@@ -1,12 +1,13 @@
 // Builds caifudeguo-av-depot-<version>-<shortsha>.zip (WordPress plugin) from a clean git checkout.
-// Usage: pnpm run wp:zip [-- --out <dir>] [-- --allow-dirty]
+// Usage (Node 22.14.0 required, see .nvmrc): pnpm run wp:zip [-- --out <dir>] [-- --allow-dirty] [-- --allow-node-mismatch]
+//   or: /exec-daemon/node caifudeguo/wp-plugin/build-zip.mjs   |   nvm use && pnpm run wp:zip
 // Copyright (C) 2026 Rich Dr (caifudeguo.de). AGPL-3.0-only.
 import { Buffer } from 'node:buffer'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { delimiter, dirname, join, relative } from 'node:path'
 import process from 'node:process'
 import { crc32, deflateRawSync } from 'node:zlib'
 
@@ -14,6 +15,12 @@ const root = new URL('../..', import.meta.url).pathname
 const args = process.argv.slice(2)
 const outIdx = args.indexOf('--out')
 const outDir = outIdx >= 0 ? args[outIdx + 1] : join(root, '..', 'wp-release')
+const EXPECTED_NODE = 'v22.14.0'
+const nodeMismatch = process.version !== EXPECTED_NODE
+if (nodeMismatch && !args.includes('--allow-node-mismatch')) {
+  console.error(`Node ${process.version} is running, but the release zip must be built with ${EXPECTED_NODE} (zlib decides the zip bytes).\nUse: nvm use && pnpm run wp:zip, or npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs (build box: see README, 2026-10-18 stage 3 row) (override: --allow-node-mismatch)`)
+  process.exit(1)
+}
 const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
 
 const dirty = git('status', '--porcelain')
@@ -26,7 +33,10 @@ const short = sha.slice(0, 7)
 const php = readFileSync(join(root, 'caifudeguo/wp-plugin/caifudeguo-av-depot/caifudeguo-av-depot.php'), 'utf8')
 const version = /^ \* Version:\s+(\S+)/m.exec(php)[1]
 
-execFileSync('pnpm', ['run', 'av:build'], { cwd: root, stdio: 'inherit', env: { ...process.env, CFD_BUILD_SHA: sha } })
+// run vite with the same Node as this process (pnpm's shebang uses PATH's node)
+const childPath = `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ''}`
+execFileSync('pnpm', ['run', 'av:build'], { cwd: root, stdio: 'inherit', env: { ...process.env, PATH: childPath, CFD_BUILD_SHA: sha } })
+const pnpmVersion = execFileSync('pnpm', ['--version'], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: childPath } }).trim()
 
 const stage = mkdtempSync(join(tmpdir(), 'cfd-wp-'))
 const plugin = join(stage, 'caifudeguo-av-depot')
@@ -42,8 +52,11 @@ writeFileSync(join(plugin, 'SOURCE.txt'), [
   `Built from: https://github.com/dich-pixel/caifudeguo-calculators/tree/${sha}`,
   `Commit:     ${sha}`,
   `Archive:    source/${srcName} (git archive of that commit)`,
-  'Build:      pnpm install --frozen-lockfile && pnpm run wp:zip',
+  'Build:      pnpm install --frozen-lockfile && pnpm run wp:zip (Node 22.14.0, see .nvmrc)',
   '            (page: caifudeguo/av-ui, plugin: caifudeguo/wp-plugin)',
+  `Node:       ${process.version}`,
+  ...(nodeMismatch ? [`Node version mismatch: expected ${EXPECTED_NODE}`] : []),
+  `pnpm:       ${pnpmVersion}`,
   'Calculation core (machine-generated copy in the page; only output rounding changed, calculation method unchanged): https://github.com/finanzfluss/calculators/tree/dcc29a69bdd8a3943d092e4c86ad42bff2767e1a',
   '',
 ].join('\n'))
