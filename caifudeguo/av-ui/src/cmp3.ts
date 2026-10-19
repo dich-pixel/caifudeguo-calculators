@@ -9,7 +9,7 @@ import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { drawChart } from './chart'
-import { amountId, flipText, foerderungKey, kindName, maxText, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
+import { amountId, flipText, kindName, maxText, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { formatEuro, formatNumberDe } from './format'
 import { ONE_CONTRACT_CAP } from './model'
@@ -158,10 +158,9 @@ export function createCmp3(): Cmp3View {
 
 /** Table (cards below 1000 px via CSS) and its notes. */
 export function table(values: FormValues, s: SweepResult): HTMLElement[] {
-  const foerKey = foerderungKey(values.taxSavingsMode)
   const cols: [string, string][] = [
     ['amount', t('cmp3ColAmount')],
-    ['foerderung', t(foerKey) + t('cmp3ColFoerSuffix')],
+    ['foerderung', t('cmp3ColFoer')],
     ['av', t('cmp3ColAv')],
     ['normal', t('cmp3ColNormal')],
     ['diff', t('cmp3ColDiff')],
@@ -199,6 +198,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     )
   }
   const notes: (StrKey | null)[] = [
+    'cmp3SubsidyFootnote',
     'cmp3DiffNote',
     values.taxSavingsMode === 'consume' ? 'foerPeriodConsume' : 'foerPeriod',
     'foerBonus',

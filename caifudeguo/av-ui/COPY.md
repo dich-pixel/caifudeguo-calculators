@@ -148,40 +148,41 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `cmp3-status` | cmp3Invalid | 输入有误，暂无比较 |  |  | 179 | – |
 | `cmp3-summary-busy` | cmp3Busy | 正在计算… |  |  | 180 | – |
 | `cmp3-status-recalc` | cmp3Rebusy | 正在重新计算… |  |  | 181 | – |
-| `cmp3-intro` | cmp3Intro | 其他输入都按你现在填的值；按单人报税计算。所有『合计』指整个领取期。 |  |  | 182 | – |
+| `cmp3-intro` | cmp3Intro | 其他输入都按你现在填的值；按单人报税计算。 |  |  | 182 | – |
 | `cmp3-col-amount` | cmp3ColAmount | 每年自己存入（税前，没算补贴） | Sparbetrag | Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat | 183 | – |
-| `cmp3-col-foerderung` | cmp3ColFoerSuffix | （整个存钱期，税前） |  |  | 184 | – |
-| `cmp3-col-av` | cmp3ColAv | AV-Depot 领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 185 | – |
-| `cmp3-col-normal` | cmp3ColNormal | 普通 ETF 账户领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 186 | – |
-| `cmp3-col-diff` | cmp3ColDiff | 差额（税后，AV − 普通） |  |  | 187 | – |
-| `cmp3-col-verdict` | cmp3ColVerdict | 结论（按税后） |  |  | 188 | – |
-| `cmp3-col-marginal` | cmp3ColMarginal | 每多存 1 €，整个领取期税后一共多拿约 … €（没有按时间折算） |  |  | 189 | – |
-| `cmp3-col-monthly` | cmp3ColMonthly | 每月到手（税后） | netto pro Monat | Alltagsbegriff, kein Normzitat | 190 | – |
-| `cmp3-col-split` | cmp3ColSplit | AV 存 1.800 €，其余放普通 ETF 账户（领取期合计，税后）（约数） |  |  | 191 | – |
-| `cmp3-cell-marginal` | cmp3MarginalCell | AV 约 {a} € · 普通 约 {b} € |  |  | 192 | – |
-| `cmp3-cell-monthly` | cmp3MonthlyCell | AV {a} · 普通 {b} |  |  | 193 | – |
-| `cmp3-user-tag` | cmp3UserTag | 你的金额 |  |  | 194 | – |
-| `cmp3-label-360` | cmp3Label360 | 360 € 以上的部分每存 1 € 补 0,25 €（前 360 € 仍是每 1 € 补 0,50 €） | Grundzulage | §84 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge | 195 | – |
-| `cmp3-label-1800` | cmp3Label1800 | 补贴和抵税都到顶：超过 1.800 € 的部分没有补贴，也不能抵税，领钱时按另一套规则交税 | Grundzulage; Sonderausgabenabzug | §84 / §10a Abs. 1 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge | 196 | – |
-| `cmp3-note-1800-reinvest` | cmp3Note1800Reinvest | 选『再存进 AV』时，再存进去的退税也算在超出的部分里。 |  |  | 197 | – |
-| `cmp3-note-13680` | cmp3Note13680 | 存入 13.680 € 时，选『存回 AV』和『另存普通账户』结果相同，选『花掉』不同（这是计算核心的处理办法，不是法律规定）。 |  |  | 198 | – |
-| `cmp3-diff-note` | cmp3DiffNote | 差额按未取整的金额计算，可能和两个合计相减差 1 €；百分比 = 差额 ÷ 两者中较大的领取期税后合计。 |  |  | 199 | – |
-| `cmp3-splitnote-under` | cmp3SplitUnder | 按你的收入和收益率假设计算，换了假设结果可能不同。 |  |  | 200 | – |
-| `cmp3-splitnote-approx` | cmp3SplitNote | 分两次计算后相加。普通账户那部分的税没有把 AV 领取的钱算进收入，所以这一列可能偏高，退休后收入越低偏得越多（例如退休后收入 10.000 € 时约 3,4 %；工作期收入 30.000 € 时约 3,5 %）。 |  |  | 201 | – |
-| `cmp3-splitnote-secondary` | cmp3SplitNoteSecondary | 选『另开账户投资』时，储蓄者免税额（Sparerpauschbetrag）重复算了一次。 | Sparerpauschbetrag | §20 Abs. 9 EStG | 202 | – |
-| `cmp3-splitnote-le1800` | cmp3SplitLe1800 | —：每年存入不超过 1.800 € 时，这一列和『全部存进 AV』相同。 |  |  | 203 | – |
-| `cmp3-splitnote-lt120` | cmp3SplitLt120 | —：剩下的不到 120 €，计算器只能算每年至少 120 € 的金额，所以这一格不显示。 |  |  | 204 | – |
-| `cmp3-share` | cmp3Share | （{p} %） |  |  | 205 | – |
-| `cmp3-chart-title` | chartTitle | 税后差额（AV − 普通，领取期合计，€） |  |  | 208 | – |
-| `cmp3-chart-xaxis` | chartXAxis | 档位（不按比例） |  |  | 209 | – |
-| `cmp3-chart-yaxis` | chartYAxis | 税后差额（€） |  |  | 210 | – |
-| `cmp3-chart-band` | chartBand | 浅色带 = 两者基本相同 |  |  | 211 | – |
-| `cmp3-marker-6840` | chartCap | 一份合同每年的上限 |  |  | 212 | – |
-| `cmp3-marker` | chartKink | 拐点 {a} € |  |  | 213 | – |
-| `cmp3-chart-caption` | chartTableFirst | 具体数字以表格为准。 |  |  | 214 | – |
-| `form-error-banner` | errBanner | 请先改正标红的项目 |  |  | 217 | 150 |
-| `form-error-jump` | errJump | 跳到第一个标红项 |  |  | 218 | 149 |
-| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 220 | 339 |
+| `cmp3-col-foerderung` | cmp3ColFoer | 国家补贴* |  |  | 184 | – |
+| `cmp3-subsidy-footnote` | cmp3SubsidyFootnote | * 整个存钱期的合计（税前）。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。 |  |  | 185 | – |
+| `cmp3-col-av` | cmp3ColAv | AV-Depot 领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 186 | – |
+| `cmp3-col-normal` | cmp3ColNormal | 普通 ETF 账户领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 187 | – |
+| `cmp3-col-diff` | cmp3ColDiff | 差额（税后，AV − 普通） |  |  | 188 | – |
+| `cmp3-col-verdict` | cmp3ColVerdict | 结论（按税后） |  |  | 189 | – |
+| `cmp3-col-marginal` | cmp3ColMarginal | 每多存 1 €，整个领取期税后一共多拿约 … €（没有按时间折算） |  |  | 190 | – |
+| `cmp3-col-monthly` | cmp3ColMonthly | 每月到手（税后） | netto pro Monat | Alltagsbegriff, kein Normzitat | 191 | – |
+| `cmp3-col-split` | cmp3ColSplit | AV 存 1.800 €，其余放普通 ETF 账户（领取期合计，税后）（约数） |  |  | 192 | – |
+| `cmp3-cell-marginal` | cmp3MarginalCell | AV 约 {a} € · 普通 约 {b} € |  |  | 193 | – |
+| `cmp3-cell-monthly` | cmp3MonthlyCell | AV {a} · 普通 {b} |  |  | 194 | – |
+| `cmp3-user-tag` | cmp3UserTag | 你的金额 |  |  | 195 | – |
+| `cmp3-label-360` | cmp3Label360 | 360 € 以上的部分每存 1 € 补 0,25 €（前 360 € 仍是每 1 € 补 0,50 €） | Grundzulage | §84 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge | 196 | – |
+| `cmp3-label-1800` | cmp3Label1800 | 补贴和抵税都到顶：超过 1.800 € 的部分没有补贴，也不能抵税，领钱时按另一套规则交税 | Grundzulage; Sonderausgabenabzug | §84 / §10a Abs. 1 EStG（2027 年起版本）; BMF FAQ Reform der privaten Altersvorsorge | 197 | – |
+| `cmp3-note-1800-reinvest` | cmp3Note1800Reinvest | 选『再存进 AV』时，再存进去的退税也算在超出的部分里。 |  |  | 198 | – |
+| `cmp3-note-13680` | cmp3Note13680 | 存入 13.680 € 时，选『存回 AV』和『另存普通账户』结果相同，选『花掉』不同（这是计算核心的处理办法，不是法律规定）。 |  |  | 199 | – |
+| `cmp3-diff-note` | cmp3DiffNote | 差额按未取整的金额计算，可能和两个合计相减差 1 €；百分比 = 差额 ÷ 两者中较大的领取期税后合计。 |  |  | 200 | – |
+| `cmp3-splitnote-under` | cmp3SplitUnder | 按你的收入和收益率假设计算，换了假设结果可能不同。 |  |  | 201 | – |
+| `cmp3-splitnote-approx` | cmp3SplitNote | 分两次计算后相加。普通账户那部分的税没有把 AV 领取的钱算进收入，所以这一列可能偏高，退休后收入越低偏得越多（例如退休后收入 10.000 € 时约 3,4 %；工作期收入 30.000 € 时约 3,5 %）。 |  |  | 202 | – |
+| `cmp3-splitnote-secondary` | cmp3SplitNoteSecondary | 选『另开账户投资』时，储蓄者免税额（Sparerpauschbetrag）重复算了一次。 | Sparerpauschbetrag | §20 Abs. 9 EStG | 203 | – |
+| `cmp3-splitnote-le1800` | cmp3SplitLe1800 | —：每年存入不超过 1.800 € 时，这一列和『全部存进 AV』相同。 |  |  | 204 | – |
+| `cmp3-splitnote-lt120` | cmp3SplitLt120 | —：剩下的不到 120 €，计算器只能算每年至少 120 € 的金额，所以这一格不显示。 |  |  | 205 | – |
+| `cmp3-share` | cmp3Share | （{p} %） |  |  | 206 | – |
+| `cmp3-chart-title` | chartTitle | 税后差额（AV − 普通，领取期合计，€） |  |  | 209 | – |
+| `cmp3-chart-xaxis` | chartXAxis | 档位（不按比例） |  |  | 210 | – |
+| `cmp3-chart-yaxis` | chartYAxis | 税后差额（€） |  |  | 211 | – |
+| `cmp3-chart-band` | chartBand | 浅色带 = 两者基本相同 |  |  | 212 | – |
+| `cmp3-marker-6840` | chartCap | 一份合同每年的上限 |  |  | 213 | – |
+| `cmp3-marker` | chartKink | 拐点 {a} € |  |  | 214 | – |
+| `cmp3-chart-caption` | chartTableFirst | 具体数字以表格为准。 |  |  | 215 | – |
+| `form-error-banner` | errBanner | 请先改正标红的项目 |  |  | 218 | 150 |
+| `form-error-jump` | errJump | 跳到第一个标红项 |  |  | 219 | 149 |
+| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 221 | 339 |
 
 ## Werbung/Anzeige (§5a Abs. 4 UWG)
 

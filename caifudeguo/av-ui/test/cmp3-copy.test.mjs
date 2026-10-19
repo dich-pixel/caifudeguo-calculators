@@ -9,7 +9,9 @@ describe('g4 wording', () => {
   it('plan texts', () => {
     expect(t('cmp3Toggle')).toBe('不同存钱额的比较（表格 + 曲线）')
     expect(t('cmp3Single')).toBe('按单人报税（Grundtarif）')
-    expect(t('cmp3Intro')).toBe('其他输入都按你现在填的值；按单人报税计算。所有『合计』指整个领取期。')
+    expect(t('cmp3Intro')).toBe('其他输入都按你现在填的值；按单人报税计算。')
+    expect(t('cmp3ColFoer')).toBe('国家补贴*')
+    expect(t('cmp3SubsidyFootnote')).toBe('* 整个存钱期的合计（税前）。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。')
     expect(t('cmp3Invalid')).toBe('输入有误，暂无比较')
     expect(t('cmp3Label360')).toBe('360 € 以上的部分每存 1 € 补 0,25 €（前 360 € 仍是每 1 € 补 0,50 €）')
     expect(t('cmp3Label1800')).toBe('补贴和抵税都到顶：超过 1.800 € 的部分没有补贴，也不能抵税，领钱时按另一套规则交税')
