@@ -289,13 +289,11 @@ describe('g3: Förderung row in the main result', () => {
   it('t3-39 label follows the tax-saving mode', async () => {
     const { foerderungKey } = await import('../src/compare')
     const { t } = await import('../src/strings')
-    expect(t(foerderungKey('avDepot'))).toBe('补贴和退税合计')
-    expect(t(foerderungKey('secondaryDepot'))).toBe('补贴和退税合计（退税存进另一个普通账户）')
-    expect(t(foerderungKey('consume'))).toBe('补贴合计（不含退税）')
+    expect(t(foerderungKey('avDepot'))).toBe('国家补贴*')
+    expect(t(foerderungKey('secondaryDepot'))).toBe('国家补贴*')
+    expect(t(foerderungKey('consume'))).toBe('国家补贴*')
     expect(t('foerBonus')).toBe('开始存钱那年年初未满 25 岁的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。')
     expect(t('foerKids')).toBe('假设孩子的补贴记在你名下。')
-    expect(t('foerPeriod')).toBe('补贴和退税都是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。')
-    expect(t('foerPeriodConsume')).toBe('补贴是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。')
     expect(t('chartCap')).toBe('一份合同每年的上限')
   })
   it('t3-40 main-result value = the user row of the table, no extra core run', async () => {

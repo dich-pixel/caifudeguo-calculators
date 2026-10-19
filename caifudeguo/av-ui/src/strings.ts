@@ -146,11 +146,9 @@ export const STR = {
   errInvalid: s('error', '输入无效。'),
 
   // stage 3: Förderung row/column (PLAN_stage3.md b „Förderung 列名“, f5)
-  foerAv: s('row-foerderung', '补贴和退税合计', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
-  foerSecondary: s('row-foerderung', '补贴和退税合计（退税存进另一个普通账户）', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
-  foerConsume: s('row-foerderung', '补贴合计（不含退税）', 'Zulagen', '§§83–85 EStG（2027 年起版本）'),
-  foerPeriod: s('foerderung-period', '补贴和退税都是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。'),
-  foerPeriodConsume: s('foerderung-period', '补贴是整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。'),
+  foerAv: s('row-foerderung', '国家补贴*', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerSecondary: s('row-foerderung', '国家补贴*', 'Förderung (Zulagen + Steuerersparnis)', 'Zulagen §§83–85 EStG, Sonderausgabenabzug §10a EStG（2027 年起版本）'),
+  foerConsume: s('row-foerderung', '国家补贴*', 'Zulagen', '§§83–85 EStG（2027 年起版本）'),
   foerBonus: s('foerderung-bonus-note', '开始存钱那年年初未满 25 岁的话，已含一次性 200 € 新手奖励（Erhöhung der Grundzulage，§84 S. 2 EStG n.F.）。', 'Erhöhung der Grundzulage', '§84 S. 2 EStG n.F.'),
   foerKids: s('foerderung-kids-note', '假设孩子的补贴记在你名下。', 'Kinderzulage', '§85 EStG（2027 年起版本）'),
   dash: s('dash', '—'),
@@ -182,7 +180,10 @@ export const STR = {
   cmp3Intro: s('cmp3-intro', '其他输入都按你现在填的值；按单人报税计算。'),
   cmp3ColAmount: s('cmp3-col-amount', '每年自己存入（税前，没算补贴）', 'Sparbetrag', 'Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat'),
   cmp3ColFoer: s('cmp3-col-foerderung', '国家补贴*'),
-  cmp3SubsidyFootnote: s('cmp3-subsidy-footnote', '* 整个存钱期的合计（税前）。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。'),
+  // Footnote under the comparison table.
+  subsidyFootnote: s('cmp3-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。'),
+  // Footnote under the main result (without the 『合计』 sentence).
+  resultSubsidyFootnote: s('result-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。'),
   cmp3ColAv: s('cmp3-col-av', 'AV-Depot 领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
   cmp3ColNormal: s('cmp3-col-normal', '普通 ETF 账户领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
   cmp3ColDiff: s('cmp3-col-diff', '差额（税后，AV − 普通）'),

@@ -198,9 +198,8 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     )
   }
   const notes: (StrKey | null)[] = [
-    'cmp3SubsidyFootnote',
+    'subsidyFootnote',
     'cmp3DiffNote',
-    values.taxSavingsMode === 'consume' ? 'foerPeriodConsume' : 'foerPeriod',
     'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,
     'cmp3SplitUnder',

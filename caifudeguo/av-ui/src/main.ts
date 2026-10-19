@@ -188,7 +188,7 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
 /** Notes under the Förderung row/column (plan b, f5). Kids note only when the calculation includes a child. */
 function foerderungNotes(): HTMLElement[] {
   return [
-    txt('p', state.taxSavingsMode === 'consume' ? 'foerPeriodConsume' : 'foerPeriod', { class: 'help' }),
+    txt('p', 'resultSubsidyFootnote', { class: 'help' }),
     txt('p', 'foerBonus', { class: 'help' }),
     countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
   ].filter((n): n is HTMLParagraphElement => n !== null)
