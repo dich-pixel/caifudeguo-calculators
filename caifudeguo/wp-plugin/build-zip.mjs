@@ -18,7 +18,7 @@ const outDir = outIdx >= 0 ? args[outIdx + 1] : join(root, '..', 'wp-release')
 const EXPECTED_NODE = 'v22.14.0'
 const nodeMismatch = process.version !== EXPECTED_NODE
 if (nodeMismatch && !args.includes('--allow-node-mismatch')) {
-  console.error(`Node ${process.version} is running, but the release zip must be built with ${EXPECTED_NODE} (zlib decides the zip bytes).\nUse: nvm use && pnpm run wp:zip, or npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs (build box: see README, 2026-10-18 stage 3 row) (override: --allow-node-mismatch)`)
+  console.error(`Node ${process.version} is running, but the release zip must be built with ${EXPECTED_NODE} (zlib decides the zip bytes).\nBuild it with: COREPACK_HOME=$HOME/.cache/corepack npx -y -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs (override: --allow-node-mismatch)`)
   process.exit(1)
 }
 const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
