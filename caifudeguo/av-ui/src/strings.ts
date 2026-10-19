@@ -201,7 +201,7 @@ export const STR = {
   cmp3SplitNote: s('cmp3-splitnote-approx', '分两次计算后相加。普通账户那部分的税没有把 AV 领取的钱算进收入，所以这一列可能偏高，退休后收入越低偏得越多（例如退休后收入 10.000 € 时约 3,4 %；工作期收入 30.000 € 时约 3,5 %）。'),
   cmp3SplitNoteSecondary: s('cmp3-splitnote-secondary', '选『另开账户投资』时，储蓄者免税额（Sparerpauschbetrag）重复算了一次。', 'Sparerpauschbetrag', '§20 Abs. 9 EStG'),
   cmp3SplitLe1800: s('cmp3-splitnote-le1800', '—：每年存入不超过 1.800 € 时，这一列和『全部存进 AV』相同。'),
-  cmp3SplitLt120: s('cmp3-splitnote-lt120', '—：剩下的不到 120 €，计算核心最低要 120 €（av-depot.ts:23），所以不算。'),
+  cmp3SplitLt120: s('cmp3-splitnote-lt120', '—：剩下的不到 120 €，计算器只能算每年至少 120 € 的金额，所以这一格不显示。'),
   cmp3Share: s('cmp3-share', '（{p} %）'),
 
   // stage 3: chart (PLAN_stage3.md c)

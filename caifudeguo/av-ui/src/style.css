@@ -196,6 +196,6 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table td { justify-content: flex-end; }
   .cmp3-table td::before { margin-right: auto; }
   .cmp3-table td.marginal { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
-  .cmp3-table td.marginal::before, .cmp3-table td.split::before { flex: 1 0 100%; }
+  .cmp3-table td.marginal::before, .cmp3-table td.split::before, .cmp3-table td.diff::before { flex: 1 0 100%; }
   .cmp3-region > p.help { margin: 2px 0; font-size: 0.8rem; }
 }
