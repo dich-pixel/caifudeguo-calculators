@@ -93,14 +93,15 @@ export function createCmp3(): Cmp3View {
 
   // Scheduling (plan e): debounce 300 ms, one core run per macrotask, newer input cancels the running round.
   let round = 0
-  const status = txt('p', 'cmp3Rebusy', { class: 'cmp3-status', hidden: true })
+  // Stage 4 (Q6): the status line always keeps its space (visibility via CSS class, not `hidden`), so the height does not jump.
+  const status = txt('p', 'cmp3Rebusy', { class: 'cmp3-status idle' })
   section.insertBefore(status, toggle)
   let token = 0
   function setBusy(busy: boolean) {
     summary.setAttribute('aria-busy', String(busy))
     region.classList.toggle('busy', busy)
     region.setAttribute('aria-busy', String(busy))
-    status.hidden = !busy || !data
+    status.classList.toggle('idle', !busy || !data)
   }
 
   function update(values: FormValues, main: Result | null) {

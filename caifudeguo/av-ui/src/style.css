@@ -132,7 +132,9 @@ input[type='text'] { min-height: 44px; }
 /* ---- stage 3: comparison block ---- */
 .cmp3 { margin-top: 16px; }
 .cmp3 h2 .tag { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+.cmp3-summary { min-height: 3.2em; }
 .cmp3-summary p { margin: 2px 0; }
+.cmp3-status.idle { visibility: hidden; }
 .cmp3-summary[aria-busy='true'], .cmp3-region.busy { color: var(--muted); }
 .cmp3-region { padding-top: 8px; }
 .cmp3 .num { white-space: nowrap; }

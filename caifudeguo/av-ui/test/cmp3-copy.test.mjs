@@ -103,4 +103,12 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(src('main.ts')).toContain("h('div', { class: 'joint' }, txt('p', 'noticeSingle', { class: 'notice' }))")
     expect(src('cmp3.ts')).toContain("txt('p', 'cmp3Intro', { class: 'help' })")
   })
+  it('q6: status line keeps its space, summary has a min-height', () => {
+    const cmp = src('cmp3.ts')
+    expect(cmp).not.toMatch(/status\.hidden/)
+    expect(cmp).toContain("status.classList.toggle('idle', !busy || !data)")
+    const css = src('style.css')
+    expect(css).toMatch(/\.cmp3-status\.idle \{ visibility: hidden; \}/)
+    expect(css).toMatch(/\.cmp3-summary \{ min-height: [\d.]+em; \}/)
+  })
 })
