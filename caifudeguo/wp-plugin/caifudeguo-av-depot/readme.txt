@@ -4,7 +4,7 @@ Tags: calculator, altersvorsorgedepot, chinese
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: AGPL-3.0-only
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -25,6 +25,10 @@ License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
 * 不建数据表、不存任何选项；删除插件后不留痕迹（uninstall.php 无需清理任何数据）。
 
+== 已知限制 ==
+
+* 不支持合并报税（Zusammenveranlagung，§26b EStG）：只按单人的基本税率（Grundtarif，§32a Abs. 1 EStG）计算。
+
 == 广告标注（§5a UWG）==
 
 如果在计算器旁边放券商返佣链接或其他有报酬的链接，必须按 §5a Abs. 4 UWG 清楚标明「Werbung」或「Anzeige」（例如链接前写「Anzeige：」）。计算器本身不含任何广告或返佣链接。
@@ -41,6 +45,9 @@ Corresponding source / 对应源代码：见 SOURCE.txt（fork 的固定 commit 
 Build / 打包：必须用 Node 22.14.0（.nvmrc）：`nvm use && pnpm run wp:zip`，或 `npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs`。其他版本会报错停下（`--allow-node-mismatch` 可跳过，SOURCE.txt 会记录实际版本）。
 
 == Changelog ==
+
+= 0.2.0 =
+* 阶段 4：去掉“合并报税 · 即将推出”按钮，写明不支持合并报税（Zusammenveranlagung）；新增单人报税脚注和配偶资格（mittelbar zulageberechtigt）说明；比较区计算时高度不再跳动；窄屏图表标签不重叠。数字不变。
 
 = 0.1.0 =
 * 第一版：中文界面（阶段 2，单人报税），WordPress iframe 短代码。
