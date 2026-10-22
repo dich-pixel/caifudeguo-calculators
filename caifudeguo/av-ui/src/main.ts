@@ -191,6 +191,7 @@ function foerderungNotes(): HTMLElement[] {
     txt('p', 'resultSubsidyFootnote', { class: 'help' }),
     txt('p', 'singleOnlyFootnote', { class: 'help' }),
     txt('p', 'spouseOnlyNotice', { class: 'help' }),
+    txt('p', 'jointApproxNotice', { class: 'help' }),
     txt('p', 'foerBonus', { class: 'help' }),
     countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
   ].filter((n): n is HTMLParagraphElement => n !== null)

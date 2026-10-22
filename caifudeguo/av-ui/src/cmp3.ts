@@ -202,6 +202,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     'subsidyFootnote',
     'singleOnlyFootnote',
     'spouseOnlyNotice',
+    'jointApproxNotice',
     'cmp3DiffNote',
     'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,

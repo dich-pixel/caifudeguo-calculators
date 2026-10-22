@@ -47,7 +47,7 @@ Build / 打包：必须用 Node 22.14.0（.nvmrc）：`nvm use && pnpm run wp:zi
 == Changelog ==
 
 = 0.2.0 =
-* 阶段 4：去掉合并报税的占位按钮，写明不支持合并报税（Zusammenveranlagung）；新增单人报税脚注和配偶资格（mittelbar zulageberechtigt）说明；比较区计算时高度不再跳动；窄屏图表标签不重叠。数字不变。
+* 阶段 4：去掉合并报税的占位按钮，写明不支持合并报税（Zusammenveranlagung）；新增单人报税脚注和配偶资格（mittelbar zulageberechtigt）说明和合并报税近似算法说明；比较区计算时高度不再跳动；窄屏图表标签不重叠。数字不变。
 
 = 0.1.0 =
 * 第一版：中文界面（阶段 2，单人报税），WordPress iframe 短代码。
