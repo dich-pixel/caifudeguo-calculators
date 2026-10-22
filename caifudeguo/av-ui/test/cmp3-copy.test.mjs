@@ -73,7 +73,7 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(STR.noticeSingle.source).toBe('§32a Abs. 1 EStG（Grundtarif）；§26b EStG（Zusammenveranlagung）')
     expect(t('singleOnlyFootnote')).toBe(FOOT)
     expect(t('spouseOnlyNotice')).toBe(SPOUSE)
-    expect(t('jointApproxNotice')).toBe('已婚合并报税（Zusammenveranlagung）的近似算法：把两人合计的应税收入（工作时和退休时都一样）各取一半填进来，每年存多少按实际金额填。这样算会有误差，退休时账户总额的差异一般在 5 % 以内。')
+    expect(t('jointApproxNotice')).toBe('已婚合并报税（Zusammenveranlagung）的近似算法：把两人合计的应税收入（工作时和退休时都一样）各取一半填进来，每年存多少按实际金额填。这样算会有误差，误差金额一般不超过退休时 AV 账户余额的约 5 %。')
     expect(STR.jointApproxNotice.de).toBe('Zusammenveranlagung')
     expect(STR.jointApproxNotice.source).toBe('§26b EStG')
     // Rich 2026-10-22: the joint Sparerpauschbetrag clause is removed from the footnote
