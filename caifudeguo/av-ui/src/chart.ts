@@ -94,8 +94,9 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
   // Label placement away from the line: centred above a peak; on a slope shifted to the open side.
   const ys = rows.map(r => g.y(r.diff))
   // Keep a label inside the SVG: estimated width (12 px CJK, 7 px other), shifted and anchored at its left edge.
+  const textWidth = (text: string) => [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 12 : 7), 0)
   const fit = (a: { 'x': number, 'y': number, 'text-anchor': string }, text: string) => {
-    const w = [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 12 : 7), 0)
+    const w = textWidth(text)
     const left = a['text-anchor'] === 'start' ? a.x : a['text-anchor'] === 'end' ? a.x - w : a.x - w / 2
     return { ...a, 'x': Math.max(2, Math.min(left, width - 2 - w)), 'text-anchor': 'start' }
   }
@@ -109,16 +110,28 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
     const dx = anchor === 'middle' ? 0 : anchor === 'end' ? -8 : 8
     return fit({ 'x': g.xs[i]! + dx, 'y': above ? y - gap : y + gap + 9, 'text-anchor': anchor }, text)
   }
+  const isKink = (r: CmpRow) => r.tier && (r.amount === 360 || r.amount === 1800)
+  // Stage 4 (Q7): estimated boxes of the kink labels; below 400 px a user label that would overlap one goes below its point.
+  const box = (a: { x: number, y: number }, text: string) => ({ l: a.x, r: a.x + textWidth(text), t: a.y - 11, b: a.y + 3 })
+  const kinkBoxes = rows.flatMap((r, i) => isKink(r) ? [box(label(i, true, 10, t('chartKink', { a: formatNumberDe(r.amount) })), t('chartKink', { a: formatNumberDe(r.amount) }))] : [])
+  const userLabel = (i: number, kink: boolean) => {
+    const text = t('cmp3UserTag')
+    const above = label(i, true, kink ? 24 : 10, text)
+    if (!narrow || kink)
+      return above
+    const u = box(above, text)
+    return kinkBoxes.some(k => u.l < k.r && k.l < u.r && u.t < k.b && k.t < u.b) ? label(i, false, 10, text) : above
+  }
   rows.forEach((r, i) => {
     const x = g.xs[i]!
     const y = g.y(r.diff)
     const id = amountId(r.amount)
     const pt = el('g', { 'data-testid': `cmp3-point-${id}` })
     pt.append(el('circle', { cx: x, cy: y, r: r.user ? 6 : 3, class: r.user ? 'pt user' : 'pt' }))
-    const kink = r.tier && (r.amount === 360 || r.amount === 1800)
+    const kink = isKink(r)
     // labels above the point (on a slope shifted to the open side); a user label on a kink is stacked above it
     if (r.user)
-      pt.append(el('text', { ...label(i, true, kink ? 24 : 10, t('cmp3UserTag')), class: 'user-label' }, t('cmp3UserTag')))
+      pt.append(el('text', { ...userLabel(i, kink), class: 'user-label' }, t('cmp3UserTag')))
     svg.append(pt)
     if (kink) {
       const m = el('g', { 'data-testid': `cmp3-marker-${r.amount}` })

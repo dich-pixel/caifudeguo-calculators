@@ -36,7 +36,7 @@ export const STR = {
   noticeKids: s('notice-kids-18', '只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。', 'Kindergeld / Kinderzulage', '§85 Abs. 1 EStG（2027 年起版本）; §32 Abs. 4 EStG'),
   noticeKidsDetails: s('notice-kids-18-details', '子女补贴（Kinderzulage）发给领取 Kindergeld 的那位家长。依据：§85 Abs. 1 EStG（2027 年起版本）、§32 Abs. 4 EStG。', 'Kinderzulage', '§85 Abs. 1 EStG（2027 年起版本）'),
   noticeDetailsSummary: s('notice-details', '详情与依据'),
-  noticeSingle: s('notice-single-2026', '目前只按未婚单人的基本税率（Grundtarif）和 2026 年税表计算，已婚合并报税的结果可能不同。', 'Grundtarif', '§32a Abs. 1 EStG'),
+  noticeSingle: s('notice-single-2026', '本计算器只按单人的基本税率（Grundtarif）和 2026 年税表计算，不支持已婚合并报税（Zusammenveranlagung）。合并报税时退税和领取时的税可能不同。', 'Grundtarif', '§32a Abs. 1 EStG（Grundtarif）；§26b EStG（Zusammenveranlagung）'),
   noticeParams: s('notice-params-date', '参数核对日期：{date}（计算参数版本 {sha}）'),
   noticeDisclaimer: s('notice-disclaimer', '本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。', 'keine Anlage- oder Steuerberatung'),
   noticeBrowser: s('notice-browser-only', '只在你的浏览器里计算，不上传任何数据，不用 cookie。'),
@@ -58,8 +58,6 @@ export const STR = {
   kidAdd: s('kid-add', '+ 添加孩子'),
   kidRemove: s('kid-remove', '删除'),
   kidLabel: s('label-kid', '第 {x} 个孩子的出生年份'),
-
-  joint: s('placeholder-joint', '合并报税（Zusammenveranlagung）· 即将推出', 'Zusammenveranlagung', '§26b EStG, Splittingtarif §32a Abs. 5 EStG'),
 
   // advanced inputs
   more: s('toggle-more', '更多设置'),
@@ -177,13 +175,18 @@ export const STR = {
   cmp3Invalid: s('cmp3-status', '输入有误，暂无比较'),
   cmp3Busy: s('cmp3-summary-busy', '正在计算…'),
   cmp3Rebusy: s('cmp3-status-recalc', '正在重新计算…'),
-  cmp3Intro: s('cmp3-intro', '其他输入都按你现在填的值；按单人报税计算。'),
+  cmp3Intro: s('cmp3-intro', '其他输入都按你现在填的值；只按单人报税（Grundtarif）计算，不支持合并报税（Zusammenveranlagung）。'),
   cmp3ColAmount: s('cmp3-col-amount', '每年自己存入（税前，没算补贴）', 'Sparbetrag', 'Begriff des Finanzfluss-Rechners (dcc29a6), kein Normzitat'),
   cmp3ColFoer: s('cmp3-col-foerderung', '国家补贴*'),
   // Footnote under the comparison table.
   subsidyFootnote: s('cmp3-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。'),
   // Footnote under the main result (without the 『合计』 sentence).
   resultSubsidyFootnote: s('result-subsidy-footnote', '* 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。'),
+  // Stage 4 (PLAN_stage4.md 2.2, Q10): shown after resultSubsidyFootnote and after subsidyFootnote (same text in both places).
+  singleOnlyFootnote: s('single-only-footnote', '已婚合并报税（Zusammenveranlagung，§26b EStG）按 Splittingtarif（§32a Abs. 5 EStG）算税，配偶自己的合同和补贴也要另算（只靠配偶才有资格的一方，补贴最多 175 €，存的钱算进配偶的抵税额度里）。这些计算器都没有算，结果只适用于单人。', 'Zusammenveranlagung; Splittingtarif', '§26b EStG; §32a Abs. 5 EStG; §10a Abs. 3 EStG; BMF FAQ Reform der privaten Altersvorsorge (175 €)'),
+  spouseOnlyNotice: s('spouse-only-notice', '如果你自己没有交法定养老保险，只是因为配偶有资格才能拿补贴（mittelbar zulageberechtigt，§79 S. 2 EStG），这个计算器不适合你：你的补贴最多 175 €，存的钱也要算进配偶的抵税额度，计算器算不出这些。', 'mittelbar zulageberechtigt', '§79 S. 2 EStG; §10a Abs. 3 EStG; BMF FAQ Reform der privaten Altersvorsorge (175 €)'),
+  // Stage 4 Q11 (Rich 2026-10-22): always right after spouseOnlyNotice.
+  jointApproxNotice: s('joint-approx-notice', '已婚合并报税（Zusammenveranlagung）的近似算法：把两人合计的应税收入（工作时和退休时都一样）各取一半填进来，每年存多少按实际金额填。这样算会有误差，误差金额一般不超过退休时 AV 账户余额的约 5 %。', 'Zusammenveranlagung', '§26b EStG'),
   cmp3ColAv: s('cmp3-col-av', 'AV-Depot 领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
   cmp3ColNormal: s('cmp3-col-normal', '普通 ETF 账户领取期合计（税后）', 'netto', 'Alltagsbegriff, kein Normzitat'),
   cmp3ColDiff: s('cmp3-col-diff', '差额（税后，AV − 普通）'),

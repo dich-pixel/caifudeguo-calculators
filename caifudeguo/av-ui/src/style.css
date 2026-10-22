@@ -51,7 +51,6 @@ button { font: inherit; cursor: pointer; }
 .toggle::before { content: '▸ '; }
 .toggle[aria-expanded='true']::before { content: '▾ '; }
 .more { padding-top: 10px; }
-.placeholder { display: block; width: 100%; background: #f0f0f1; color: #646970; border: 1px dashed #a7aaad; border-radius: 4px; padding: 10px; text-align: center; cursor: not-allowed; }
 .joint { margin: 8px 0 12px; }
 .notice { margin: 6px 0; }
 .joint .notice { font-size: 0.9rem; color: var(--muted); }
@@ -133,7 +132,9 @@ input[type='text'] { min-height: 44px; }
 /* ---- stage 3: comparison block ---- */
 .cmp3 { margin-top: 16px; }
 .cmp3 h2 .tag { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+.cmp3-summary { min-height: 3.2em; }
 .cmp3-summary p { margin: 2px 0; }
+.cmp3-status.idle { visibility: hidden; }
 .cmp3-summary[aria-busy='true'], .cmp3-region.busy { color: var(--muted); }
 .cmp3-region { padding-top: 8px; }
 .cmp3 .num { white-space: nowrap; }
