@@ -150,7 +150,7 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `cmp3-col-foerderung` | cmp3ColFoer | 国家补贴* |  |  | 180 | – |
 | `cmp3-subsidy-footnote` | subsidyFootnote | * 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。其他『合计』都指整个领取期。 |  |  | 182 | – |
 | `result-subsidy-footnote` | resultSubsidyFootnote | * 整个存钱期的合计，是存进去的钱（税前），不是领取时到手的钱。选『花掉』时只算补贴，选另外两种时也算上退税。 |  |  | 184 | 191 |
-| `single-only-footnote` | singleOnlyFootnote | 已婚合并报税（Zusammenveranlagung，§26b EStG）按 Splittingtarif（§32a Abs. 5 EStG）算税，夫妻的储蓄者免税额合计 2.000 €（§20 Abs. 9 S. 2 EStG），配偶自己的合同和补贴也要另算（只靠配偶才有资格的一方，补贴最多 175 €，存的钱算进配偶的抵税额度里）。这些计算器都没有算，结果只适用于单人。 | Zusammenveranlagung; Splittingtarif; Sparerpauschbetrag | §26b EStG; §32a Abs. 5 EStG; §20 Abs. 9 S. 2 EStG; §10a Abs. 3 EStG; BMF FAQ Reform der privaten Altersvorsorge (175 €) | 186 | 192 |
+| `single-only-footnote` | singleOnlyFootnote | 已婚合并报税（Zusammenveranlagung，§26b EStG）按 Splittingtarif（§32a Abs. 5 EStG）算税，配偶自己的合同和补贴也要另算（只靠配偶才有资格的一方，补贴最多 175 €，存的钱算进配偶的抵税额度里）。这些计算器都没有算，结果只适用于单人。 | Zusammenveranlagung; Splittingtarif | §26b EStG; §32a Abs. 5 EStG; §10a Abs. 3 EStG; BMF FAQ Reform der privaten Altersvorsorge (175 €) | 186 | 192 |
 | `spouse-only-notice` | spouseOnlyNotice | 如果你自己没有交法定养老保险，只是因为配偶有资格才能拿补贴（mittelbar zulageberechtigt，§79 S. 2 EStG），这个计算器不适合你：你的补贴最多 175 €，存的钱也要算进配偶的抵税额度，计算器算不出这些。 | mittelbar zulageberechtigt | §79 S. 2 EStG; §10a Abs. 3 EStG; BMF FAQ Reform der privaten Altersvorsorge (175 €) | 187 | 193 |
 | `cmp3-col-av` | cmp3ColAv | AV-Depot 领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 188 | – |
 | `cmp3-col-normal` | cmp3ColNormal | 普通 ETF 账户领取期合计（税后） | netto | Alltagsbegriff, kein Normzitat | 189 | – |
