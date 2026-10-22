@@ -39,8 +39,13 @@ export interface CmpRow {
   normalNet: number
   /** D = avNet − normalNet, unrounded */
   diff: number
-  /** D ÷ larger net total (display only) */
-  share: number
+  /**
+   * Stage 5 B: D ÷ largest AV balance at retirement (max over years of core capitalEnd.avDepot, incl. the
+   * separate account, Q14) × 100. null when that balance is below the yearly savings amount (point not drawn).
+   */
+  rel: number | null
+  /** the denominator of rel */
+  relBase: number
   kind: Kind
   /** b3 rule 3; null = "—" */
   marginal: Marginal | null
@@ -93,6 +98,12 @@ export function foerderungKey(mode: TaxSavingsMode): StrKey {
 
 export function foerderung(r: Result): number {
   return r.years.reduce((s, y) => s + y.contribution.avDepot, 0) - r.totalContributions.avDepot
+}
+
+/** Stage 5 B (PLAN_stage5.md B.1, Q5, Q6): relative difference against the AV balance at retirement. */
+export function relOf(diff: number, result: Result, amount: number): { rel: number | null, relBase: number } {
+  const relBase = Math.max(...result.years.map(y => y.capitalEnd.avDepot))
+  return { rel: relBase < amount ? null : (diff / relBase) * 100, relBase }
 }
 
 /** Cache (plan e3): results per amount while all inputs except savingsRate stay the same. */
@@ -197,7 +208,7 @@ export function sweep(values: FormValues, evaluateFn: EvaluateFn = evaluate, opt
       avNet,
       normalNet,
       diff: v.diff,
-      share: v.diff / Math.max(Math.abs(avNet), Math.abs(normalNet)),
+      ...relOf(v.diff, result, amount),
       kind: v.kind,
       marginal: null,
       split: null,

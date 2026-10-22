@@ -341,3 +341,33 @@ describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
     expect(pendingAmounts(v, { main: ref(v, 1800), today: TODAY }).length).toBe(15) // 11 tiers + 5.040/6.600/8.200/11.880
   })
 })
+
+// Stage 5 B.2 / Q14: rel = D ÷ max_y capitalEnd.avDepot × 100 (secondary account included); reference = scratch/b.json "Bincl"
+describe('stage 5 relative difference', () => {
+  it.each([
+    ['avDepot', 1800, 10.985623402669923],
+    ['avDepot', 13680, -1.2054294792595226],
+    ['secondaryDepot', 1800, 12.872505724227857],
+    ['consume', 1800, -0.9154122057864972],
+    ['consume', 120, 5.975576591019951],
+  ] as const)('%s %i: %f %', async (mode, amount, want) => {
+    const { relOf } = await import('../src/compare')
+    clearSweepCache()
+    const s = sweep(form({}, { taxSavingsMode: mode }), undefined, { today: TODAY })!
+    const r = s.rows.find(x => x.amount === amount)!
+    expect(Math.abs(r.rel! - want)).toBeLessThan(0.01)
+    const peak = Math.max(...r.result.years.map(y => y.capitalEnd.avDepot))
+    expect(r.relBase).toBe(peak)
+    expect(relOf(r.diff, r.result, amount)).toEqual({ rel: (r.diff / peak) * 100, relBase: peak })
+  })
+  it('not drawn only when the base is below the yearly amount (strict)', async () => {
+    const { relOf } = await import('../src/compare')
+    const res = (b: number) => ({ years: [{ capitalEnd: { avDepot: b } }] }) as unknown as Result
+    expect(relOf(10, res(119.99), 120).rel).toBeNull()
+    expect(relOf(12, res(120), 120).rel).toBe(10)
+    const { relText } = await import('../src/cmp3')
+    expect(relText(null)).toBe('—')
+    expect(relText(-1.2054)).toBe('-1,21 %'.replace('-', relText(-1).startsWith('−') ? '−' : '-'))
+    expect(relText(12.87)).toBe('12,9 %')
+  })
+})

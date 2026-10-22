@@ -2,40 +2,125 @@
  * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
  * Licensed under AGPL-3.0-only.
  *
- * Stage 3 chart (PLAN_stage3.md c): one line = after-tax difference D per amount, tiers evenly spaced.
+ * Stage 3 chart (PLAN_stage3.md c): after-tax difference D per amount, tiers evenly spaced.
+ * Stage 5 B (PLAN_stage5.md B.2): the ±1 % band is gone; a dashed line shows the relative difference on a right
+ * axis (%), its 0 at the same height as the left 0. Stage 5 A.3: every text label is placed so that it keeps
+ * ≥ 4 px from all other texts and from the 0 line and does not cover its own point.
+ * The dual-axis frame and the label placer are shared with the early-withdrawal chart (early-exit-view.ts).
  * Inline SVG via createElementNS, no library, no requests, no style attributes (CSP style-src 'self').
  * The SVG is aria-hidden; the figcaption + the table are the text version.
  */
 import type { CmpRow } from './compare'
+import type { StrKey } from './strings'
 import { amountId } from './compare'
 import { formatNumberDe } from './format'
 import { ONE_CONTRACT_CAP } from './model'
 import { t } from './strings'
 
 const NS = 'http://www.w3.org/2000/svg'
-const PAD = { left: 78, right: 20, top: 44, bottom: 44 }
+/** right = tick labels (start-anchored at width − right + 6) + the rotated right axis title at width − 8 */
+export const PAD = { left: 78, right: 66, top: 46, bottom: 44 }
 /** x-axis labels below 400 px */
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
+/** A.3: minimum gap between texts / to the 0 line */
+export const GAP = 4
+/** right axis: at most this many ticks below 400 px (B.2) */
+export const NARROW_RIGHT_TICKS = 3
 
 export function chartHeight(width: number): number {
   return Math.round(Math.min(320, Math.max(200, width * 0.45)))
 }
 
-export interface Geometry {
+export interface Axes {
+  /** € → px (left) */
+  y: (v: number) => number
+  /** % → px (right); yR(0) === y(0) */
+  yR: (v: number) => number
+  ticks: number[]
+  ticksR: number[]
+}
+
+export interface Geometry extends Axes {
+  top: number
   width: number
   height: number
   xs: number[]
-  y: (v: number) => number
-  /** band half-width per point: 1 % × larger net total (same rule as verdict()) */
-  band: number[]
-  ticks: number[]
 }
 
-function niceStep(range: number): number {
-  const raw = range / 4
+function niceStep(range: number, parts = 4): number {
+  const raw = range / parts
   const p = 10 ** Math.floor(Math.log10(raw || 1))
   const m = raw / p
   return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p
+}
+
+function niceRange(vals: number[], parts: number): { lo: number, hi: number, step: number } {
+  const all = vals.concat(0)
+  const min = Math.min(...all)
+  const max = Math.max(...all)
+  const step = niceStep(max - min || 1, parts)
+  return { lo: Math.floor(min / step) * step, hi: Math.ceil(max / step) * step || step, step }
+}
+
+const ticksIn = (lo: number, hi: number, step: number) => {
+  const out: number[] = []
+  for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + step * 1e-9; k++)
+    out.push(Math.abs(k * step) < 1e-9 ? 0 : k * step)
+  return out
+}
+
+/**
+ * Two value axes with their 0 at the same height (B.2): each axis gets nice limits, then both are widened to the
+ * same share above / below 0. Right values: null = not drawn (B.3) and not used for the range.
+ */
+export function axes(left: number[], right: (number | null)[], top: number, bottom: number, narrow: boolean): Axes {
+  const L = niceRange(left, 4)
+  const rv = right.filter((v): v is number => v !== null)
+  const R = niceRange(rv.length ? rv : [0], narrow ? 2 : 4)
+  const span = (a: { lo: number, hi: number }) => a.hi - a.lo
+  const up = Math.max(L.hi / span(L), R.hi / span(R))
+  const down = Math.max(-L.lo / span(L), -R.lo / span(R))
+  const loL = -down * span(L)
+  const hiL = up * span(L)
+  const loR = -down * span(R)
+  const hiR = up * span(R)
+  const h = bottom - top
+  const y = (v: number) => top + ((hiL - v) / (hiL - loL)) * h
+  const yR = (v: number) => top + ((hiR - v) / (hiR - loR)) * h
+  let stepR = R.step
+  let ticksR = ticksIn(loR, hiR, stepR)
+  const maxR = narrow ? NARROW_RIGHT_TICKS : Infinity
+  while (ticksR.length > maxR) {
+    stepR *= 2
+    ticksR = ticksIn(loR, hiR, stepR)
+  }
+  return { y, yR, ticks: ticksIn(loL, hiL, L.step).map(v => Math.round(v)), ticksR }
+}
+
+/** estimated text width (12 px font): 13 px per CJK character, 7 px otherwise */
+export const textWidth = (text: string) => [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)
+
+const LEGEND: [string, StrKey][] = [['line', 'chartLegendDiff'], ['rel', 'chartLegendRel']]
+
+/** legend items (first row baseline 31, second row 47) */
+export function legendLayout(width: number): { x: number, y: number, cls: string, key: StrKey }[] {
+  let x = PAD.left
+  let y = 31
+  return LEGEND.map(([cls, key]) => {
+    const w = 20 + textWidth(t(key))
+    if (x > PAD.left && x + w > width - 4) {
+      x = PAD.left
+      y += 16
+    }
+    const it = { x, y, cls, key }
+    x += w + 14
+    return it
+  })
+}
+
+/** top of the plot area: 15 px below the last legend row */
+export function plotTop(width: number): number {
+  return Math.max(PAD.top, Math.max(...legendLayout(width).map(i => i.y)) + 15)
 }
 
 export function geometry(rows: CmpRow[], width: number): Geometry {
@@ -43,19 +128,12 @@ export function geometry(rows: CmpRow[], width: number): Geometry {
   const n = rows.length
   const inner = width - PAD.left - PAD.right
   const xs = rows.map((_, i) => PAD.left + (n === 1 ? inner / 2 : (inner * i) / (n - 1)))
-  const band = rows.map(r => 0.01 * Math.max(Math.abs(r.avNet), Math.abs(r.normalNet)))
-  const vals = rows.flatMap((r, i) => [r.diff, band[i]!, -band[i]!]).concat(0)
-  const step = niceStep(Math.max(...vals) - Math.min(...vals))
-  const lo = Math.floor(Math.min(...vals) / step) * step
-  const hi = Math.ceil(Math.max(...vals) / step) * step
-  const ticks: number[] = []
-  for (let v = lo; v <= hi + step / 2; v += step)
-    ticks.push(Math.round(v))
-  const y = (v: number) => PAD.top + ((hi - v) / (hi - lo || 1)) * (height - PAD.top - PAD.bottom)
-  return { width, height, xs, y, band, ticks }
+  const top = plotTop(width)
+  const a = axes(rows.map(r => r.diff), rows.map(r => r.rel), top, height - PAD.bottom, width < 400)
+  return { width, height, top, xs, ...a }
 }
 
-function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, text?: string): SVGElementTagNameMap[K] {
+export function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, text?: string): SVGElementTagNameMap[K] {
   const e = document.createElementNS(NS, tag)
   for (const [k, v] of Object.entries(attrs))
     e.setAttribute(k, String(v))
@@ -64,88 +142,229 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
   return e
 }
 
+// ---- text boxes and label placement (A.3) ----------------------------------------------------------------------
+
+export interface Box { l: number, r: number, t: number, b: number }
+/** Estimated text width, deliberately generous (A.3): 13 px per CJK character, 7 px otherwise (12 px font). */
+/** box of a start-anchored text at baseline y */
+export const textBox = (x: number, y: number, text: string): Box => ({ l: x, r: x + textWidth(text), t: y - 11, b: y + 3 })
+const anchoredLeft = (x: number, anchor: string, w: number) => anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2
+const apart = (a: Box, b: Box, gap: number) => a.r + gap <= b.l || b.r + gap <= a.l || a.b + gap <= b.t || b.b + gap <= a.t
+
+export type Placed = Record<string, string | number> & { 'x': number, 'y': number, 'text-anchor': 'start' }
+
+/** Occupied boxes of one SVG; labels are placed one after another (first fit), each then occupies its box. */
+export class Placer {
+  readonly boxes: Box[] = []
+  readonly width: number
+  readonly height: number
+  readonly zeroY: number | null
+  readonly plot: { l: number, r: number }
+  constructor(width: number, height: number, zeroY: number | null, plot: { l: number, r: number }) {
+    this.width = width
+    this.height = height
+    this.zeroY = zeroY
+    this.plot = plot
+  }
+
+  occupy(b: Box) {
+    this.boxes.push(b)
+  }
+
+  /** a text that is always drawn at this place (titles, ticks, legend); it still occupies its box */
+  fixed(x: number, y: number, anchor: string, text: string): Placed {
+    const w = textWidth(text)
+    const p: Placed = { 'x': anchoredLeft(x, anchor, w), y, 'text-anchor': 'start' }
+    this.occupy(textBox(p.x, p.y, text))
+    return p
+  }
+
+  ok(b: Box, own: Box | null): boolean {
+    if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
+      return false
+    if (own && !apart(b, own, 1))
+      return false
+    if (this.zeroY !== null && b.r > this.plot.l && b.l < this.plot.r && !(b.b + GAP <= this.zeroY || this.zeroY + GAP <= b.t))
+      return false
+    return this.boxes.every(o => apart(b, o, GAP))
+  }
+
+  /** collision cost of a box: overlap with every grown box, the zero-line strip and the own point; out of bounds = ∞ */
+  cost(b: Box, own: Box | null): number {
+    if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
+      return Infinity
+    const ov = (o: Box, g: number) => Math.max(0, Math.min(b.r, o.r + g) - Math.max(b.l, o.l - g)) * Math.max(0, Math.min(b.b, o.b + g) - Math.max(b.t, o.t - g))
+    let c = this.boxes.reduce((n, o) => n + ov(o, GAP) + 100 * ov(o, 0), 0)
+    if (own)
+      c += 100 * ov(own, 1)
+    if (this.zeroY !== null)
+      c += ov({ l: this.plot.l, r: this.plot.r, t: this.zeroY, b: this.zeroY }, GAP)
+    return c
+  }
+
+  /** candidates: [x, baseline y, anchor]; x is clamped into the SVG; falls back to the first candidate */
+  place(text: string, candidates: [number, number, string][], own: Box | null): Placed {
+    const w = textWidth(text)
+    const fitted = candidates.map(([x, y, a]): Placed => ({ 'x': Math.max(2, Math.min(anchoredLeft(x, a, w), this.width - 2 - w)), y, 'text-anchor': 'start' }))
+    // first candidate that fits; otherwise the one with the least collision (overlap area, gap included)
+    const p = fitted.find(c => this.ok(textBox(c.x, c.y, text), own))
+      ?? fitted.reduce((best, c) => this.cost(textBox(c.x, c.y, text), own) < this.cost(textBox(best.x, best.y, text), own) ? c : best)
+    this.occupy(textBox(p.x, p.y, text))
+    return p
+  }
+}
+
+/** Candidate positions around a point (A.3): above (3 heights), below, left, right; slope side first. */
+export function around(x: number, y: number, r: number, slope: 'start' | 'end' | 'middle'): [number, number, string][] {
+  const dx = slope === 'middle' ? 0 : slope === 'end' ? -8 : 8
+  const out: [number, number, string][] = []
+  for (const gap of [10, 24, 38]) {
+    out.push([x + dx, y - gap, slope])
+    out.push([x, y - gap, 'middle'])
+  }
+  for (const gap of [10, 24]) {
+    out.push([x + dx, y + gap + 9, slope])
+    out.push([x, y + gap + 9, 'middle'])
+  }
+  out.push([x - r - 6, y + 4, 'end'], [x + r + 6, y + 4, 'start'])
+  // sideways shifted rows for crowded narrow charts
+  for (const gap of [10, 24, 38, 52, 66, 80]) {
+    for (const sx of [40, -40, 80, -80, 120, -120])
+      out.push([x + sx, y - gap, 'middle'], [x + sx, y + gap + 9, 'middle'])
+    out.push([x + 6, y - gap, 'start'], [x + 6, y + gap + 9, 'start'], [x - 6, y - gap, 'end'], [x - 6, y + gap + 9, 'end'])
+  }
+  return out
+}
+
+/** Frame shared by both charts: title, legend, grid + both tick columns, axis titles. Returns the placer. */
+export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width: number, height: number, title: StrKey, xAxis: StrKey }): Placer {
+  const { width, height } = o
+  const bottom = height - PAD.bottom
+  const pl = new Placer(width, height, a.y(0), { l: PAD.left, r: width - PAD.right })
+  svg.append(el('text', { ...pl.fixed(0, 13, 'start', t(o.title)), class: 'title' }, t(o.title)))
+  // legend: solid = € (left), dashed = % (right); may wrap to a second row on narrow screens
+  const lg = el('g', { 'class': 'legend', 'data-testid': 'chart-legend' })
+  for (const it of legendLayout(width)) {
+    lg.append(el('line', { 'x1': it.x, 'x2': it.x + 16, 'y1': it.y - 4, 'y2': it.y - 4, 'class': `${it.cls} sample`, ...(it.cls === 'rel' ? { 'stroke-dasharray': '5 3' } : {}) }))
+    lg.append(el('text', pl.fixed(it.x + 20, it.y, 'start', t(it.key)), t(it.key)))
+    pl.occupy({ l: it.x, r: it.x + 16, t: it.y - 6, b: it.y - 2 })
+  }
+  svg.append(lg)
+  for (const v of a.ticks) {
+    svg.append(el('line', { x1: PAD.left, x2: width - PAD.right, y1: a.y(v), y2: a.y(v), class: v === 0 ? 'zero' : 'grid' }))
+    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', formatNumberDe(v)), formatNumberDe(v)))
+  }
+  const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
+  for (const v of a.ticksR) {
+    const s = `${formatNumberDe(v, Number.isInteger(v) ? 0 : 1)} %`
+    rg.append(el('line', { x1: width - PAD.right, x2: width - PAD.right + 4, y1: a.yR(v), y2: a.yR(v), class: 'tick' }))
+    rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
+  }
+  svg.append(rg)
+  svg.append(el('text', pl.fixed(PAD.left + (width - PAD.left - PAD.right) / 2, height - 6, 'middle', t(o.xAxis)), t(o.xAxis)))
+  // rotated axis titles: vertical boxes
+  const mid = (a.top + bottom) / 2
+  const vbox = (cx: number, text: string) => pl.occupy({ l: cx - 9, r: cx + 5, t: mid - textWidth(text) / 2, b: mid + textWidth(text) / 2 })
+  svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'transform': `translate(12 ${mid}) rotate(-90)` }, t('chartYAxis')))
+  vbox(12, t('chartYAxis'))
+  svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'class': 'axis-title-right', 'transform': `translate(${width - 8} ${mid}) rotate(90)` }, t('chartYAxisRight')))
+  vbox(width - 8, t('chartYAxisRight'))
+  return pl
+}
+
+/** dashed relative line, broken at null points (B.3); hollow circles so it is not told apart by colour only */
+export function relLine(svg: SVGSVGElement, xs: number[], rel: (number | null)[], yR: (v: number) => number, ids: string[]): void {
+  const g = el('g', { 'class': 'rel-series', 'data-testid': 'chart-rel' })
+  let seg: string[] = []
+  const flush = () => {
+    if (seg.length > 1)
+      g.append(el('polyline', { 'points': seg.join(' '), 'class': 'rel', 'stroke-dasharray': '5 3' }))
+    seg = []
+  }
+  rel.forEach((v, i) => {
+    if (v === null)
+      return flush()
+    seg.push(`${xs[i]},${yR(v)}`)
+    g.append(el('circle', { 'cx': xs[i]!, 'cy': yR(v), 'r': 2.5, 'class': 'rel-pt', 'data-testid': `chart-rel-pt-${ids[i]}` }))
+  })
+  flush()
+  svg.append(g)
+}
+
+export const slopeOf = (ys: number[], i: number): 'start' | 'end' | 'middle' => {
+  const y = ys[i]!
+  const prev = ys[i - 1] ?? y
+  const next = ys[i + 1] ?? y
+  if (y <= prev && y <= next)
+    return 'middle'
+  return next < prev ? 'end' : 'start'
+}
+
 export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
   const g = geometry(rows, width)
   const svg = el('svg', { 'width': g.width, 'height': g.height, 'viewBox': `0 0 ${g.width} ${g.height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false' })
   const bottom = g.height - PAD.bottom
-  svg.append(el('text', { x: 0, y: 13, class: 'title' }, t('chartTitle')))
-  // y grid + labels
-  for (const v of g.ticks) {
-    svg.append(el('line', { x1: PAD.left, x2: g.width - PAD.right, y1: g.y(v), y2: g.y(v), class: v === 0 ? 'zero' : 'grid' }))
-    svg.append(el('text', { 'x': PAD.left - 4, 'y': g.y(v) + 4, 'text-anchor': 'end' }, formatNumberDe(v)))
-  }
-  // "两者基本相同" band (hatched via CSS class + legend)
-  const upper = g.xs.map((x, i) => `${x},${g.y(g.band[i]!)}`)
-  const lower = g.xs.map((x, i) => `${x},${g.y(-g.band[i]!)}`).reverse()
-  svg.append(el('polygon', { points: [...upper, ...lower].join(' '), class: 'band' }))
-  // 6.840 € dashed line (between points if it is not a row)
+  const narrow = width < 400
+  const pl = frame(svg, g, { width, height: g.height, title: 'chartTitle', xAxis: 'chartXAxis' })
+  const ys = rows.map(r => g.y(r.diff))
+  // x labels (fixed)
+  const xl: SVGTextElement[] = []
+  rows.forEach((r, i) => {
+    if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow)) {
+      const s = formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)
+      const w = textWidth(s)
+      const x = Math.max(2, Math.min(g.xs[i]! - w / 2, width - 2 - w))
+      pl.occupy(textBox(x, bottom + 14, s))
+      xl.push(el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': r.tier ? 'xl' : 'xl user' }, s))
+    }
+  })
+  // 6.840 € dashed line; its label goes where it fits (bottom, then top, either side)
   const i6840 = rows.findIndex(r => r.amount === ONE_CONTRACT_CAP)
   if (i6840 >= 0) {
     const x = g.xs[i6840]!
     const m = el('g', { 'data-testid': 'cmp3-marker-6840' })
-    m.append(el('line', { 'x1': x, 'x2': x, 'y1': PAD.top, 'y2': bottom, 'stroke-dasharray': '4 3', 'class': 'cap' }))
-    m.append(el('text', { 'x': x - 8, 'y': bottom - 6, 'text-anchor': 'end' }, t('chartCap')))
+    m.append(el('line', { 'x1': x, 'x2': x, 'y1': g.top, 'y2': bottom, 'stroke-dasharray': '4 3', 'class': 'cap' }))
+    const text = t('chartCap')
+    const cands: [number, number, string][] = []
+    for (const y of [bottom - 8, g.top + 12, bottom - 24, g.top + 28, (g.top + bottom) / 2])
+      cands.push([x - 8, y, 'end'], [x + 8, y, 'start'])
+    m.append(el('text', pl.place(text, cands, { l: x - 1, r: x + 1, t: g.top, b: bottom }), text))
     svg.append(m)
   }
-  // data line (solid)
-  svg.append(el('polyline', { points: g.xs.map((x, i) => `${x},${g.y(rows[i]!.diff)}`).join(' '), class: 'line' }))
-  // points, markers, x labels
-  const narrow = width < 400
-  // Label placement away from the line: centred above a peak; on a slope shifted to the open side.
-  const ys = rows.map(r => g.y(r.diff))
-  // Keep a label inside the SVG: estimated width (12 px CJK, 7 px other), shifted and anchored at its left edge.
-  const textWidth = (text: string) => [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 12 : 7), 0)
-  const fit = (a: { 'x': number, 'y': number, 'text-anchor': string }, text: string) => {
-    const w = textWidth(text)
-    const left = a['text-anchor'] === 'start' ? a.x : a['text-anchor'] === 'end' ? a.x - w : a.x - w / 2
-    return { ...a, 'x': Math.max(2, Math.min(left, width - 2 - w)), 'text-anchor': 'start' }
-  }
-  const label = (i: number, above: boolean, gap: number, text: string) => {
-    const y = ys[i]!
-    const prev = ys[i - 1] ?? y
-    const next = ys[i + 1] ?? y
-    const rising = next < prev
-    const peak = y <= prev && y <= next
-    const anchor = peak ? 'middle' : (above === rising ? 'end' : 'start')
-    const dx = anchor === 'middle' ? 0 : anchor === 'end' ? -8 : 8
-    return fit({ 'x': g.xs[i]! + dx, 'y': above ? y - gap : y + gap + 9, 'text-anchor': anchor }, text)
-  }
+  svg.append(el('polyline', { points: g.xs.map((x, i) => `${x},${ys[i]}`).join(' '), class: 'line' }))
+  relLine(svg, g.xs, rows.map(r => r.rel), g.yR, rows.map(r => amountId(r.amount)))
   const isKink = (r: CmpRow) => r.tier && (r.amount === 360 || r.amount === 1800)
-  // Stage 4 (Q7): estimated boxes of the kink labels; below 400 px a user label that would overlap one goes below its point.
-  const box = (a: { x: number, y: number }, text: string) => ({ l: a.x, r: a.x + textWidth(text), t: a.y - 11, b: a.y + 3 })
-  const kinkBoxes = rows.flatMap((r, i) => isKink(r) ? [box(label(i, true, 10, t('chartKink', { a: formatNumberDe(r.amount) })), t('chartKink', { a: formatNumberDe(r.amount) }))] : [])
-  const userLabel = (i: number, kink: boolean) => {
-    const text = t('cmp3UserTag')
-    const above = label(i, true, kink ? 24 : 10, text)
-    if (!narrow || kink)
-      return above
-    const u = box(above, text)
-    return kinkBoxes.some(k => u.l < k.r && k.l < u.r && u.t < k.b && k.t < u.b) ? label(i, false, 10, text) : above
-  }
+  // own marks first, so no label covers any point of its own kind
+  const own = rows.map((r, i): Box => {
+    const rad = r.user ? 6 : isKink(r) ? 5 : 3
+    return { l: g.xs[i]! - rad, r: g.xs[i]! + rad, t: ys[i]! - rad, b: ys[i]! + rad }
+  })
+  // priority: kink labels, then the user label (A.3)
+  const kinkText = new Map<number, [SVGTextElement]>()
+  rows.forEach((r, i) => {
+    if (!isKink(r))
+      return
+    const s = t('chartKink', { a: formatNumberDe(r.amount) })
+    kinkText.set(i, [el('text', pl.place(s, around(g.xs[i]!, ys[i]!, 5, slopeOf(ys, i)), own[i]!), s)])
+  })
   rows.forEach((r, i) => {
     const x = g.xs[i]!
-    const y = g.y(r.diff)
+    const y = ys[i]!
     const id = amountId(r.amount)
     const pt = el('g', { 'data-testid': `cmp3-point-${id}` })
     pt.append(el('circle', { cx: x, cy: y, r: r.user ? 6 : 3, class: r.user ? 'pt user' : 'pt' }))
-    const kink = isKink(r)
-    // labels above the point (on a slope shifted to the open side); a user label on a kink is stacked above it
-    if (r.user)
-      pt.append(el('text', { ...userLabel(i, kink), class: 'user-label' }, t('cmp3UserTag')))
+    if (r.user) {
+      const s = t('cmp3UserTag')
+      pt.append(el('text', { ...pl.place(s, around(x, y, 6, slopeOf(ys, i)), own[i]!), class: 'user-label' }, s))
+    }
     svg.append(pt)
-    if (kink) {
+    const k = kinkText.get(i)
+    if (k) {
       const m = el('g', { 'data-testid': `cmp3-marker-${r.amount}` })
-      m.append(el('rect', { x: x - 5, y: y - 5, width: 10, height: 10, class: 'kink' }))
-      m.append(el('text', label(i, true, 10, t('chartKink', { a: formatNumberDe(r.amount) })), t('chartKink', { a: formatNumberDe(r.amount) })))
+      m.append(el('rect', { x: x - 5, y: y - 5, width: 10, height: 10, class: 'kink' }), k[0])
       svg.append(m)
     }
-    if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow))
-      svg.append(el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': i === rows.length - 1 ? 'end' : 'middle', 'class': r.tier ? 'xl' : 'xl user' }, formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)))
   })
-  svg.append(el('text', { 'x': PAD.left + (g.width - PAD.left - PAD.right) / 2, 'y': g.height - 6, 'text-anchor': 'middle' }, t('chartXAxis')))
-  svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'transform': `translate(12 ${(PAD.top + bottom) / 2}) rotate(-90)` }, t('chartYAxis')))
-  // legend
-  svg.append(el('rect', { x: PAD.left, y: 20, width: 14, height: 10, class: 'band' }))
-  svg.append(el('text', { x: PAD.left + 18, y: 29 }, t('chartBand')))
+  svg.append(...xl)
   return svg
 }

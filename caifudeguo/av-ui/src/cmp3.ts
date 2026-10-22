@@ -19,9 +19,9 @@ export const DEBOUNCE_MS = 300
 
 const num = (s: string) => h('span', { class: 'num' }, s)
 
-function shareText(share: number): string {
-  const p = share * 100
-  return t('cmp3Share', { p: formatNumberDe(p, Math.abs(p) >= 10 ? 1 : 2) })
+/** Stage 5 B: relative difference in % (2 decimals, 1 from 10 %); null → dash (B.3) */
+export function relText(rel: number | null): string {
+  return rel === null ? t('dash') : t('relCell', { p: formatNumberDe(rel, Math.abs(rel) >= 10 ? 1 : 2) })
 }
 
 export interface Cmp3View {
@@ -75,6 +75,7 @@ export function createCmp3(): Cmp3View {
     const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'cmp3-chart' }, box, h('figcaption', {},
       h('span', { class: 'cap-verdict' }, verdictSentence(s.userRow.avNet, s.userRow.normalNet)), ' ',
       h('span', { class: 'cap-sensitivity' }, sensitivityText(s)), ' ',
+      txt('span', 'relNote'), ' ',
       txt('span', 'chartTableFirst')))
     // Draw before inserting (width of the open region = box width), so the chart never disappears for a frame.
     let lastWidth = Math.floor(region.clientWidth)
@@ -165,6 +166,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     ['av', t('cmp3ColAv')],
     ['normal', t('cmp3ColNormal')],
     ['diff', t('cmp3ColDiff')],
+    ['rel', t('cmp3ColRel')],
     ['verdict', t('cmp3ColVerdict')],
     ['marginal', t('cmp3ColMarginal')],
     ['monthly', t('cmp3ColMonthly')],
@@ -189,7 +191,8 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
       cell('foerderung', num(formatEuro(r.foerderung))),
       cell('av', num(formatEuro(r.avNet))),
       cell('normal', num(formatEuro(r.normalNet))),
-      cell('diff', num(formatEuro(r.diff)), ' ', num(shareText(r.share))),
+      cell('diff', num(formatEuro(r.diff))),
+      cell('rel', r.rel === null ? t('dash') : num(relText(r.rel))),
       cell('verdict', h('span', { 'data-verdict': r.kind }, kindName(r.kind)), r.flip ? h('span', { 'class': 'flip', 'data-testid': 'cmp3-flip' }, flipText(r.flip)) : null),
       cell('marginal', m
         ? num(t('cmp3MarginalCell', { a: formatNumberDe(m.av, 2), b: formatNumberDe(m.normal, 2) }))
@@ -204,6 +207,8 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     'spouseOnlyNotice',
     'jointApproxNotice',
     'cmp3DiffNote',
+    'relNote',
+    s.rows.some(r => r.rel === null) ? 'relOmitted' : null,
     'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,
     'cmp3SplitUnder',

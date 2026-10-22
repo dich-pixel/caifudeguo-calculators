@@ -65,7 +65,7 @@ describe('g12 testids and live regions', () => {
 })
 
 describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () => {
-  const FOOT = '已婚合并报税（Zusammenveranlagung，§26b EStG）按 Splittingtarif（§32a Abs. 5 EStG）算税，配偶自己的合同和补贴也要另算（只靠配偶才有资格的一方，补贴最多 175 €，存的钱算进配偶的抵税额度里）。这些计算器都没有算，结果只适用于单人。'
+  const FOOT = '已婚合并报税（Zusammenveranlagung，§26b EStG）按 Splittingtarif（§32a Abs. 5 EStG）算税，配偶自己的合同和补贴也要另算。本计算器没有算这些，结果只适用于单人。'
   const SPOUSE = '如果你自己没有交法定养老保险，只是因为配偶有资格才能拿补贴（mittelbar zulageberechtigt，§79 S. 2 EStG），这个计算器不适合你：你的补贴最多 175 €，存的钱也要算进配偶的抵税额度，计算器算不出这些。'
   it('plan texts', async () => {
     const { STR } = await import('../src/strings.ts')
@@ -73,9 +73,13 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(STR.noticeSingle.source).toBe('§32a Abs. 1 EStG（Grundtarif）；§26b EStG（Zusammenveranlagung）')
     expect(t('singleOnlyFootnote')).toBe(FOOT)
     expect(t('spouseOnlyNotice')).toBe(SPOUSE)
-    expect(t('jointApproxNotice')).toBe('已婚合并报税（Zusammenveranlagung）的近似算法：把两人合计的应税收入（工作时和退休时都一样）各取一半填进来，每年存多少按实际金额填。这样算会有误差，误差金额一般不超过退休时 AV 账户余额的约 5 %。')
+    expect(t('jointApproxNotice')).toBe('如果仍想参考：已婚合并报税（Zusammenveranlagung）的近似算法：把两人合计的应税收入（工作时和退休时都一样）各取一半填进来，每年存多少按实际金额填。这样算会有误差，误差金额一般不超过退休时 AV 账户余额的约 5 %。')
     expect(STR.jointApproxNotice.de).toBe('Zusammenveranlagung')
-    expect(STR.jointApproxNotice.source).toBe('§26b EStG')
+    expect(STR.jointApproxNotice.source).toBe('§26b EStG; §32a Abs. 5 EStG')
+    // stage 5 A.4: 175 € only in spouseOnlyNotice
+    expect(t('singleOnlyFootnote')).not.toContain('175')
+    expect(STR.singleOnlyFootnote.source).not.toContain('175')
+    expect(Object.entries(STR).filter(([, v]) => v.zh.includes('175 €')).map(([k]) => k)).toEqual(['spouseOnlyNotice'])
     // Rich 2026-10-22: the joint Sparerpauschbetrag clause is removed from the footnote
     expect(t('singleOnlyFootnote')).not.toMatch(/2\.000|储蓄者免税额|§20/)
     expect(STR.singleOnlyFootnote.de).toBe('Zusammenveranlagung; Splittingtarif')
@@ -109,7 +113,7 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(css).toContain('.joint .notice')
   })
   it('csp: no style attributes anywhere in the UI source; notices rendered', () => {
-    for (const f of ['main.ts', 'cmp3.ts', 'compare.ts', 'chart.ts', 'dom.ts'])
+    for (const f of ['main.ts', 'cmp3.ts', 'compare.ts', 'chart.ts', 'dom.ts', 'early-exit.ts', 'early-exit-view.ts'])
       expect(src(f)).not.toMatch(/style=|\.style\.|setAttribute\('style'/)
     expect(src('main.ts')).toContain("h('div', { class: 'joint' }, txt('p', 'noticeSingle', { class: 'notice' }))")
     expect(src('cmp3.ts')).toContain("txt('p', 'cmp3Intro', { class: 'help' })")
