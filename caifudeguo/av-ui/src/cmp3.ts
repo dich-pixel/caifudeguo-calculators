@@ -199,6 +199,8 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
   }
   const notes: (StrKey | null)[] = [
     'subsidyFootnote',
+    'singleOnlyFootnote',
+    'spouseOnlyNotice',
     'cmp3DiffNote',
     'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,

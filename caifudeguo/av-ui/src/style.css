@@ -51,7 +51,6 @@ button { font: inherit; cursor: pointer; }
 .toggle::before { content: '▸ '; }
 .toggle[aria-expanded='true']::before { content: '▾ '; }
 .more { padding-top: 10px; }
-.placeholder { display: block; width: 100%; background: #f0f0f1; color: #646970; border: 1px dashed #a7aaad; border-radius: 4px; padding: 10px; text-align: center; cursor: not-allowed; }
 .joint { margin: 8px 0 12px; }
 .notice { margin: 6px 0; }
 .joint .notice { font-size: 0.9rem; color: var(--muted); }

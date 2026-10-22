@@ -343,3 +343,12 @@ describe('misc', () => {
     expect(t('noticeKids')).toBe('只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。')
   })
 })
+
+describe('stage 4 (PLAN_stage4.md 2.4)', () => {
+  // Source-level checks (no placeholder button, no style attributes) are in cmp3-copy.test.mjs.
+  it('new notice texts', () => {
+    expect(t('noticeSingle')).toBe('本计算器只按单人的基本税率（Grundtarif）和 2026 年税表计算，不支持已婚合并报税（Zusammenveranlagung）。合并报税时退税和领取时的税可能不同。')
+    expect(t('cmp3Intro')).toBe('其他输入都按你现在填的值；只按单人报税（Grundtarif）计算，不支持合并报税（Zusammenveranlagung）。')
+    expect(t('noticeSingle')).not.toContain('即将推出')
+  })
+})

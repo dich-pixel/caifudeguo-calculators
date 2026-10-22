@@ -189,6 +189,8 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
 function foerderungNotes(): HTMLElement[] {
   return [
     txt('p', 'resultSubsidyFootnote', { class: 'help' }),
+    txt('p', 'singleOnlyFootnote', { class: 'help' }),
+    txt('p', 'spouseOnlyNotice', { class: 'help' }),
     txt('p', 'foerBonus', { class: 'help' }),
     countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
   ].filter((n): n is HTMLParagraphElement => n !== null)
@@ -321,7 +323,7 @@ function build() {
     field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts, inlineResult)),
     field('zveSavingsPhase', 'zveSavings', 'zveHelp'),
     kids,
-    h('div', { class: 'joint' }, txt('button', 'joint', { 'type': 'button', 'class': 'placeholder', 'disabled': true, 'aria-disabled': 'true' }), txt('p', 'noticeSingle', { class: 'notice' })),
+    h('div', { class: 'joint' }, txt('p', 'noticeSingle', { class: 'notice' })),
     toggle('more', 'more-region', more),
     more,
   )
