@@ -77,23 +77,37 @@ export function axes(left: number[], right: (number | null)[], top: number, bott
   const L = niceRange(left, 4)
   const rv = right.filter((v): v is number => v !== null)
   const R = niceRange(rv.length ? rv : [0], narrow ? 2 : 4)
+  const minR = Math.min(0, ...rv)
   const span = (a: { lo: number, hi: number }) => a.hi - a.lo
-  const up = Math.max(L.hi / span(L), R.hi / span(R))
-  const down = Math.max(-L.lo / span(L), -R.lo / span(R))
-  const loL = -down * span(L)
-  const hiL = up * span(L)
-  const loR = -down * span(R)
-  const hiR = up * span(R)
+  const maxR = narrow ? NARROW_RIGHT_TICKS : Infinity
+  let stepR = R.step
+  let loL = 0
+  let hiL = 0
+  let loR = 0
+  let hiR = 0
+  let ticksR: number[] = []
+  // Stage 5 follow-up: when a value is below 0 the right axis needs a tick below 0 (lo ≤ −step),
+  // and both axes keep their 0 at the same height.
+  for (let pass = 0; pass < 12; pass++) {
+    const rLo = minR < 0 ? Math.min(R.lo, -stepR * Math.ceil(-minR / stepR)) : R.lo
+    const rHi = Math.max(R.hi, stepR * Math.ceil(Math.max(0, ...rv) / stepR) || stepR)
+    const RR = { lo: rLo, hi: rHi }
+    const up = Math.max(L.hi / span(L), RR.hi / span(RR))
+    const down = Math.max(-L.lo / span(L), -RR.lo / span(RR))
+    loL = -down * span(L)
+    hiL = up * span(L)
+    loR = -down * span(RR)
+    hiR = up * span(RR)
+    ticksR = ticksIn(loR, hiR, stepR)
+    if (ticksR.length > maxR) {
+      stepR *= 2
+      continue
+    }
+    break
+  }
   const h = bottom - top
   const y = (v: number) => top + ((hiL - v) / (hiL - loL)) * h
   const yR = (v: number) => top + ((hiR - v) / (hiR - loR)) * h
-  let stepR = R.step
-  let ticksR = ticksIn(loR, hiR, stepR)
-  const maxR = narrow ? NARROW_RIGHT_TICKS : Infinity
-  while (ticksR.length > maxR) {
-    stepR *= 2
-    ticksR = ticksIn(loR, hiR, stepR)
-  }
   return { y, yR, ticks: ticksIn(loL, hiL, L.step).map(v => Math.round(v)), ticksR }
 }
 
@@ -255,6 +269,8 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
     svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', formatNumberDe(v)), formatNumberDe(v)))
   }
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
+  // subtle 0 reference line of the right axis (true zero, shared with the left axis)
+  svg.append(el('line', { 'x1': PAD.left, 'x2': width - PAD.right, 'y1': a.yR(0), 'y2': a.yR(0), 'class': 'zero-r', 'data-testid': 'chart-zero-r' }))
   for (const v of a.ticksR) {
     const s = `${formatNumberDe(v, Number.isInteger(v) ? 0 : 1)} %`
     rg.append(el('line', { x1: width - PAD.right, x2: width - PAD.right + 4, y1: a.yR(v), y2: a.yR(v), class: 'tick' }))

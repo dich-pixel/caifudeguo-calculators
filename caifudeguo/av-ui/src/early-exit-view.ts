@@ -147,6 +147,8 @@ export function summaryLines(e: EarlyExit): HTMLElement[] {
 
 export interface EarlyExitView {
   section: HTMLElement
+  /** short summary placed directly below the overall result footnotes (heading, disclaimer, one line per age, link down) */
+  brief: HTMLElement
   update: (values: FormValues, main: { result: Result, coreInput: Record<string, unknown> } | null) => void
 }
 
@@ -154,10 +156,14 @@ export function createEarlyExit(): EarlyExitView {
   const summary = h('div', { 'class': 'ee-summary', 'data-testid': 'ee-summary', 'aria-live': 'polite' })
   const region = h('div', { 'id': 'ee-region', 'class': 'ee-region', 'hidden': true })
   const toggle = txt('button', 'eeToggle', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': 'ee-region' })
-  const section = h('section', { 'class': 'cmp3 ee', 'aria-labelledby': 'ee-h', 'data-testid': 'ee' },
-    h('h2', { id: 'ee-h' }, txt('span', 'eeHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
+  const brief = h('div', { 'class': 'ee-brief', 'role': 'group', 'aria-labelledby': 'ee-brief-h', 'data-testid': 'ee-brief' },
+    h('h2', { id: 'ee-brief-h' }, txt('span', 'eeHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
     txt('p', 'eeDisclaimer', { class: 'ee-disclaimer' }),
     summary,
+    h('p', { class: 'ee-more' }, txt('a', 'eeMore', { 'href': '#ee', 'data-testid': 'ee-more' })),
+  )
+  const section = h('section', { 'id': 'ee', 'class': 'cmp3 ee', 'aria-labelledby': 'ee-h', 'data-testid': 'ee' },
+    h('h2', { id: 'ee-h' }, txt('span', 'eeDetailHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
     toggle,
     region,
   )
@@ -212,5 +218,5 @@ export function createEarlyExit(): EarlyExitView {
     summary.replaceChildren(...(data ? summaryLines(data) : [txt('p', 'eeInvalid')]))
     render()
   }
-  return { section, update }
+  return { brief, section, update }
 }

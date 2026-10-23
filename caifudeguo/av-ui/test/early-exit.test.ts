@@ -41,8 +41,8 @@ describe('data points (C.4)', () => {
 describe('c.6 reference values', () => {
   it('e1: 1.800, reinvest, N = 10', () => {
     const p = at(form(), 10)
-    // core row.age = age at the start of year N (35 + 9); the plan's 「45 岁」 counts the end of year N
-    expect(p.age).toBe(44)
+    // age at the END of year N (= withdrawal): core row.age (start of year, 35 + 9) + 1 = 45, as in the plan
+    expect(p.age).toBe(45)
     near(p.avBalance, 34106.58)
     near(p.zulagen, 5400)
     near(p.taxSaving, 2720)
@@ -65,7 +65,7 @@ describe('c.6 reference values', () => {
   })
   it('e2: N = 20', () => {
     const p = at(form(), 20)
-    expect(p.age).toBe(54)
+    expect(p.age).toBe(55)
     near(p.avBalance, 94043.55)
     near(p.taxableGain, 41803.55)
     near(p.avTax, 17714.44)
@@ -162,16 +162,16 @@ describe('invariants over modes and inputs (E.7)', () => {
 })
 
 describe('q9 half taxation and the not-drawn rule', () => {
-  it('50 → 67: year 15 (age 64, 15 years) halved, years 5 and 10 not', () => {
+  it('50 → 67: year 15 (age 65, 15 years) halved, years 5 and 10 not', () => {
     const e = run(form({ age: '50' }))
     expect(e.points.map(p => p.year)).toEqual([5, 10, 15, 16])
     const [p5, p10, p15] = e.points
     expect([p5!.half, p10!.half, p15!.half]).toEqual([false, false, true])
-    expect(p15!.age).toBe(64)
+    expect(p15!.age).toBe(65)
     near(p15!.taxableGain, p15!.gain / 2)
     near(p10!.taxableGain, p10!.gain)
   })
-  it('default: year 30 (age 64) halved', () => {
+  it('default: year 30 (age 65) halved', () => {
     const p = at(form(), 30)
     expect(p.half).toBe(true)
     expect(at(form(), 25).half).toBe(false)
@@ -232,7 +232,20 @@ describe('view (C.5)', () => {
     const o = evaluate(form(), TODAY)
     v.update(form(), o.ok ? o : null)
     const s = v.section as unknown as FakeEl
-    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(1)
+    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(0)
+    // follow-up: heading + disclaimer + per-age lines + link down live in the brief block (below the result footnotes)
+    const b = v.brief as unknown as FakeEl
+    expect(byTestId(b, 'ee-disclaimer')).toHaveLength(1)
+    expect(byTestId(b, 'ee-heading')).toHaveLength(1)
+    expect(all(b, x => x.tag === 'h2')).toHaveLength(1)
+    expect(byTestId(b, 'ee-summary-5')).toHaveLength(1)
+    expect(byTestId(b, 'ee-summary-5')[0]!.textContent).toMatch(/^第 5 年年末（40 岁）取出：AV 一侧到手 /) // default age 35 + 5
+    const more = byTestId(b, 'ee-more')[0]!
+    expect(more.tag).toBe('a')
+    expect(more.attrs.href).toBe('#ee')
+    expect(more.textContent).toBe('详细计算结果和曲线见下方。')
+    expect(s.attrs.id).toBe('ee')
+    expect(byTestId(s, 'ee-detail-heading')).toHaveLength(1)
     const btn = all(s, x => x.tag === 'button')[0]!
     btn.click()
     const ids = all(s, x => !!x.attrs['data-testid']).map(x => x.attrs['data-testid'])

@@ -127,3 +127,14 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(css).toMatch(/\.cmp3-summary \{ min-height: [\d.]+em; \}/)
   })
 })
+
+describe('stage 5 follow-up: early-withdrawal brief placement', () => {
+  it('brief sits at the end of the results section (after compare = after the last footnote); details stay below', () => {
+    const m = src('main.ts')
+    expect(m).toContain('status, monthlyBox, compare,\n    // stage 5 follow-up: early-withdrawal short summary right after the result footnotes\n    early.brief,\n  )')
+    expect(m.indexOf('foerBonus')).toBeLessThan(m.indexOf('early.brief'))
+    expect(m.indexOf('cmp3.section,')).toBeLessThan(m.indexOf('early.section,'))
+    expect(m.indexOf('early.brief')).toBeLessThan(m.indexOf('early.section,'))
+    expect(t('eeMore')).toBe('详细计算结果和曲线见下方。')
+  })
+})

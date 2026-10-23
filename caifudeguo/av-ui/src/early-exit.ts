@@ -25,7 +25,7 @@ export const HALF_YEARS = 12
 export interface ExitPoint {
   /** savings year N (withdrawal at its end) */
   year: number
-  /** age column of the yearly table for year N */
+  /** age at the END of year N = at withdrawal (core row.age is the start-of-year age, + 1) */
   age: number
   calendarYear: number
   /** B_N: AV contract balance (core capitalEnd.avDepot minus the separate account) */
@@ -118,7 +118,8 @@ export function earlyExit(input: CoreInput, result: Result): EarlyExit {
     const taxSaving = sum(save, n)
     const ownToAv = n * c + sum(reinv, n)
     const gain = Math.max(0, avBalance - zulagen - ownToAv)
-    const half = row.age >= HALF_AGE && n >= HALF_YEARS
+    const ageEnd = row.age + 1
+    const half = ageEnd >= HALF_AGE && n >= HALF_YEARS
     const taxableGain = half ? gain * 0.5 : gain
     const avTax = grenzsteuer(taxableGain, zve)
     const received = mode === 'consume' ? taxSaving : 0
@@ -132,7 +133,7 @@ export function earlyExit(input: CoreInput, result: Result): EarlyExit {
     const diff = avNet - normalNet
     return {
       year: n,
-      age: row.age,
+      age: ageEnd,
       calendarYear: row.calendarYear,
       avBalance,
       zulagen,

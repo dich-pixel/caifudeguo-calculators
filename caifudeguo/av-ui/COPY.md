@@ -12,23 +12,23 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | data-testid | key | 中文 | German term | source | strings.ts | main.ts |
 | --- | --- | --- | --- | --- | --- | --- |
 | `title` | title | 养老投资账户计算器 | Altersvorsorgedepot | §1 Abs. 1b AltZertG n.F. (BGBl. 2026 I Nr. 156) | 26 | 324 |
-| `subtitle` | subtitle | 对比：同样每年存钱，放进有国家补贴的 AV 账户，和放进普通 ETF 账户（normales Depot），退休后每月各能拿多少。 |  |  | 27 | 356 |
-| `notice-number-format` | numberFormat | 本页数字用德式写法：1.800 € = 一千八百欧元，6,0 % = 六点零 % |  |  | 28 | 358 |
-| `notice-start-2027` | noticeStart | 2027-01-01 起才能开户。 |  |  | 31 | 357 |
-| `notice-lock-65` | noticeLock | 最早 65 岁开始领（若更早领法定养老金可同时开始），最晚 70 岁。 | Beginn der Auszahlungsphase | §1 Abs. 1 S. 1 Nr. 2a AltZertG n.F. | 32 | 357 |
-| `notice-lock-65-details` | noticeLockDetails | 本计算器只算 65–70 岁开始领取的情况。依据：§1 Abs. 1 S. 1 Nr. 2a AltZertG n.F.。 |  |  | 33 | 357 |
-| `notice-schaedlich` | noticeSchaedlich | 提前取出（schädliche Verwendung）要退还取出部分对应的补贴和省下的税；自住房、转合同、领取开始时最多 30 % 一次性取出除外；缴费可随时暂停。 | schädliche Verwendung | §93 Abs. 1 EStG（2027 年起版本） | 34 | 346 |
-| `notice-schaedlich-details` | noticeSchaedlichDetails | 提前取出属于有害使用（schädliche Verwendung）：取出的那部分所对应的补贴和多省的税要退还，其中的收益还要交个人所得税。例外：用来买自住房（§92a EStG）、转到另一份合同、领取开始时一次性取出最多 30 %（Teilkapitalauszahlung）。缴费随时可以暂停。依据：§93 Abs. 1 EStG（2027 年起版本）、§92a EStG、§22 Nr. 5 EStG、§1 AltZertG n.F.。 |  |  | 35 | 346 |
-| `notice-kids-18` | noticeKids | 只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。 | Kindergeld / Kinderzulage | §85 Abs. 1 EStG（2027 年起版本）; §32 Abs. 4 EStG | 36 | 347 |
-| `notice-kids-18-details` | noticeKidsDetails | 子女补贴（Kinderzulage）发给领取 Kindergeld 的那位家长。依据：§85 Abs. 1 EStG（2027 年起版本）、§32 Abs. 4 EStG。 | Kinderzulage | §85 Abs. 1 EStG（2027 年起版本） | 37 | 347 |
+| `subtitle` | subtitle | 对比：同样每年存钱，放进有国家补贴的 AV 账户，和放进普通 ETF 账户（normales Depot），退休后每月各能拿多少。 |  |  | 27 | 358 |
+| `notice-number-format` | numberFormat | 本页数字用德式写法：1.800 € = 一千八百欧元，6,0 % = 六点零 % |  |  | 28 | 360 |
+| `notice-start-2027` | noticeStart | 2027-01-01 起才能开户。 |  |  | 31 | 359 |
+| `notice-lock-65` | noticeLock | 最早 65 岁开始领（若更早领法定养老金可同时开始），最晚 70 岁。 | Beginn der Auszahlungsphase | §1 Abs. 1 S. 1 Nr. 2a AltZertG n.F. | 32 | 359 |
+| `notice-lock-65-details` | noticeLockDetails | 本计算器只算 65–70 岁开始领取的情况。依据：§1 Abs. 1 S. 1 Nr. 2a AltZertG n.F.。 |  |  | 33 | 359 |
+| `notice-schaedlich` | noticeSchaedlich | 提前取出（schädliche Verwendung）要退还取出部分对应的补贴和省下的税；自住房、转合同、领取开始时最多 30 % 一次性取出除外；缴费可随时暂停。 | schädliche Verwendung | §93 Abs. 1 EStG（2027 年起版本） | 34 | 348 |
+| `notice-schaedlich-details` | noticeSchaedlichDetails | 提前取出属于有害使用（schädliche Verwendung）：取出的那部分所对应的补贴和多省的税要退还，其中的收益还要交个人所得税。例外：用来买自住房（§92a EStG）、转到另一份合同、领取开始时一次性取出最多 30 %（Teilkapitalauszahlung）。缴费随时可以暂停。依据：§93 Abs. 1 EStG（2027 年起版本）、§92a EStG、§22 Nr. 5 EStG、§1 AltZertG n.F.。 |  |  | 35 | 348 |
+| `notice-kids-18` | noticeKids | 只要还在为孩子领 Kindergeld（一般最长到 25 岁，§32 Abs. 4 EStG），子女补贴就一直有。本计算器只算到 18 岁，所以结果偏保守。 | Kindergeld / Kinderzulage | §85 Abs. 1 EStG（2027 年起版本）; §32 Abs. 4 EStG | 36 | 349 |
+| `notice-kids-18-details` | noticeKidsDetails | 子女补贴（Kinderzulage）发给领取 Kindergeld 的那位家长。依据：§85 Abs. 1 EStG（2027 年起版本）、§32 Abs. 4 EStG。 | Kinderzulage | §85 Abs. 1 EStG（2027 年起版本） | 37 | 349 |
 | `notice-details` | noticeDetailsSummary | 详情与依据 |  |  | 38 | 301 |
 | `notice-single-2026` | noticeSingle | 本计算器只按单人的基本税率（Grundtarif）和 2026 年税表计算，不支持已婚合并报税（Zusammenveranlagung）。合并报税时退税和领取时的税可能不同。 | Grundtarif | §32a Abs. 1 EStG（Grundtarif）；§26b EStG（Zusammenveranlagung） | 39 | 330 |
-| `notice-params-date` | noticeParams | 参数核对日期：{date}（计算参数版本 {sha}） |  |  | 40 | 348 |
-| `notice-disclaimer` | noticeDisclaimer | 本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。 | keine Anlage- oder Steuerberatung |  | 41 | 349 |
-| `notice-browser-only` | noticeBrowser | 只在你的浏览器里计算，不上传任何数据，不用 cookie。 |  |  | 42 | 350 |
-| `notice-source-license` | noticeSource | 计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，只改了输出取整（计算方法不变）。本页面的完整源代码（AGPL-3.0）： |  |  | 43 | 351 |
-| `notice-source-link` | noticeSourceLink | 源代码（fork，固定 commit {sha}） |  |  | 44 | 351 |
-| `notice-not-affiliated` | noticeNotAffiliated | 本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。 |  |  | 45 | 352 |
+| `notice-params-date` | noticeParams | 参数核对日期：{date}（计算参数版本 {sha}） |  |  | 40 | 350 |
+| `notice-disclaimer` | noticeDisclaimer | 本计算结果仅供参考，不构成投资或税务建议（keine Anlage- oder Steuerberatung）。 | keine Anlage- oder Steuerberatung |  | 41 | 351 |
+| `notice-browser-only` | noticeBrowser | 只在你的浏览器里计算，不上传任何数据，不用 cookie。 |  |  | 42 | 352 |
+| `notice-source-license` | noticeSource | 计算方法来自 finanzfluss/calculators（AGPL-3.0）commit dcc29a6。页面运行的是这份计算代码的机器生成副本，只改了输出取整（计算方法不变）。本页面的完整源代码（AGPL-3.0）： |  |  | 43 | 353 |
+| `notice-source-link` | noticeSourceLink | 源代码（fork，固定 commit {sha}） |  |  | 44 | 353 |
+| `notice-not-affiliated` | noticeNotAffiliated | 本站与 Finanzfluss / Finflow GmbH 无关，没有合作或背书关系。 |  |  | 45 | 354 |
 | `label-age` | age | 当前年龄 | Alter |  | 48 | 326 |
 | `label-retirementAge` | retirementAge | 退休年龄 | Renteneintrittsalter |  | 49 | 326 |
 | `label-savingsRate` | savingsRate | 每年存入（€） | Sparbetrag |  | 50 | 57 |
@@ -188,46 +188,48 @@ German terms: the term shown in brackets and its legal/official source. Sources 
 | `cmp3-chart-caption` | chartTableFirst | 具体数字以表格为准。 |  |  | 225 | – |
 | `ee-heading` | eeHeading | 如果提前取出（schädliche Verwendung） | schädliche Verwendung | §93 Abs. 1 EStG | 228 | – |
 | `ee-single` | eeSingle | 按单人报税（Grundtarif） | Grundtarif | §32a Abs. 1 EStG | 229 | – |
-| `ee-disclaimer` | eeDisclaimer | 这一部分是本站按 §93 和 §22 Nr. 5 EStG 另外计算的，不是 Finanzfluss 原计算器的结果；只用于比较，不构成税务建议。 | schädliche Verwendung | §93 EStG; §22 Nr. 5 EStG | 230 | – |
-| `ee-toggle` | eeToggle | 提前取出的比较（假设 + 曲线 + 表格） |  |  | 231 | – |
-| `ee-status` | eeInvalid | 输入有误，暂无比较 |  |  | 232 | – |
-| `ee-no-points` | eeNoPoints | 存钱时间太短，没有提前取出的数据点 |  |  | 233 | – |
-| `ee-summary` | eeSummary | 第 {n} 年年末（{age} 岁）取出：AV 一侧到手 {av}，普通账户到手 {normal}，差额 {d}（{rel}）。 |  |  | 234 | – |
-| `ee-assumptions` | eeAssumptionsHead | 提前取出部分的假设： |  |  | 235 | – |
-| `ee-assume-1` | eeAssume1 | 取出那一年的应税收入（zu versteuerndes Einkommen，应纳税所得额）按你填的工作期收入算；不考虑你当年的其他资本收益，储蓄者免税额（Sparerpauschbetrag，每年 1.000 € 免税额度）全部用在这一笔上。 | zu versteuerndes Einkommen; Sparerpauschbetrag | §2 Abs. 5 EStG; §20 Abs. 9 EStG | 236 | – |
-| `ee-assume-2` | eeAssume2 | 除了已填的 AV 账户费用，不算其他产品费用和卖出费用。 |  |  | 237 | – |
-| `ee-assume-3` | eeAssume3 | 第 N 年的补贴（Zulagen，国家补贴）和退税按已经到账并全额退回处理，实际要次年才到账。 | Zulagen | §93 Abs. 1 S. 1 EStG; §10a Abs. 4 EStG | 238 | – |
-| `ee-assume-4` | eeAssume4 | AV 取出部分按个人累进税率交税；普通账户卖出时，取 25 % 资本利得税（Abgeltungsteuer）和个人税率中较低的那个（Günstigerprüfung，较优税率比较）。 | Abgeltungsteuer; Günstigerprüfung | §22 Nr. 5 S. 2 lit. c EStG; §32d Abs. 1, Abs. 6 EStG | 239 | – |
-| `ee-assume-5` | eeAssume5 | 满 62 岁且合同满 12 年时，收益只有一半应税。 | hälftige Besteuerung | §22 Nr. 5 S. 2 lit. c EStG i. V. m. §20 Abs. 1 Nr. 6 S. 2 EStG | 240 | – |
-| `ee-assume-6` | eeAssume6 | 只按单人、2026 年税表算，含团结附加税（Solidaritätszuschlag），不含教会税（Kirchensteuer）。 | Solidaritätszuschlag; Kirchensteuer | SolZG §3, §4 | 241 | – |
-| `ee-chart-title` | eeChartTitle | 提前取出时的税后差额（AV − 普通，€） |  |  | 242 | – |
-| `ee-chart-xaxis` | eeChartXAxis | 取出时的年龄 |  |  | 243 | – |
-| `ee-col-when` | eeColWhen | 取出时间 |  |  | 244 | – |
-| `ee-cell-when` | eeWhenCell | 第 {n} 年年末（{age} 岁） |  |  | 245 | – |
-| `ee-col-av-net` | eeColAvNet | AV 一侧到手（税后） | netto | Alltagsbegriff, kein Normzitat | 246 | – |
-| `ee-col-normal-net` | eeColNormalNet | 普通账户到手（税后） | netto | Alltagsbegriff, kein Normzitat | 247 | – |
-| `ee-col-diff` | eeColDiff | 差额（税后，AV − 普通） |  |  | 248 | – |
-| `ee-col-rel` | eeColRel | 相对差异（以 AV 一侧到手为基数） |  |  | 249 | – |
-| `ee-details` | eeDetails | 明细 |  |  | 250 | – |
-| `ee-av-balance` | eeAvBalance | AV 合同余额（税前） |  |  | 251 | – |
-| `ee-zulagen` | eeZulagen | 退回国家补贴（Zulagen） | Rückzahlung der Zulagen | §93 Abs. 1 S. 1 EStG | 252 | – |
-| `ee-tax-saving` | eeTaxSaving | 退回抵税（Steuerermäßigung） | Steuerermäßigung | §93 Abs. 1 S. 1 EStG; §10a Abs. 4 EStG | 253 | – |
-| `ee-received` | eeReceived | 已拿到的退税 |  |  | 254 | – |
-| `ee-av-taxable` | eeAvTaxable | AV 应税收益 |  |  | 255 | – |
-| `ee-av-taxable-half` | eeAvTaxableHalf | AV 应税收益（满 62 岁且满 12 年，只算一半） | hälftige Besteuerung | §20 Abs. 1 Nr. 6 S. 2 EStG | 256 | – |
-| `ee-av-tax` | eeAvTax | AV 税（个人累进税率） | Einkommensteuer | §22 Nr. 5 S. 2 lit. c EStG | 257 | – |
-| `ee-no-fuenftel` | eeNoFuenftel | 不适用五分之一规则（Fünftelregelung，把一次性收入分五年平摊计税的优惠）。 | Fünftelregelung | §34 Abs. 1 EStG; §22 Nr. 5 S. 13 EStG | 258 | – |
-| `ee-sec` | eeSecLabel | 其中普通副账户：余额 / 税 / 到手 |  |  | 259 | – |
-| `ee-sec-cell` | eeSecCell | {b} / {t} / {n} |  |  | 260 | – |
-| `ee-normal-balance` | eeNormalBalance | 普通账户余额（税前） |  |  | 261 | – |
-| `ee-normal-vorab` | eeNormalVorab | 累计预缴基数（Vorabpauschale） | Vorabpauschale | §18 InvStG; §19 Abs. 1 InvStG | 262 | – |
-| `ee-normal-taxable` | eeNormalTaxable | 普通账户应税收益 |  |  | 263 | – |
-| `ee-normal-tax` | eeNormalTax | 普通账户卖出的税 |  |  | 264 | – |
-| `ee-rel-omitted` | relOmittedEarly | —：提前取出时 AV 一侧到手还不到一年的存入额，百分比没有意义，不显示。 |  |  | 265 | – |
-| `ee-consume-refund-note` | consumeRefundNote | 退税花掉了，提前取出时也要全额退回。 |  |  | 266 | – |
-| `form-error-banner` | errBanner | 请先改正标红的项目 |  |  | 269 | 152 |
-| `form-error-jump` | errJump | 跳到第一个标红项 |  |  | 270 | 151 |
-| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 272 | 345 |
+| `ee-detail-heading` | eeDetailHeading | 提前取出的详细计算结果和曲线（schädliche Verwendung） | schädliche Verwendung | §93 Abs. 1 EStG | 230 | – |
+| `ee-more` | eeMore | 详细计算结果和曲线见下方。 |  |  | 231 | – |
+| `ee-disclaimer` | eeDisclaimer | 这一部分是本站按 §93 和 §22 Nr. 5 EStG 另外计算的，不是 Finanzfluss 原计算器的结果；只用于比较，不构成税务建议。 | schädliche Verwendung | §93 EStG; §22 Nr. 5 EStG | 232 | – |
+| `ee-toggle` | eeToggle | 提前取出的比较（假设 + 曲线 + 表格） |  |  | 233 | – |
+| `ee-status` | eeInvalid | 输入有误，暂无比较 |  |  | 234 | – |
+| `ee-no-points` | eeNoPoints | 存钱时间太短，没有提前取出的数据点 |  |  | 235 | – |
+| `ee-summary` | eeSummary | 第 {n} 年年末（{age} 岁）取出：AV 一侧到手 {av}，普通账户到手 {normal}，差额 {d}（{rel}）。 |  |  | 236 | – |
+| `ee-assumptions` | eeAssumptionsHead | 提前取出部分的假设： |  |  | 237 | – |
+| `ee-assume-1` | eeAssume1 | 取出那一年的应税收入（zu versteuerndes Einkommen，应纳税所得额）按你填的工作期收入算；不考虑你当年的其他资本收益，储蓄者免税额（Sparerpauschbetrag，每年 1.000 € 免税额度）全部用在这一笔上。 | zu versteuerndes Einkommen; Sparerpauschbetrag | §2 Abs. 5 EStG; §20 Abs. 9 EStG | 238 | – |
+| `ee-assume-2` | eeAssume2 | 除了已填的 AV 账户费用，不算其他产品费用和卖出费用。 |  |  | 239 | – |
+| `ee-assume-3` | eeAssume3 | 第 N 年的补贴（Zulagen，国家补贴）和退税按已经到账并全额退回处理，实际要次年才到账。 | Zulagen | §93 Abs. 1 S. 1 EStG; §10a Abs. 4 EStG | 240 | – |
+| `ee-assume-4` | eeAssume4 | AV 取出部分按个人累进税率交税；普通账户卖出时，取 25 % 资本利得税（Abgeltungsteuer）和个人税率中较低的那个（Günstigerprüfung，较优税率比较）；股票基金收益 30 % 免税（Teilfreistellung）。 | Abgeltungsteuer; Günstigerprüfung; Teilfreistellung | §22 Nr. 5 S. 2 lit. c, S. 3 EStG; §20 Abs. 1 InvStG; §32d Abs. 1, Abs. 6 EStG | 241 | – |
+| `ee-assume-5` | eeAssume5 | 满 62 岁且合同满 12 年时，收益只有一半应税。 | hälftige Besteuerung | §22 Nr. 5 S. 2 lit. c EStG i. V. m. §20 Abs. 1 Nr. 6 S. 2 EStG | 242 | – |
+| `ee-assume-6` | eeAssume6 | 只按单人、2026 年税表算，含团结附加税（Solidaritätszuschlag），不含教会税（Kirchensteuer）。 | Solidaritätszuschlag; Kirchensteuer | SolZG §3, §4 | 243 | – |
+| `ee-chart-title` | eeChartTitle | 提前取出时的税后差额（AV − 普通，€） |  |  | 244 | – |
+| `ee-chart-xaxis` | eeChartXAxis | 取出时的年龄 |  |  | 245 | – |
+| `ee-col-when` | eeColWhen | 取出时间 |  |  | 246 | – |
+| `ee-cell-when` | eeWhenCell | 第 {n} 年年末（{age} 岁） |  |  | 247 | – |
+| `ee-col-av-net` | eeColAvNet | AV 一侧到手（税后） | netto | Alltagsbegriff, kein Normzitat | 248 | – |
+| `ee-col-normal-net` | eeColNormalNet | 普通账户到手（税后） | netto | Alltagsbegriff, kein Normzitat | 249 | – |
+| `ee-col-diff` | eeColDiff | 差额（税后，AV − 普通） |  |  | 250 | – |
+| `ee-col-rel` | eeColRel | 相对差异（以 AV 一侧到手为基数） |  |  | 251 | – |
+| `ee-details` | eeDetails | 明细 |  |  | 252 | – |
+| `ee-av-balance` | eeAvBalance | AV 合同余额（税前） |  |  | 253 | – |
+| `ee-zulagen` | eeZulagen | 退回国家补贴（Zulagen） | Rückzahlung der Zulagen | §93 Abs. 1 S. 1 EStG | 254 | – |
+| `ee-tax-saving` | eeTaxSaving | 退回超出补贴的抵税（Steuerermäßigung） | Steuerermäßigung | §93 Abs. 1 S. 1 EStG; §10a Abs. 4 EStG | 255 | – |
+| `ee-received` | eeReceived | 已拿到的退税 |  |  | 256 | – |
+| `ee-av-taxable` | eeAvTaxable | AV 应税收益 |  |  | 257 | – |
+| `ee-av-taxable-half` | eeAvTaxableHalf | AV 应税收益（满 62 岁且满 12 年，只算一半） | hälftige Besteuerung | §20 Abs. 1 Nr. 6 S. 2 EStG | 258 | – |
+| `ee-av-tax` | eeAvTax | AV 税（个人累进税率） | Einkommensteuer | §22 Nr. 5 S. 2 lit. c, S. 3 EStG | 259 | – |
+| `ee-no-fuenftel` | eeNoFuenftel | 不适用五分之一规则（Fünftelregelung，把一次性收入分五年平摊计税的优惠）。 | Fünftelregelung | §34 Abs. 1 EStG; §22 Nr. 5 S. 13 EStG | 260 | – |
+| `ee-sec` | eeSecLabel | 其中普通副账户：余额 / 税 / 到手 |  |  | 261 | – |
+| `ee-sec-cell` | eeSecCell | {b} / {t} / {n} |  |  | 262 | – |
+| `ee-normal-balance` | eeNormalBalance | 普通账户余额（税前） |  |  | 263 | – |
+| `ee-normal-vorab` | eeNormalVorab | 累计已提前计税的收益（Vorabpauschale） | Vorabpauschale | §18 InvStG; §19 Abs. 1 InvStG | 264 | – |
+| `ee-normal-taxable` | eeNormalTaxable | 普通账户应税收益 |  |  | 265 | – |
+| `ee-normal-tax` | eeNormalTax | 普通账户卖出的税 |  |  | 266 | – |
+| `ee-rel-omitted` | relOmittedEarly | —：提前取出时 AV 一侧到手还不到一年的存入额，百分比没有意义，不显示。 |  |  | 267 | – |
+| `ee-consume-refund-note` | consumeRefundNote | 退税花掉了，提前取出时也要全额退回。 |  |  | 268 | – |
+| `form-error-banner` | errBanner | 请先改正标红的项目 |  |  | 271 | 152 |
+| `form-error-jump` | errJump | 跳到第一个标红项 |  |  | 272 | 151 |
+| `notes-heading` | notesHeading | 提示 · 免责 · 来源 |  |  | 274 | 347 |
 
 ## Werbung/Anzeige (§5a Abs. 4 UWG)
 

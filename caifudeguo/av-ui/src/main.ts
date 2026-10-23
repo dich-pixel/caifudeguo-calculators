@@ -336,6 +336,8 @@ function build() {
   const results = h('section', { 'class': 'results', 'aria-labelledby': 'results-h' },
     txt('h2', 'resultsHeading', { id: 'results-h' }),
     status, monthlyBox, compare,
+    // stage 5 follow-up: early-withdrawal short summary right after the result footnotes
+    early.brief,
   )
 
   const yearly = h('section', { class: 'yearly-sec' }, toggle('yearly', 'yearly-region', yearlyBody), yearlyBody)

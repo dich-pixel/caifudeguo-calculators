@@ -151,3 +151,34 @@ describe('label sweep (stage 5 E)', () => {
 })
 
 void PAD
+
+describe('right axis with negative values (stage 5 follow-up)', () => {
+  it.each([375, 1280])('default 13.680 tier at %i px: below the 0 tick, negative tick label, 0 reference line', (width) => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const r = s.rows.find(x => x.amount === 13680)!
+    expect(r.rel!).toBeLessThan(0)
+    const g = geometry(s.rows, width)
+    expect(g.ticksR).toContain(0)
+    expect(Math.min(...g.ticksR)).toBeLessThan(0)
+    expect(g.yR(r.rel!)).toBeGreaterThan(g.yR(0))
+    expect(g.yR(0)).toBeCloseTo(g.y(0), 9)
+    if (width < 400)
+      expect(g.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
+    const svg = drawChart(s.rows, width) as unknown as FakeEl
+    const labels = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').map(x => x.textContent)
+    expect(labels.some(l => /^[−-]\d/.test(l))).toBe(true)
+    expect(byTestId(svg, 'chart-zero-r')).toHaveLength(1)
+    const pt = byTestId(svg, 'chart-rel-pt-13680')[0]!
+    expect(Number(pt.attrs.cy)).toBeGreaterThan(g.yR(0))
+  })
+  it('axes(): all-positive right values keep 0 as lowest tick; mixed values get a tick ≤ min', () => {
+    expect(Math.min(...axes([1, 2], [5, 30], 0, 200, false).ticksR)).toBe(0)
+    const a = axes([10, -3], [12, -7], 0, 200, false)
+    expect(Math.min(...a.ticksR)).toBeLessThanOrEqual(-7)
+    expect(a.yR(-7)).toBeGreaterThan(a.yR(0))
+    const n = axes([10, -3], [40, -1.2], 0, 200, true)
+    expect(n.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
+    expect(Math.min(...n.ticksR)).toBeLessThan(0)
+  })
+})
