@@ -163,7 +163,6 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg text.title { font-weight: 700; }
 .cmp3-svg .grid { stroke: var(--line); stroke-width: 1; }
 .cmp3-svg .zero { stroke: var(--fg); stroke-width: 1.5; }
-.cmp3-svg .zero-r { stroke: #b5651d; stroke-width: 1; stroke-opacity: 0.45; stroke-dasharray: 2 3; }
 .cmp3-svg .line { fill: none; stroke: var(--av); stroke-width: 2.5; }
 .cmp3-svg .pt { fill: var(--av); }
 .cmp3-svg .pt.user { fill: #fff; stroke: var(--fg); stroke-width: 2.5; }

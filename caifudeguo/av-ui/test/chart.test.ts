@@ -168,7 +168,16 @@ describe('right axis with negative values (stage 5 follow-up)', () => {
     const svg = drawChart(s.rows, width) as unknown as FakeEl
     const labels = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').map(x => x.textContent)
     expect(labels.some(l => /^[−-]\d/.test(l))).toBe(true)
-    expect(byTestId(svg, 'chart-zero-r')).toHaveLength(1)
+    // Q4: zeros aligned, no separate 0 % line (only the left grid's zero line, at the same y)
+    expect(byTestId(svg, 'chart-zero-r')).toHaveLength(0)
+    expect(all(svg, x => x.attrs.class === 'zero-r')).toHaveLength(0)
+    const zeroLines = all(svg, x => x.tag === 'line' && x.attrs.class === 'zero')
+    expect(zeroLines.length).toBeLessThanOrEqual(1)
+    const t0 = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'line' && x.attrs.class === 'tick')
+      .find(l => Math.abs(Number(l.attrs.y1) - g.yR(0)) < 1e-9)
+    expect(t0).toBeDefined()
+    expect(Number(t0!.attrs.y1)).toBeCloseTo(g.y(0), 9)
+    for (const l of zeroLines) expect(Number(l.attrs.y1)).toBeCloseTo(g.y(0), 9)
     const pt = byTestId(svg, 'chart-rel-pt-13680')[0]!
     expect(Number(pt.attrs.cy)).toBeGreaterThan(g.yR(0))
   })

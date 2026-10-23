@@ -269,8 +269,6 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
     svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', formatNumberDe(v)), formatNumberDe(v)))
   }
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
-  // subtle 0 reference line of the right axis (true zero, shared with the left axis)
-  svg.append(el('line', { 'x1': PAD.left, 'x2': width - PAD.right, 'y1': a.yR(0), 'y2': a.yR(0), 'class': 'zero-r', 'data-testid': 'chart-zero-r' }))
   for (const v of a.ticksR) {
     const s = `${formatNumberDe(v, Number.isInteger(v) ? 0 : 1)} %`
     rg.append(el('line', { x1: width - PAD.right, x2: width - PAD.right + 4, y1: a.yR(v), y2: a.yR(v), class: 'tick' }))
