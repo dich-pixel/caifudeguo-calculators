@@ -257,3 +257,63 @@ it('leader lines are styled by CSS class only', async () => {
   const { readFileSync } = await import('node:fs')
   expect(readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')).toMatch(/\.cmp3-svg \.xl-leader \{[^}]*stroke:/)
 })
+
+// stage 5 follow-up: checks that so far only the e2e made
+const R_GLYPH = (n) => { // glyph box of a text, also when rotated (translate(tx ty) rotate(±90))
+  const bs = all(n, c => c.tag === 'tspan').length ? all(n, c => c.tag === 'tspan').map(c => tbox(c, n.attrs['text-anchor'])) : [tbox(n)]
+  const g = { l: Math.min(...bs.map(b => b.l)), r: Math.max(...bs.map(b => b.r)), t: Math.min(...bs.map(b => b.t)) + 0.5, b: Math.max(...bs.map(b => b.b)) - 1.5 }
+  const m = /^translate\(([-\d.]+)[ ,]+([-\d.]+)\) rotate\((-?90)\)$/.exec(n.attrs.transform ?? '')
+  if (!n.attrs.transform)
+    return g
+  if (!m)
+    throw new Error(`unsupported transform ${n.attrs.transform}`)
+  const [tx, ty, a] = m.slice(1).map(Number)
+  const pts = [[g.l, g.t], [g.r, g.b]].map(([x, y]) => (a === 90 ? [-y, x] : [y, -x])).map(([x, y]) => [x + tx, y + ty])
+  return { l: Math.min(pts[0][0], pts[1][0]), r: Math.max(pts[0][0], pts[1][0]), t: Math.min(pts[0][1], pts[1][1]), b: Math.max(pts[0][1], pts[1][1]) }
+}
+const markerBox = n => n.tag === 'circle'
+  ? { l: Number(n.attrs.cx) - Number(n.attrs.r), r: Number(n.attrs.cx) + Number(n.attrs.r), t: Number(n.attrs.cy) - Number(n.attrs.r), b: Number(n.attrs.cy) + Number(n.attrs.r) }
+  : { l: Number(n.attrs.x), r: Number(n.attrs.x) + Number(n.attrs.width), t: Number(n.attrs.y), b: Number(n.attrs.y) + Number(n.attrs.height) }
+const isMarker = n => (n.tag === 'circle' && /^(?:pt(?: user)?|rel-pt)$/.test(n.attrs.class ?? '')) || (n.tag === 'rect' && n.attrs.class === 'kink')
+const MAX_USER_GAP = 48
+describe.each(Object.keys(MATRIX))('%s (follow-up)', (name) => {
+  it.each(VIEWPORTS)('%i px viewport: rotated texts (axis titles) glyph boxes ≥ GLYPH_GAP from every other text', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const rot = all(svg, n => n.tag === 'text' && !!n.attrs.transform)
+    expect(rot.length, 'both axis titles are rotated texts').toBe(2)
+    const others = all(svg, n => n.tag === 'text' && n.attrs.class !== 'title' && !inLegend(svg, n))
+    for (const a of rot) {
+      const ga = R_GLYPH(a)
+      for (const b of others) {
+        if (b === a)
+          continue
+        const gb = R_GLYPH(b)
+        const gap = Math.max(gb.l - ga.r, ga.l - gb.r, gb.t - ga.b, ga.t - gb.b)
+        expect(gap, `"${a.textContent}" (rotated) × "${b.textContent}"`).toBeGreaterThanOrEqual(GLYPH_GAP)
+      }
+    }
+  })
+  it.each(VIEWPORTS)('%i px viewport: 「你的金额」 ≤ 48 px from its dot, and its glyph box overlaps no marker (own dot excepted)', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const ul = all(svg, n => n.attrs.class === 'user-label')[0]
+    const own = all(svg, n => n.tag === 'circle' && n.attrs.class === 'pt user')[0]
+    expect(ul && own).toBeTruthy()
+    const g = R_GLYPH(ul)
+    const m = markerBox(own)
+    const d = Math.hypot(Math.max(0, g.l - m.r, m.l - g.r), Math.max(0, g.t - m.b, m.t - g.b))
+    expect(d, 'glyph box → own dot').toBeLessThanOrEqual(MAX_USER_GAP)
+    for (const k of all(svg, isMarker).filter(n => n !== own))
+      expect(hit(g, markerBox(k)), `「你的金额」 (glyph box) × ${k.tag}.${k.attrs.class} @ ${JSON.stringify(markerBox(k))}`).toBe(false)
+  })
+})
+
+it('chart box reserves at least the rendered SVG height (no layout shift), all inputs × widths', async () => {
+  const { readFileSync } = await import('node:fs')
+  const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')
+  const rules = [...css.matchAll(/\.cmp3-chart-box\s*\{[^}]*min-height:\s*(\d+)px/g)].map(m => Number(m[1]))
+  expect(rules.length, 'one min-height rule for .cmp3-chart-box').toBe(1)
+  for (const name of Object.keys(MATRIX)) {
+    for (const w of VIEWPORTS)
+      expect(rules[0], `${name} @ ${w}`).toBeGreaterThanOrEqual(Number(chart(MATRIX[name], w - 24).svg.attrs.height))
+  }
+}, 120_000)

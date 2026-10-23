@@ -174,6 +174,11 @@ const all = []
 for (const [name, v] of Object.entries(CASES)) {
   for (const w of WIDTHS) {
     const p = await b.newPage({ viewport: { width: w, height: 900 }, isMobile: w < 800, hasTouch: w < 800 })
+    // follow-up: record layout shifts (CLS sources) from page start
+    await p.addInitScript(() => {
+      window.__shifts = []
+      new PerformanceObserver(l => window.__shifts.push(...l.getEntries().map(e => ({ t: e.startTime, v: e.value, input: e.hadRecentInput, src: e.sources.map(s => s.node?.className || s.node?.nodeName || '?').join(',') })))).observe({ type: 'layout-shift', buffered: true })
+    })
     await p.goto(`http://localhost:${port}/index.html`)
     await p.waitForTimeout(800)
     if (v.m) {
@@ -193,9 +198,19 @@ for (const [name, v] of Object.entries(CASES)) {
     const t = p.locator('button[aria-controls=cmp3-region]')
     if (await t.getAttribute('aria-expanded') !== 'true')
       await t.click()
+    const t0 = await p.evaluate(() => performance.now())
     await p.waitForTimeout(800)
+    // re-render the chart (as when the sweep finishes again) and require CLS = 0 from the open region on
+    await p.locator(`[data-testid=input-zveSavingsPhase]`).evaluate((e) => {
+      for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))
+    })
+    await p.waitForTimeout(800)
+    const shifts = await p.evaluate(t0 => window.__shifts.filter(e => e.t > t0 + 500 && !e.input), t0)
+    const cls = shifts.reduce((n, e) => n + e.v, 0)
     const r = await p.evaluate(check, { MAX_GAP, unplaced: ALLOWED_UNPLACED[w]?.[name] ?? '', GLYPH_GAP, GLYPH_GAP_SCOPE })
     const fails = Array.isArray(r) ? r : r.fails
+    if (cls > 0)
+      fails.push(`CLS ${cls.toFixed(4)} after the chart region opened (sources: ${[...new Set(shifts.map(e => e.src))].join(' | ')})`)
     all.push(...fails.map(f => `${name} @ ${w}: ${f}`))
     console.log(`${fails.length ? '✗' : '✓'} ${name} @ ${w} px${r.named ? ` (chart ${r.svgWidth} px; named: ${r.named.join(', ')})` : ''}`)
     if (shots)
