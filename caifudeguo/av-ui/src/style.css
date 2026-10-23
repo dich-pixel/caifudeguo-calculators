@@ -222,6 +222,11 @@ input[type='text'] { min-height: 44px; }
 .ee-table tr.sub > th[scope='row'], .ee-item.sub dt { padding-left: 1.5em; }
 .ee-table tr.sec > td { border-bottom: 0; }
 .ee-table thead th { font-size: 0.75rem; vertical-align: bottom; }
+/* stage 5 follow-up: 「第 5 年年末（40 岁）」 stays on one line at 1280 px; the label column keeps its 14em */
+.ee-table thead th[scope='col'] { white-space: nowrap; }
+/* stage 5 follow-up: air between the two notes and between them and the chart title, at every width */
+.ee-region > p.help { margin: 10px 0; }
+.ee-region > .cmp3-figure { margin-top: 18px; }
 .ee-table tr.av, .ee-table tr.normal, .ee-table tr.diff, .ee-table tr.rel { font-weight: 700; }
 .ee-table .small, .ee-details .small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; }
 .ee-cards { list-style: none; margin: 8px 0; padding: 0; display: none; }
@@ -233,11 +238,6 @@ input[type='text'] { min-height: 44px; }
 .ee-item dd { margin: 0; text-align: right; }
 .ee-main .ee-item dd { font-weight: 700; }
 .ee-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
-@media (max-width: 520px) {
-  /* stage 5 (5): air between the two notes and between them and the chart title */
-  .ee-region > p.help { margin: 10px 0; }
-  .ee-region > .cmp3-figure { margin-top: 18px; }
-}
 @media (max-width: 999px) {
   .ee-table { display: none; }
   .ee-cards { display: block; }

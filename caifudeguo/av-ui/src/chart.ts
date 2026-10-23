@@ -22,21 +22,61 @@ const NS = 'http://www.w3.org/2000/svg'
 /** min horizontal gap between an x label and the right-axis tick labels */
 export const X_LABEL_GAP = 4
 
-/**
- * Stage 5 (4): x labels never overlap each other. Keeps the first and the last label, then `extra` priorities
- * (e.g. the user amount), then the rest from left to right; a label is kept only if it stays ≥ X_LABEL_GAP px
- * from every label kept so far. Returns the kept indices in x order.
- */
-export function thinLabels(spans: { l: number, r: number }[], extra: number[] = []): number[] {
-  const n = spans.length
-  const order = [0, n - 1, ...extra, ...spans.map((_, i) => i)].filter((i, k, a) => i >= 0 && i < n && a.indexOf(i) === k)
-  const kept: number[] = []
-  for (const i of order) {
-    const a = spans[i]!
-    if (kept.every(j => a.r + X_LABEL_GAP <= spans[j]!.l || spans[j]!.r + X_LABEL_GAP <= a.l))
-      kept.push(i)
+/** stage 5 follow-up: min horizontal gap between two x labels (tester: 65/66 at 800 px) */
+export const X_LABEL_MIN_GAP = 8
+/** stage 5 follow-up: baseline offset between x-label rows (only used for must-keep ticks that do not fit) */
+export const X_ROW2_DY = 13
+
+export interface XLabel { tick: number, w: number, must?: boolean }
+export interface XPlaced { i: number, l: number, row: number }
+
+/** Lay out one row: each label still touches its tick (l ≤ tick ≤ l + w), inside [minL, maxR], ≥ gap apart. */
+function fitRow(ls: XLabel[], idx: number[], minL: number, maxR: number, gap: number): number[] | null {
+  const o = [...idx].sort((x, y) => ls[x]!.tick - ls[y]!.tick)
+  const lo = o.map(i => Math.max(minL, ls[i]!.tick - ls[i]!.w))
+  const hi = o.map(i => Math.min(maxR - ls[i]!.w, ls[i]!.tick))
+  const l = o.map((i, k) => Math.min(hi[k]!, Math.max(lo[k]!, ls[i]!.tick - ls[i]!.w / 2)))
+  for (let k = 1; k < o.length; k++) l[k] = Math.max(l[k]!, l[k - 1]! + ls[o[k - 1]!]!.w + gap)
+  for (let k = o.length - 1; k >= 0; k--) l[k] = Math.min(l[k]!, hi[k]!, k < o.length - 1 ? l[k + 1]! - ls[o[k]!]!.w - gap : Infinity)
+  for (let k = 0; k < o.length; k++) {
+    if (l[k]! < lo[k]! - 1e-9 || l[k]! > hi[k]! + 1e-9 || (k > 0 && l[k]! < l[k - 1]! + ls[o[k - 1]!]!.w + gap - 1e-9))
+      return null
   }
-  return kept.sort((x, y) => x - y)
+  const out: number[] = []
+  o.forEach((i, k) => { out[i] = l[k]! })
+  return out
+}
+
+/**
+ * Stage 5 (4) + follow-up: x labels never overlap (≥ gap px). All labels are kept when they fit (shifted a little
+ * if needed, never off their tick). Otherwise labels are dropped, in this order of protection: first, last, must-keep
+ * (the amounts the summary sentences name), the rest left to right. A must-keep label that does not fit in row 0
+ * goes to the next of up to `rows` rows (narrow screens, where adjacent named ticks are only ~15 px apart). Returns placed labels in index order.
+ */
+export function placeLabels(ls: XLabel[], o: { minL: number, maxR: number, gap?: number, rows?: number }): XPlaced[] {
+  const gap = o.gap ?? X_LABEL_MIN_GAP
+  const n = ls.length
+  const all = ls.map((_, i) => i)
+  const one = fitRow(ls, all, o.minL, o.maxR, gap)
+  if (one)
+    return all.map(i => ({ i, l: one[i]!, row: 0 }))
+  const order = [0, n - 1, ...all.filter(i => ls[i]!.must), ...all].filter((i, k, a) => i >= 0 && i < n && a.indexOf(i) === k)
+  const rowsIdx: number[][] = Array.from({ length: Math.max(1, o.rows ?? 1) }, () => [])
+  for (const i of order) {
+    const tries = ls[i]!.must ? rowsIdx.map((_, r) => r) : [0]
+    for (const r of tries) {
+      if (fitRow(ls, [...rowsIdx[r]!, i], o.minL, o.maxR, gap)) {
+        rowsIdx[r]!.push(i)
+        break
+      }
+    }
+  }
+  const out: XPlaced[] = []
+  rowsIdx.forEach((idx, r) => {
+    const l = fitRow(ls, idx, o.minL, o.maxR, gap)!
+    for (const i of idx) out.push({ i, l: l[i]!, row: r })
+  })
+  return out.sort((x, y) => x.i - y.i)
 }
 /** stage 5 (5): baseline of the rotated right title; its glyphs (≈ 13 px towards the edge in the browser) end ≥ 8 px inside the SVG */
 export const RIGHT_TITLE_INSET = 22
@@ -275,9 +315,9 @@ export function around(x: number, y: number, r: number, slope: 'start' | 'end' |
 export const axisNumber = (v: number, digits = 0) => formatNumberDe(v, digits).replace(/^[-\u2212]/, '\u2212')
 
 /** Frame shared by both charts: title, legend, grid + both tick columns, axis titles. Returns the placer. */
-export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width: number, height: number, title: StrKey, xAxis: StrKey }): Placer {
+export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width: number, height: number, title: StrKey, xAxis: StrKey, extraBottom?: number }): Placer {
   const { width, height } = o
-  const bottom = height - PAD.bottom
+  const bottom = height - PAD.bottom - (o.extraBottom ?? 0)
   const pl = new Placer(width, height, a.y(0), { l: PAD.left, r: width - PAD.right })
   svg.append(el('text', { ...pl.fixed(0, 13, 'start', t(o.title)), class: 'title' }, t(o.title)))
   // legend: solid = € (left), dashed = % (right); may wrap to a second row on narrow screens
@@ -339,28 +379,32 @@ export const slopeOf = (ys: number[], i: number): 'start' | 'end' | 'middle' => 
   return next < prev ? 'end' : 'start'
 }
 
-export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
+export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly number[] = []): SVGSVGElement {
   const g = geometry(rows, width)
-  const svg = el('svg', { 'width': g.width, 'height': g.height, 'viewBox': `0 0 ${g.width} ${g.height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false' })
   const bottom = g.height - PAD.bottom
   const narrow = width < 400
-  const pl = frame(svg, g, { width, height: g.height, title: 'chartTitle', xAxis: 'chartXAxis' })
-  const ys = rows.map(r => g.y(r.diff))
-  // x labels (fixed), thinned by the available width (stage 5 (4))
-  const cand: { s: string, x: number, user: boolean }[] = []
+  // x labels (stage 5 (4) + follow-up): all fitting ticks stay; the amounts the summary names (mustKeep) never go
+  const cand: { s: string, user: boolean, label: XLabel }[] = []
   rows.forEach((r, i) => {
-    if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow)) {
+    if ((!narrow || NARROW_TICKS.includes(r.amount) || mustKeep.includes(r.amount)) && (r.tier || !narrow)) {
       const s = formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)
-      const w = textWidth(s)
-      // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
-      cand.push({ s, x: Math.max(2, Math.min(g.xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)), user: !r.tier })
+      cand.push({ s, user: !r.tier, label: { tick: g.xs[i]!, w: textWidth(s), must: r.tier && mustKeep.includes(r.amount) } })
     }
   })
-  const keep = thinLabels(cand.map(c => ({ l: c.x, r: c.x + textWidth(c.s) })), cand.flatMap((c, i) => c.user ? [i] : []))
-  const xl: SVGTextElement[] = keep.map((i) => {
-    const c = cand[i]!
-    pl.occupy(textBox(c.x, bottom + 14, c.s))
-    return el('text', { 'x': c.x, 'y': bottom + 14, 'text-anchor': 'start', 'class': c.user ? 'xl user' : 'xl' }, c.s)
+  // the user amount (not a tier) has its own「你的金额」label, so it is the first to give way: placed after the tiers
+  const tiersFirst = [...cand.filter(c => !c.user), ...cand.filter(c => c.user)]
+  // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
+  const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 4 })
+  const extra = Math.max(0, ...placed.map(p => p.row)) * X_ROW2_DY
+  const height = g.height + extra
+  const svg = el('svg', { 'width': g.width, 'height': height, 'viewBox': `0 0 ${g.width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false' })
+  const pl = frame(svg, g, { width, height, title: 'chartTitle', xAxis: 'chartXAxis', extraBottom: extra })
+  const ys = rows.map(r => g.y(r.diff))
+  const xl: SVGTextElement[] = placed.sort((p, q) => tiersFirst[p.i]!.label.tick - tiersFirst[q.i]!.label.tick).map((p) => {
+    const c = tiersFirst[p.i]!
+    const y = bottom + 14 + p.row * X_ROW2_DY
+    pl.occupy(textBox(p.l, y, c.s))
+    return el('text', { 'x': p.l, 'y': y, 'text-anchor': 'start', 'class': c.user ? 'xl user' : 'xl' }, c.s)
   })
   // 6.840 € dashed line; its label goes where it fits (bottom, then top, either side)
   const i6840 = rows.findIndex(r => r.amount === ONE_CONTRACT_CAP)

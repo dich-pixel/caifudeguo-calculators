@@ -315,6 +315,15 @@ export function sensitivityText(s: SweepResult): string {
   return `${t('sensPrefix')}${first !== 'av' ? t('sensStart', { k: kindName(first) }) : ''}${parts.join('，')}${s.flips.length > 3 ? t('sensMore') : ''}。`
 }
 
+/** Stage 5 follow-up: the tier amounts the two summary sentences name (flips written by sensitivityText, max by maxText);
+ *  the chart keeps these x ticks visible whatever the inputs. */
+export function namedAmounts(s: SweepResult): number[] {
+  const a = s.flips.slice(0, 3).flatMap(f => [f.from, f.to])
+  if (s.max.type === 'max')
+    a.push(s.max.amount)
+  return [...new Set(a)]
+}
+
 /** e / b3 rule 2: second summary line. */
 export function maxText(s: SweepResult): string {
   const m = s.max

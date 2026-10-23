@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { relText } from '../src/cmp3'
-import { clearSweepCache, sweep } from '../src/compare'
+import { clearSweepCache, namedAmounts, sweep } from '../src/compare'
 import { earlyExitFor } from '../src/early-exit'
 import { DEFAULTS, evaluate } from '../src/model'
 import { all, byTestId, installFakeDom } from './fake-dom'
@@ -12,8 +12,16 @@ const form = (f = {}, mode = 'avDepot') =>
   ({ ...structuredClone(DEFAULTS), taxSavingsMode: mode, kids: [], fields: { ...DEFAULTS.fields, ...f } })
 const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')
 const est = t => [...t].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)
-const spans = svg => all(svg, x => /^xl(?: user)?$/.test(x.attrs.class ?? '')).map(t => ({ t: t.textContent, l: Number(t.attrs.x), r: Number(t.attrs.x) + est(t.textContent) }))
-const noOverlap = (s) => { for (let i = 1; i < s.length; i++) expect(s[i].l, `${s[i - 1].t} / ${s[i].t}`).toBeGreaterThanOrEqual(s[i - 1].r + 4) }
+const spans = svg => all(svg, x => /^xl(?: user)?$/.test(x.attrs.class ?? '')).map(t => ({ t: t.textContent, y: t.attrs.y, l: Number(t.attrs.x), r: Number(t.attrs.x) + est(t.textContent) }))
+// follow-up: ≥ 8 px between labels of the same row
+const noOverlap = (s) => {
+  for (const y of new Set(s.map(x => x.y))) {
+    const row = s.filter(x => x.y === y).sort((a, b) => a.l - b.l)
+    for (let i = 1; i < row.length; i++) expect(row[i].l, `${row[i - 1].t} / ${row[i].t}`).toBeGreaterThanOrEqual(row[i - 1].r + 8)
+  }
+}
+// viewport widths; 288 / 343 are the real chart widths inside the 320 / 375 viewports
+const W = [320, 375, 800, 1280]
 
 let restore
 beforeAll(() => { restore = installFakeDom() })
@@ -63,6 +71,8 @@ describe('(4) x labels never overlap, first and last kept', () => {
     noOverlap(s)
     expect(s[0].t).toBe(String(e.points[0].age))
     expect(s.at(-1).t).toBe(String(e.points.at(-1).age))
+    if (w >= 800)
+      expect(s.map(x => x.t)).toEqual(e.points.map(p => String(p.age))) // everything fits from 800 px: nothing dropped
   })
   it.each([[375, '1.800'], [1280, '1.800'], [375, '6.840'], [800, '300'], [320, '2.000']])('cmp3 chart %i px user %s', async (w, amount) => {
     const { drawChart } = await import('../src/chart')
@@ -72,10 +82,48 @@ describe('(4) x labels never overlap, first and last kept', () => {
     noOverlap(s)
     expect(s.length).toBeGreaterThan(1)
   })
-  it('thinLabels keeps first and last and drops the neighbour that collides with the last', async () => {
-    const { thinLabels } = await import('../src/chart')
-    expect(thinLabels([{ l: 0, r: 14 }, { l: 20, r: 34 }, { l: 36, r: 50 }, { l: 52, r: 66 }])).toEqual([0, 1, 3])
-    expect(thinLabels([{ l: 0, r: 14 }, { l: 10, r: 24 }])).toEqual([0])
+  it('placeLabels: keeps all when they fit (shifting), else first/last/must; must-keep goes to another row', async () => {
+    const { placeLabels } = await import('../src/chart')
+    const o = { minL: 0, maxR: 200 }
+    expect(placeLabels([{ tick: 10, w: 14 }, { tick: 32, w: 14 }], o).map(p => p.i)).toEqual([0, 1])
+    const three = [{ tick: 10, w: 14 }, { tick: 20, w: 14 }, { tick: 30, w: 14 }]
+    expect(placeLabels(three, o).map(p => p.i)).toEqual([0, 2])
+    expect(placeLabels(three.map((x, i) => ({ ...x, must: i === 1 })), { ...o, rows: 2 })).toEqual([
+      expect.objectContaining({ i: 0, row: 0 }),
+      expect.objectContaining({ i: 1, row: 1 }),
+      expect.objectContaining({ i: 2, row: 0 }),
+    ])
+  })
+})
+
+describe('follow-up: x ticks the summary names are always visible (stage 4 chart)', () => {
+  const visible = async (f, w) => {
+    const { drawChart } = await import('../src/chart')
+    clearSweepCache()
+    const s = sweep(f, undefined, { today: TODAY })
+    const shown = spans(drawChart(s.rows, w, namedAmounts(s)))
+    noOverlap(shown)
+    return { s, shown: shown.map(x => x.t) }
+  }
+  it.each([...W, 288, 343])('default input @ %i px: 6.840 and every named amount shown', async (w) => {
+    const { s, shown } = await visible(form(), w)
+    expect(namedAmounts(s)).toContain(6840)
+    for (const a of namedAmounts(s)) expect(shown).toContain(a.toLocaleString('de-DE'))
+  })
+  it.each([...W, 288, 343])('non-default input (zvE 20.000 €, consume) @ %i px: the brackets the sentence names are shown', async (w) => {
+    const f = form({ zveSavingsPhase: '20.000' }, 'consume')
+    const { s, shown } = await visible(f, w)
+    const named = namedAmounts(s)
+    expect(named.length).toBeGreaterThanOrEqual(2)
+    expect(named).not.toEqual(namedAmounts(sweep(form(), undefined, { today: TODAY })))
+    const { sensitivityText } = await import('../src/compare')
+    for (const f0 of s.flips.slice(0, 3)) expect(sensitivityText(s)).toContain(f0.from.toLocaleString('de-DE'))
+    for (const a of named) expect(shown).toContain(a.toLocaleString('de-DE'))
+  })
+  it.each([800, 1280])('%i px: all 12 tiers present', async (w) => {
+    const { TIERS } = await import('../src/compare')
+    const { shown } = await visible(form(), w)
+    for (const a of TIERS) expect(shown).toContain(a.toLocaleString('de-DE'))
   })
 })
 
@@ -122,11 +170,14 @@ describe('(5) right title margin, 2-decimal %, 375 px spacing', () => {
       }
     }
   })
-  it('≤ 520 px: spacing rules for the ee notes and the chart title; card breakpoint 999 px kept', () => {
-    const q = css.match(/@media \(max-width: 520px\) \{[^@]*?\.ee-region > p\.help \{ margin: (\d+)px 0; \}\s*\.ee-region > \.cmp3-figure \{ margin-top: (\d+)px; \}/)
-    expect(q).not.toBeNull()
-    expect(Number(q[1])).toBeGreaterThanOrEqual(8)
-    expect(Number(q[2])).toBeGreaterThanOrEqual(12)
+  it('spacing between the notes and the chart title at every width (no media query); header nowrap; 999 px kept', () => {
+    const top = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
+    const m1 = top.match(/\.ee-region > p\.help \{ margin: (\d+)px 0; \}/)
+    const m2 = top.match(/\.ee-region > \.cmp3-figure \{ margin-top: (\d+)px; \}/)
+    expect(Number(m1[1])).toBeGreaterThanOrEqual(8)
+    expect(Number(m2[1])).toBeGreaterThanOrEqual(12)
+    expect(top).toMatch(/\.ee-table thead th\[scope='col'\] \{ white-space: nowrap; \}/)
+    expect(top).toMatch(/\.ee-table th\[scope='row'\] \{[^}]*min-width: 14em;/)
     expect(css).toMatch(/@media \(max-width: 999px\) \{\s*\.ee-table \{ display: none; \}/)
   })
 })

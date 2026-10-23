@@ -258,7 +258,7 @@ export const STR = {
   eeAvTaxableHalf: s('ee-av-taxable-half', 'AV 应税收益（满 62 岁且满 12 年，只算一半）', 'hälftige Besteuerung', '§20 Abs. 1 Nr. 6 S. 2 EStG'),
   eeAvTax: s('ee-av-tax', 'AV 税（个人累进税率）', 'Einkommensteuer', '§22 Nr. 5 S. 2 lit. c, S. 3 EStG'),
   eeNoFuenftel: s('ee-no-fuenftel', '不适用五分之一规则（Fünftelregelung，把一次性收入分五年平摊计税的优惠）。', 'Fünftelregelung', '§34 Abs. 1 EStG; §22 Nr. 5 S. 13 EStG'),
-  eeSecLabel: s('ee-sec', '其中普通副账户：余额 / 税 / 到手'),
+  eeSecLabel: s('ee-sec', '其中普通副账户：税前 / 税 / 税后'),
   eeSecCell: s('ee-sec-cell', '{b} / {t} / {n}'),
   eeNormalBalance: s('ee-normal-balance', '普通账户余额（税前）'),
   eeNormalVorab: s('ee-normal-vorab', '累计已提前计税的收益（Vorabpauschale）', 'Vorabpauschale', '§18 InvStG; §19 Abs. 1 InvStG'),

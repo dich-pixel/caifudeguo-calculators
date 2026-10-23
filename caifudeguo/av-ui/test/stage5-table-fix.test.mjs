@@ -30,6 +30,8 @@ describe('ee table: side account split into three rows', () => {
     expect(rows.slice(i, i + 4).map(r => r.attrs.class)).toEqual(['sec', 'sec-gross sub', 'sec-tax sub', 'sec-net sub'])
     const th = r => all(r, x => x.tag === 'th')[0].textContent
     expect(rows.slice(i, i + 4).map(th)).toEqual([tr('eeSecLabel'), tr('gross'), tr('tax'), tr('net')])
+    expect(tr('eeSecLabel')).toBe('其中普通副账户：税前 / 税 / 税后') // Rich-approved wording
+    expect(tr('eeSecLabel')).toBe(`其中普通副账户：${tr('gross')} / ${tr('tax')} / ${tr('net')}`)
     expect(byTestId(tbl, 'ee-sec-10')[0].textContent).toBe('')
     const eur = formatEuro
     expect(byTestId(tbl, 'ee-sec-gross-10')[0].textContent).toBe(eur(p.secBalance))

@@ -9,7 +9,7 @@ import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { drawChart } from './chart'
-import { amountId, flipText, kindName, maxText, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
+import { amountId, flipText, kindName, maxText, namedAmounts, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { displayNumberDe, formatEuro } from './format'
 import { ONE_CONTRACT_CAP } from './model'
@@ -80,12 +80,12 @@ export function createCmp3(): Cmp3View {
     // Draw before inserting (width of the open region = box width), so the chart never disappears for a frame.
     let lastWidth = Math.floor(region.clientWidth)
     if (lastWidth > 0)
-      box.append(drawChart(s.rows, lastWidth))
+      box.append(drawChart(s.rows, lastWidth, namedAmounts(s)))
     observer = new ResizeObserver(() => {
       const w = Math.floor(box.clientWidth)
       if (w > 0 && w !== lastWidth) {
         lastWidth = w
-        box.replaceChildren(drawChart(s.rows, w))
+        box.replaceChildren(drawChart(s.rows, w, namedAmounts(s)))
       }
     })
     region.replaceChildren(figure, ...table(data.values, s))

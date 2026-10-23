@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, el, frame, PAD, plotTop, relLine, textBox, textWidth, thinLabels, X_LABEL_GAP } from './chart'
+import { axes, el, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -39,16 +39,13 @@ export function drawEarlyChart(e: EarlyExit, width: number): SVGSVGElement {
   const a0 = pts[0]!.age
   const a1 = pts[pts.length - 1]!.age
   const xs = pts.map(p => PAD.left + (a1 === a0 ? inner / 2 : ((p.age - a0) / (a1 - a0)) * inner))
-  // x labels = ages, thinned by the available width (stage 5 (4)): first and last always kept, ≥ X_LABEL_GAP px apart
-  const cand = pts.map((p, i) => {
+  // x labels = ages (stage 5 (4) + follow-up): all kept when they fit ≥ X_LABEL_MIN_GAP px apart; else thinned, first and last kept
+  const placed = placeLabels(pts.map((p, i) => ({ tick: xs[i]!, w: textWidth(String(p.age)) })), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP })
+  const xl: SVGTextElement[] = placed.map(({ i, l }) => {
+    const p = pts[i]!
     const s = String(p.age)
-    const w = textWidth(s)
-    return { p, s, x: Math.max(2, Math.min(xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)) } // stage 5 (b): clear of the right-axis labels
-  })
-  const xl: SVGTextElement[] = thinLabels(cand.map(c => ({ l: c.x, r: c.x + textWidth(c.s) }))).map((i) => {
-    const { p, s, x } = cand[i]!
-    pl.occupy(textBox(x, bottom + 14, s))
-    return el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s)
+    pl.occupy(textBox(l, bottom + 14, s))
+    return el('text', { 'x': l, 'y': bottom + 14, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s)
   })
   svg.append(el('polyline', { points: xs.map((x, i) => `${x},${a.y(pts[i]!.diff)}`).join(' '), class: 'line' }))
   pts.forEach((p, i) => svg.append(el('circle', { 'cx': xs[i]!, 'cy': a.y(p.diff), 'r': 3, 'class': 'pt', 'data-testid': `ee-point-${p.year}` })))
