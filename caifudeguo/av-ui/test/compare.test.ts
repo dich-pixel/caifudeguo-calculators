@@ -82,7 +82,7 @@ describe('t3-15/16 every field = one separate core run', () => {
       expect(formatCurrencyAdaptive(row.normalNet)).toBe(core.payoutTotal.net.normalDepot)
       expect(formatCurrencyAdaptive(row.result.totalContributions.avDepot)).toBe(core.totalContributions.avDepot)
     }
-  })
+  }, 15000) // CI runners took 5.0–5.5 s for 'secondary' (runs 39906750031 #1/#2)
 })
 
 describe('known values (TESTPLAN appendix A)', () => {
