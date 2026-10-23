@@ -139,7 +139,7 @@ describe('b3 rule 3: 多存 1 €', () => {
     expect(m(form(), 1800)).toEqual([1200, 3.78, 3.19])
     expect(m(form(), 2400)).toEqual([1800, 3.10, 3.17])
     expect(m(form({ savingsRate: '1.850' }), 2400)).toEqual([1800, 3.10, 3.17])
-  })
+  }, 15000)
   it('user row', () => {
     expect(m(form({ savingsRate: '1.850' }), 1850)).toEqual([1200, 3.73, 3.18])
     // TESTPLAN T3-33 says 3,19 for normal; the core gives 3,1845… → 3,18 (3,19 is the 1.800 row)
@@ -149,7 +149,7 @@ describe('b3 rule 3: 多存 1 €', () => {
     expect(m(form({ savingsRate: '125' }), 125)).toBeNull()
     expect(m(form({ savingsRate: '219' }), 219)).toBeNull()
     expect(m(form({ savingsRate: '1.799' }), 1800)).toEqual([1200, 3.78, 3.19])
-  })
+  }, 15000) // CI runner took 5.8 s for this test (run 39955498783)
   it('t3-20 user amount equal to a tier: no extra row', () => {
     const s = run(form())
     expect(s.rows).toHaveLength(12)
@@ -158,7 +158,7 @@ describe('b3 rule 3: 多存 1 €', () => {
     const s2 = run(form({ savingsRate: '1.800,50' }))
     expect(s2.rows.map(r => r.amount).slice(5, 8)).toEqual([1800, 1800.5, 2400])
     expect(s2.rows.filter(r => r.user)).toHaveLength(1)
-  })
+  }, 15000)
 })
 
 const sens = (v: FormValues) => { clearSweepCache(); const s = run(v); return [sensitivityText(s), maxText(s), s.marginalHigher, s.flips.map(flipText)] as const }
