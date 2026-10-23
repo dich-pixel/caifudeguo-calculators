@@ -30,7 +30,8 @@ export const X_ROW2_DY = 13
 /** free space (px) on each side of a leader line */
 export const LEADER_CLEAR = 2
 
-export interface XLabel { tick: number, w: number, must?: boolean }
+/** `yields`: never protected (the user amount, which has its own「你的金额」label) */
+export interface XLabel { tick: number, w: number, must?: boolean, yields?: boolean }
 export interface XPlaced { i: number, l: number, row: number }
 
 /** Lay out one row: each label still touches its tick (l ≤ tick ≤ l + w), inside [minL, maxR], ≥ gap apart. */
@@ -73,7 +74,11 @@ export function placeLabels(ls: XLabel[], o: { minL: number, maxR: number, gap?:
   if (one)
     return all.map(i => ({ i, l: one[i]!, row: 0 }))
   // protected labels (first, last, must-keep) left to right, so stacked ones form a staircase whose leaders stay free
-  const isProt = (i: number) => i === 0 || i === n - 1 || !!ls[i]!.must
+  // first / last = the outermost ticks among the labels that do not yield (input order may put yielding ones last)
+  const keep = all.filter(i => !ls[i]!.yields).sort((x, y) => ls[x]!.tick - ls[y]!.tick)
+  const first = keep[0] ?? 0
+  const last = keep[keep.length - 1] ?? n - 1
+  const isProt = (i: number) => !ls[i]!.yields && (i === first || i === last || !!ls[i]!.must)
   const byTick = (x: number, y: number) => ls[x]!.tick - ls[y]!.tick
   const order = [...all.filter(isProt).sort(byTick), ...all.filter(i => !isProt(i))]
   const rowsIdx: number[][] = Array.from({ length: Math.max(1, o.rows ?? 1) }, () => [])
@@ -311,14 +316,14 @@ export class Placer {
   }
 
   /** clear of every text / tick / legend box and the own point; curves and markers may be crossed */
-  hardOk(b: Box, own: Box | null): boolean {
+  hardOk(b: Box, own: Box | null, ignoreMarks?: ReadonlySet<Box>): boolean {
     if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
       return false
     if (own && !apart(b, own, 1))
       return false
     if (this.zeroY !== null && b.r > this.plot.l && b.l < this.plot.r && !(b.b + GAP <= this.zeroY || this.zeroY + GAP <= b.t))
       return false
-    return this.marks.every(o => o === own || apart(b, o, 1)) && this.boxes.every(o => o === own || apart(b, o, GAP)) // the own point only needs 1 px (checked above)
+    return this.marks.every(o => o === own || ignoreMarks?.has(o) || apart(b, o, 1)) && this.boxes.every(o => o === own || apart(b, o, GAP)) // the own point only needs 1 px (checked above)
   }
 
   /** how much of the curves / markers / dashed lines a box covers */
@@ -399,14 +404,6 @@ export const scanYs = (top: number, bottom: number): number[] => Array.from({ le
 export const scanAround = (x: number, top: number, bottom: number): [number, number, string][] =>
   [0, 20, -20, 40, -40, 60, -60, 80, -80, 100, -100, 120, -120, 140, -140, 160, -160].flatMap(sx => scanYs(top, bottom).map((y): [number, number, string] => [x + sx, y, 'middle']))
 
-/** the fixed spots of userAbove; only when none of them is clear of every text and marker, the plot-wide scan is added */
-function userCands(pl: Placer, x: number, y: number, top: number, bottom: number, own: Box): [number, number, string][] {
-  const fixed = userAbove(x, y, 6)
-  const w = textWidth(t('cmp3UserTag'))
-  const free = fixed.some(([cx, cy, a]) => pl.hardOk(textBox(Math.max(2, Math.min(anchoredLeft(cx, a, w), pl.width - 2 - w)), cy, t('cmp3UserTag')), own))
-  return free ? fixed : [...fixed, ...scanAround(x, top, bottom)]
-}
-
 /** Candidate positions around a point (A.3): above (3 heights), below, left, right; slope side first. */
 export function around(x: number, y: number, r: number, slope: 'start' | 'end' | 'middle'): [number, number, string][] {
   const dx = slope === 'middle' ? 0 : slope === 'end' ? -8 : 8
@@ -429,6 +426,98 @@ export function around(x: number, y: number, r: number, slope: 'start' | 'end' |
   return out
 }
 
+/** follow-up (validator, PM): an annotation stays at its own marker: edge gap label → own marker ≤ ANN_MAX_GAP px */
+/** chart width at a 320 px viewport (24 px page padding): only up to here may a kink label be left out */
+export const OMIT_MAX_WIDTH = 296
+export const ANN_MAX_GAP = 46
+/** a vertical / sideways offset larger than this gets a short leader line back to the marker */
+export const ANN_LEADER_FROM = 6
+export interface Ann { lines: string[], x: number, y: number, anchor: 'start' | 'middle' | 'end', box: Box, gap: number, leader: [number, number, number, number] | null }
+const boxGap = (a: Box, b: Box) => Math.hypot(Math.max(0, a.l - b.r, b.l - a.r), Math.max(0, a.t - b.b, b.t - a.b))
+/** the same characters on two lines (split at the first space after the CJK part, else in the middle) */
+export const splitLabel = (text: string): string[] | null => {
+  const i = text.indexOf(' ')
+  if (i > 0)
+    return [text.slice(0, i), text.slice(i + 1)]
+  const h = Math.floor(text.length / 2)
+  return h > 0 ? [text.slice(0, h), text.slice(h)] : null
+}
+
+/**
+ * Placement next to the own marker only: above, below, left or right of it (one line, or the same text on two lines),
+ * edge gap ≤ ANN_MAX_GAP, inside `region`, clear of every text / tick / marker, and always nearer to the own marker
+ * than to any of `rivals` (the other annotated markers). Curves may be crossed, but the spot crossing the least wins.
+ * Returns null when no such spot exists (the caller then keeps the label out rather than detaching it).
+ */
+export function placeAnn(pl: Placer, text: string, own: Box, region: Box, rivals: Box[], spaceIdx = true, ignoreMarks?: ReadonlySet<Box>): Ann | null {
+  const variants = [[text], ...(spaceIdx && splitLabel(text) ? [splitLabel(text)!] : [])]
+  const cx = (own.l + own.r) / 2
+  const cy = (own.t + own.b) / 2
+  let best: { a: Ann, score: number } | null = null
+  for (const lines of variants) {
+    const w = Math.max(...lines.map(textWidth))
+    // ascent 11 px above the baseline, 3 px below (same box as textBox and the tests)
+    const h = 14 + CAP_LINE_DY * (lines.length - 1)
+    const tops: number[] = []
+    const lefts: number[] = []
+    for (let g = 2; g <= ANN_MAX_GAP; g += 2) {
+      tops.push(own.t - g - h, own.b + g) // above / below
+      lefts.push(own.l - g - w, own.r + g) // left / right
+    }
+    const boxes: Box[] = []
+    for (const t of tops) {
+      for (let d = 0; d <= w / 2 + ANN_MAX_GAP; d += 2) {
+        for (const l of d ? [cx - w / 2 - d, cx - w / 2 + d] : [cx - w / 2]) boxes.push({ l, r: l + w, t, b: t + h })
+      }
+    }
+    for (const l of lefts) {
+      for (let d = 0; d <= h / 2 + ANN_MAX_GAP; d += 2) {
+        for (const t of d ? [cy - h / 2 - d, cy - h / 2 + d] : [cy - h / 2]) boxes.push({ l, r: l + w, t, b: t + h })
+      }
+    }
+    for (const b of boxes) {
+      if (b.l < region.l || b.r > region.r || b.t < region.t || b.b > region.b)
+        continue
+      // the gap is measured to the inked part of the text (the layout box has ascent / descent / width slack)
+      const gap = boxGap({ l: b.l, r: b.r, t: b.t + 3, b: b.b - 3 }, own)
+      if (gap > ANN_MAX_GAP || !pl.hardOk(b, own, ignoreMarks) || !rivals.every(o => boxGap(b, o) >= gap + 4))
+        continue
+      const relHits = ignoreMarks ? [...ignoreMarks].filter(o => !apart(b, o, 1)).length : 0
+      const soft = pl.softCost(b)
+      const score = gap + (lines.length > 1 ? 12 : 0) + 4 * soft + (b.b <= own.t ? 0 : 3) + 40 * relHits
+      if (!best || score < best.score) {
+        // anchored on the side facing the marker, so a narrower real text still hugs its marker
+        const mid = (b.l + b.r) / 2
+        const anchor = Math.abs(mid - cx) < 1 ? 'middle' : mid < cx ? 'end' : 'start'
+        const x = anchor === 'middle' ? mid : anchor === 'end' ? b.r : b.l
+        const y = b.t + 11
+        let leader: Ann['leader'] = null
+        if (gap > ANN_LEADER_FROM) { // from the marker edge to the nearest point of the label box
+          const px = Math.max(b.l, Math.min(cx, b.r))
+          const py = Math.max(b.t, Math.min(cy, b.b))
+          const len = Math.hypot(px - cx, py - cy)
+          const rad = (own.r - own.l) / 2 + 1
+          leader = [cx + ((px - cx) * rad) / len, cy + ((py - cy) * rad) / len, px - ((px - cx) * 2) / len, py - ((py - cy) * 2) / len]
+        }
+        best = { a: { lines, x, y, anchor, box: b, gap, leader }, score }
+      }
+    }
+  }
+  if (best)
+    pl.occupy(best.a.box)
+  return best?.a ?? null
+}
+
+/** draws a placed annotation (one or two lines, plus its leader) into g */
+export function drawAnn(g: Element, a: Ann, cls?: string): void {
+  if (a.leader)
+    g.append(el('line', { 'x1': a.leader[0], 'y1': a.leader[1], 'x2': a.leader[2], 'y2': a.leader[3], 'class': 'ann-leader' }))
+  const tx = el('text', { 'x': a.x, 'y': a.y, 'text-anchor': a.anchor, ...(cls ? { class: cls } : {}) }, a.lines.length === 1 ? a.lines[0] : undefined)
+  if (a.lines.length > 1)
+    a.lines.forEach((ln, k) => tx.append(el('tspan', { x: a.x, y: a.y + k * CAP_LINE_DY }, ln)))
+  g.append(tx)
+}
+
 /** axis label number in de-DE style with a real minus sign (U+2212) for negatives */
 export const axisNumber = (v: number, digits = 0) => formatNumberDe(v, digits).replace(/^[-\u2212]/, '\u2212')
 
@@ -449,13 +538,14 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
   for (const v of a.ticks) {
     svg.append(el('line', { x1: PAD.left, x2: width - PAD.right, y1: a.y(v), y2: a.y(v), class: v === 0 ? 'zero' : 'grid' }))
     const sl = axisNumber(v)
-    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', sl), sl))
+    // the lowest tick on the x axis itself sits 4 px higher, so it stays clear of the first x-axis label row
+    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + (a.y(v) >= bottom - 1 ? 0 : 4), 'end', sl), sl))
   }
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
   for (const v of a.ticksR) {
     // no tick marks: a dash touching the number read as a minus sign; the grid lines give the position
     const s = `${axisNumber(v, Number.isInteger(v) ? 0 : 2)} %` // stage 5 (5): percentages with decimals use exactly 2
-    rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
+    rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + (a.yR(v) >= bottom - 1 ? 0 : 4), 'start', s), s))
   }
   svg.append(rg)
   svg.append(el('text', pl.fixed(PAD.left + (width - PAD.left - PAD.right) / 2, height - 6, 'middle', t(o.xAxis)), t(o.xAxis)))
@@ -506,16 +596,16 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   rows.forEach((r, i) => {
     if ((!narrow || NARROW_TICKS.includes(r.amount) || mustKeep.includes(r.amount)) && (r.tier || !narrow)) {
       const s = formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)
-      cand.push({ s, user: !r.tier, label: { tick: g.xs[i]!, w: textWidth(s), must: r.tier && mustKeep.includes(r.amount) } })
+      cand.push({ s, user: !r.tier, label: { tick: g.xs[i]!, w: textWidth(s), must: !!r.tier && mustKeep.includes(r.amount), ...(r.tier ? {} : { yields: true }) } })
     }
   })
   // the user amount (not a tier) has its own「你的金额」label, so it is the first to give way: placed after the tiers
   const tiersFirst = [...cand.filter(c => !c.user), ...cand.filter(c => c.user)]
   // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
-  const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 6 })
+  const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 7 })
   const extra = Math.max(0, ...placed.map(p => p.row)) * X_ROW2_DY
   const height = g.height + extra
-  const svg = el('svg', { 'width': g.width, 'height': height, 'viewBox': `0 0 ${g.width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false' })
+  const svg = el('svg', { 'width': g.width, 'height': height, 'viewBox': `0 0 ${g.width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false', 'data-plot': `${PAD.left} ${g.top} ${width - PAD.right} ${bottom}` })
   const pl = frame(svg, g, { width, height, title: 'chartTitle', xAxis: 'chartXAxis', extraBottom: extra })
   const ys = rows.map(r => g.y(r.diff))
   const leaders: SVGLineElement[] = []
@@ -537,89 +627,204 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   const relPts = rows.map((r, i) => r.rel === null ? null : [g.xs[i]!, g.yR(r.rel)] as const)
   for (const b of curveBoxes(g.xs.map((x, i) => [x, ys[i]!] as const))) pl.occupySoft(b)
   for (const b of curveBoxes(relPts)) pl.occupySoft(b)
+  const relMarks = new Set<Box>()
   for (const q of relPts) { // dashed-curve markers
-    if (q)
-      pl.occupyMark({ l: q[0] - REL_PT_R, r: q[0] + REL_PT_R, t: q[1] - REL_PT_R, b: q[1] + REL_PT_R })
+    if (q) {
+      const b = { l: q[0] - REL_PT_R, r: q[0] + REL_PT_R, t: q[1] - REL_PT_R, b: q[1] + REL_PT_R }
+      relMarks.add(b)
+      pl.occupyMark(b)
+    }
   }
   // 6.840 € dashed line; its label goes where it fits (bottom, then top, either side)
-  const iu = rows.findIndex(r => r.user)
   const i6840 = rows.findIndex(r => r.amount === ONE_CONTRACT_CAP)
-  if (i6840 >= 0) {
-    const x = g.xs[i6840]!
-    const m = el('g', { 'data-testid': 'cmp3-marker-6840' })
-    m.append(el('line', { 'x1': x, 'x2': x, 'y1': g.top, 'y2': bottom, 'stroke-dasharray': '4 3', 'class': 'cap' }))
-    const capLine = { l: x - 1, r: x + 1, t: g.top, b: bottom }
-    const text = t('chartCap')
-    const cands: [number, number, string][] = []
-    for (const y of [bottom - 8, g.top + 12, bottom - 24, g.top + 28, (g.top + bottom) / 2])
-      cands.push([x - 8, y, 'end'], [x + 8, y, 'start'])
-    for (const d of [8, 28, 48, 68]) {
-      for (const y of scanYs(g.top + 12, bottom - 4))
-        cands.push([x - d, y, 'end'], [x + d, y, 'start'])
-    }
-    // follow-up: one line where it fits, else the same words on two lines (narrow charts); free spots first,
-    // then spots clear of every text that cross the least curve, one line before two
-    const lines = [text.slice(0, Math.floor(text.length / 2)), text.slice(Math.floor(text.length / 2))]
-    const w2 = Math.max(...lines.map(textWidth))
-    const w1 = textWidth(text)
-    const opts: { x: number, y: number, two: boolean, box: Box }[] = []
-    for (const [cx, y, an] of cands) {
-      const lx = Math.max(2, an === 'end' ? cx - w1 : cx)
-      if (lx + w1 <= width - 2)
-        opts.push({ x: lx, y, two: false, box: textBox(lx, y, text) })
-    }
-    const y2s = [bottom - 8 - CAP_LINE_DY, g.top + 12, bottom - 24 - CAP_LINE_DY, g.top + 28, (g.top + bottom) / 2, g.top + 44, bottom - 40 - CAP_LINE_DY]
-    for (const d of [8, 28, 48, 68, 88, 108, 128]) {
-      for (const y of [...(d === 8 ? y2s : []), ...scanYs(g.top + 12, bottom - 4 - CAP_LINE_DY)]) {
-        for (const lx of [x - d - w2, x + d]) {
-          if (lx >= 2 && lx + w2 <= width - 2)
-            opts.push({ x: lx, y, two: true, box: { l: lx, r: lx + w2, t: y - 11, b: y + CAP_LINE_DY + 3 } })
+  // validator follow-up: kink labels and「你的金额」 stay at their own marker (placeAnn); placed before the 6.840 label,
+  // which may go anywhere along its line. The dashed 6.840 line is kept clear of annotations.
+  const capLineBox = i6840 >= 0 ? { l: g.xs[i6840]! - 1, r: g.xs[i6840]! + 1, t: g.top, b: bottom } : null
+  if (capLineBox)
+    pl.occupy(capLineBox)
+  // the cap label: anns first; when the cap label then finds no clear spot, the cap label goes first
+  const placeCap = (nth?: number): { m: Element, free: boolean, hard: boolean } | null => {
+    if (i6840 >= 0) {
+      const x = g.xs[i6840]!
+      const m = el('g', { 'data-testid': 'cmp3-marker-6840' })
+      m.append(el('line', { 'x1': x, 'x2': x, 'y1': g.top, 'y2': bottom, 'stroke-dasharray': '4 3', 'class': 'cap' }))
+      const capLine = capLineBox!
+      const text = t('chartCap')
+      const cands: [number, number, string][] = []
+      for (const y of [bottom - 8, g.top + 12, bottom - 24, g.top + 28, (g.top + bottom) / 2])
+        cands.push([x - 8, y, 'end'], [x + 8, y, 'start'])
+      for (const d of [8, 28, 48, 68, 88, 108, 128, 148, 168, 188, 208]) {
+        for (const y of scanYs(g.top + 12, bottom - 4))
+          cands.push([x - d, y, 'end'], [x + d, y, 'start'])
+      }
+      // follow-up: one line where it fits, else the same words on two lines (narrow charts); free spots first,
+      // then spots clear of every text that cross the least curve, one line before two
+      const lines = [text.slice(0, Math.floor(text.length / 2)), text.slice(Math.floor(text.length / 2))]
+      const w2 = Math.max(...lines.map(textWidth))
+      const w1 = textWidth(text)
+      const opts: { x: number, y: number, two: boolean, box: Box }[] = []
+      for (const [cx, y, an] of cands) {
+        const lx = Math.max(2, an === 'end' ? cx - w1 : cx)
+        if (lx + w1 <= width - 2)
+          opts.push({ x: lx, y, two: false, box: textBox(lx, y, text) })
+      }
+      const y2s = [bottom - 8 - CAP_LINE_DY, g.top + 12, bottom - 24 - CAP_LINE_DY, g.top + 28, (g.top + bottom) / 2, g.top + 44, bottom - 40 - CAP_LINE_DY]
+      // two lines: 4 px steps sideways (crowded narrow charts leave only small gaps)
+      for (let d = 8; d <= 228; d += 4) {
+        for (const y of [...(d === 8 ? y2s : []), ...scanYs(g.top + 12, bottom - 4 - CAP_LINE_DY)]) {
+          for (const lx of [x - d - w2, x + d]) {
+            if (lx >= 2 && lx + w2 <= width - 2)
+              opts.push({ x: lx, y, two: true, box: { l: lx, r: lx + w2, t: y - 11, b: y + CAP_LINE_DY + 3 } })
+          }
         }
       }
+      let p: typeof opts[number]
+      if (nth === undefined) {
+        const freeOne = opts.findIndex(o => !o.two && pl.ok(o.box, capLine))
+        p = opts[freeOne >= 0 ? freeOne : pl.pick(opts.map(o => o.box), capLine)]!
+      }
+      else { // the nth spot clear of every text and marker: clear of curves first, then by the curve covered
+        const hardOnes = opts.filter(o => pl.hardOk(o.box, capLine))
+        const ranked = [...hardOnes.filter(o => pl.ok(o.box, capLine)), ...hardOnes.filter(o => !pl.ok(o.box, capLine)).sort((a, b) => pl.softCost(a.box) - pl.softCost(b.box))]
+        if (nth >= ranked.length)
+          return null
+        p = ranked[nth]!
+      }
+      const free = pl.ok(p.box, capLine)
+      const hard = pl.hardOk(p.box, capLine)
+      pl.occupy(p.box)
+      if (!p.two) {
+        m.append(el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start' }, text))
+      }
+      else {
+        const tx = el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start', 'class': 'cap-label' })
+        lines.forEach((ln, k) => tx.append(el('tspan', { x: p.x, y: p.y + k * CAP_LINE_DY }, ln)))
+        m.append(tx)
+      }
+      return { m, free, hard }
     }
-    const freeOne = opts.findIndex(o => !o.two && pl.ok(o.box, capLine))
-    const p = opts[freeOne >= 0 ? freeOne : pl.pick(opts.map(o => o.box), capLine)]!
-    pl.occupy(p.box)
-    if (!p.two) {
-      m.append(el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start' }, text))
-    }
-    else {
-      const tx = el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start', 'class': 'cap-label' })
-      lines.forEach((ln, k) => tx.append(el('tspan', { x: p.x, y: p.y + k * CAP_LINE_DY }, ln)))
-      m.append(tx)
-    }
-    svg.append(m)
-    pl.occupy(capLine) // follow-up (a): later annotations keep clear of the dashed 6.840 line
+    return null
   }
-  // follow-up (b): 「你的金额」 next, always at its marker (above; below / inward only when blocked)
-  const userLabel = iu < 0 ? null : el('text', { ...pl.place(t('cmp3UserTag'), userCands(pl, g.xs[iu]!, ys[iu]!, g.top + 12, bottom - 8, own[iu]!), own[iu]!), class: 'user-label' }, t('cmp3UserTag'))
+
+  const placeAnns = (only?: 'user' | 'kinks'): Map<string, Ann | null> => {
+    const annIdx = rows.map((r, i) => (r.user || isKink(r)) ? i : -1).filter(i => i >= 0)
+    const plotBox: Box = { l: PAD.left, r: width - PAD.right, t: g.top, b: bottom }
+    // try the user label first, then the kinks first; the first attempt that places every label wins (else the one
+    // with fewest labels left out)
+    // one item per label: a user amount that sits on a kink keeps both labels (user + kink)
+    const items = [...annIdx.filter(i => rows[i]!.user).map(i => ({ i, user: true })), ...annIdx.filter(i => isKink(rows[i]!)).map(i => ({ i, user: false }))]
+      .filter(it => !only || it.user === (only === 'user'))
+    const key = (it: { i: number, user: boolean }) => `${it.user ? 'u' : 'k'}${it.i}`
+    const userFirst = [...items.filter(it => it.user), ...items.filter(it => !it.user)]
+    const kinksFirst = [...items.filter(it => !it.user), ...items.filter(it => it.user)]
+    const n0 = pl.boxes.length
+    let anns = new Map<string, Ann | null>()
+    for (const order of [userFirst, kinksFirst]) {
+      pl.boxes.length = n0
+      const tryAnns = new Map<string, Ann | null>()
+      for (const it of order) {
+        const i = it.i
+        const r = rows[i]!
+        const text = it.user ? t('cmp3UserTag') : t('chartKink', { a: formatNumberDe(r.amount) })
+        const region = it.user ? plotBox : { l: 2, r: width - 2, t: 2, b: bottom }
+        tryAnns.set(key(it), placeAnn(pl, text, own[i]!, region, annIdx.filter(j => j !== i && g.xs[j] !== g.xs[i]).map(j => own[j]!), true))
+      }
+      const miss = (m: Map<string, Ann | null>) => [...m.values()].filter(a => !a).length
+      if (anns.size === 0 || miss(tryAnns) < miss(anns))
+        anns = tryAnns
+      if (miss(tryAnns) === 0)
+        break
+    }
+    // re-occupy the winning boxes (the loop may have ended on another attempt)
+    pl.boxes.length = n0
+    for (const a of anns.values()) {
+      if (a)
+        pl.occupy(a.box)
+    }
+    return anns
+  }
+
+  // four orders: labels then cap label; cap label then labels; your label / cap label / kink labels; kink labels /
+  // cap label / your label. The winner never drops your label, then keeps the cap label off texts and markers, then (wider than
+  // OMIT_MAX_WIDTH) every kink label, then leaves out the fewest kink labels, then keeps the cap label off
+  // curves (first order wins ties)
+  const nStart = pl.boxes.length
+  const orders: (() => { anns: Map<string, Ann | null>, cap: ReturnType<typeof placeCap> })[] = [
+    () => { const anns = placeAnns(); return { anns, cap: placeCap() } },
+    () => { const cap = placeCap(); return { anns: placeAnns(), cap } },
+    () => { const u = placeAnns('user'); const cap = placeCap(); return { anns: new Map([...u, ...placeAnns('kinks')]), cap } },
+    () => { const k = placeAnns('kinks'); const cap = placeCap(); return { anns: new Map([...k, ...placeAnns('user')]), cap } },
+  ]
+  const rank = ({ anns, cap }: ReturnType<typeof orders[number]>) => {
+    const miss = [...anns].filter(([, a]) => !a).map(([k]) => k)
+    return (miss.some(k => k[0] === 'u') ? 1e6 : 0) + (cap && !cap.hard ? 1e5 : 0) + (width <= OMIT_MAX_WIDTH ? 100 : 1e4) * miss.length + (cap && !cap.free ? 1 : 0)
+  }
+  let bestOrder = 0
+  let bestRank = Infinity
+  for (let k = 0; k < orders.length; k++) {
+    pl.boxes.length = nStart
+    const o = orders[k]!()
+    const r = rank(o)
+    if (r < bestRank) {
+      bestRank = r
+      bestOrder = k
+    }
+    if (r === 0)
+      break
+  }
+  // still no clear layout: the cap label tries its next clear spots before the other labels are placed
+  const nthOrders = (n: number) => [
+    () => ({ cap: placeCap(n), anns: placeAnns() }),
+    () => { const u = placeAnns('user'); const cap = placeCap(n); return { anns: new Map([...u, ...placeAnns('kinks')]), cap } },
+    () => { const k = placeAnns('kinks'); const cap = placeCap(n); return { anns: new Map([...k, ...placeAnns('user')]), cap } },
+  ]
+  for (let n = 0; bestRank >= 100 && n < 80; n++) {
+    let any = false
+    for (const f of nthOrders(n)) {
+      pl.boxes.length = nStart
+      const o = f()
+      if (!o.cap)
+        continue
+      any = true
+      const r = rank(o)
+      if (r < bestRank) {
+        bestRank = r
+        orders.push(f)
+        bestOrder = orders.length - 1
+      }
+    }
+    if (!any)
+      break
+  }
+  pl.boxes.length = nStart
+  const { anns, cap } = orders[bestOrder]!()
+  const capMarker = cap?.m ?? null
+
+  if (capMarker)
+    svg.append(capMarker)
   svg.append(el('polyline', { points: g.xs.map((x, i) => `${x},${ys[i]}`).join(' '), class: 'line' }))
   relLine(svg, g.xs, rows.map(r => r.rel), g.yR, rows.map(r => amountId(r.amount)))
-  // priority: kink labels, then the user label (A.3)
-  const kinkText = new Map<number, [SVGTextElement]>()
-  rows.forEach((r, i) => {
-    if (!isKink(r))
-      return
-    const s = t('chartKink', { a: formatNumberDe(r.amount) })
-    kinkText.set(i, [el('text', pl.place(s, [...around(g.xs[i]!, ys[i]!, 5, slopeOf(ys, i)), ...scanAround(g.xs[i]!, g.top + 12, bottom - 8)], own[i]!), s)])
-  })
   rows.forEach((r, i) => {
     const x = g.xs[i]!
     const y = ys[i]!
     const id = amountId(r.amount)
     const pt = el('g', { 'data-testid': `cmp3-point-${id}` })
     pt.append(el('circle', { cx: x, cy: y, r: r.user ? 6 : 3, class: r.user ? 'pt user' : 'pt' }))
-    if (r.user) {
-      pt.append(userLabel!)
-    }
+    const a = anns.get(`u${i}`)
+    if (r.user && a)
+      drawAnn(pt, a, 'user-label')
     svg.append(pt)
-    const k = kinkText.get(i)
-    if (k) {
+    if (isKink(r)) {
       const m = el('g', { 'data-testid': `cmp3-marker-${r.amount}` })
-      m.append(el('rect', { x: x - 5, y: y - 5, width: 10, height: 10, class: 'kink' }), k[0])
+      m.append(el('rect', { x: x - 5, y: y - 5, width: 10, height: 10, class: 'kink' }))
+      const ak = anns.get(`k${i}`)
+      if (ak)
+        drawAnn(m, ak)
       svg.append(m)
     }
   })
+  // labels without a valid spot next to their marker are left out (and listed here for tests / reports)
+  svg.setAttribute('data-unplaced', [...anns].filter(([, a]) => !a).map(([k]) => k[0] === 'u' ? 'user' : String(rows[Number(k.slice(1))]!.amount)).join(' '))
   svg.append(...leaders, ...xl)
   return svg
 }

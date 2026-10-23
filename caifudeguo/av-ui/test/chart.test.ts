@@ -85,8 +85,9 @@ function boxesOf(svg: FakeEl, width: number) {
   return texts.map((e) => {
     const x = Number(e.attrs.x)
     const y = Number(e.attrs.y)
-    expect(e.attrs['text-anchor'], e.textContent).toMatch(/^(?:start|middle)$/)
-    const l = e.attrs['text-anchor'] === 'middle' ? x - est(e.textContent) / 2 : x
+    expect(e.attrs['text-anchor'], e.textContent).toMatch(/^(?:start|middle|end)$/)
+    const a = e.attrs['text-anchor']
+    const l = a === 'middle' ? x - est(e.textContent) / 2 : a === 'end' ? x - est(e.textContent) : x
     expect(l, e.textContent).toBeGreaterThanOrEqual(0)
     expect(l + est(e.textContent), e.textContent).toBeLessThanOrEqual(width)
     return { text: e.textContent, cls: e.attrs.class ?? '', grp: (e as unknown as { parent?: unknown }).parent ?? e, l, r: l + est(e.textContent), t: y - 11, b: y + 3 }

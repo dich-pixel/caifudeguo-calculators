@@ -7,7 +7,12 @@ const TODAY = new Date(2026, 9, 17)
 const form = (f = {}, mode = 'avDepot') =>
   ({ ...structuredClone(DEFAULTS), taxSavingsMode: mode, kids: [], fields: { ...DEFAULTS.fields, ...f } })
 const est = t => [...t].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)
-const tbox = n => ({ l: Number(n.attrs.x), r: Number(n.attrs.x) + est(n.textContent), t: Number(n.attrs.y) - 11, b: Number(n.attrs.y) + 3, s: n.textContent })
+// x is the start, centre or end of the text (text-anchor; a tspan inherits it from its text)
+const tbox = (n, anchor = n.attrs['text-anchor']) => {
+  const w = est(n.textContent)
+  const l = Number(n.attrs.x) - (anchor === 'middle' ? w / 2 : anchor === 'end' ? w : 0)
+  return { l, r: l + w, t: Number(n.attrs.y) - 11, b: Number(n.attrs.y) + 3, s: n.textContent }
+}
 const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b
 const pts = s => s.trim().split(/\s+/).map(p => p.split(',').map(Number))
 const samples = (ps) => {
@@ -23,6 +28,17 @@ const INPUTS = {
   'zvE 20.000 / refunds spent': form({ zveSavingsPhase: '20.000' }, 'consume'),
   'zvE 15.000 / retirement 8.000': form({ zveSavingsPhase: '15.000', zveRetirement: '8.000' }),
 }
+// the e2e matrix (viewport 288/320/343/375/800 px = chart 264/296/319/351/776 px)
+const MATRIX = {
+  ...INPUTS,
+  'zvE 80.000 / secondary depot': form({ zveSavingsPhase: '80.000' }, 'secondaryDepot'),
+}
+const VIEWPORTS = [288, 320, 343, 375, 800]
+// PM decision (option a): only at these screen widths may exactly these kink labels be left out; markers stay drawn
+const ALLOWED_UNPLACED = {
+  288: { 'default': '1800', 'zvE 20.000 / refunds spent': '360 1800', 'zvE 15.000 / retirement 8.000': '1800', 'zvE 80.000 / secondary depot': '360 1800' },
+  320: { 'default': '1800', 'zvE 20.000 / refunds spent': '360', 'zvE 15.000 / retirement 8.000': '1800' },
+}
 const WIDTHS = [288, 320, 343, 375]
 
 let drawChart, sweep, namedAmounts, clearSweepCache
@@ -36,12 +52,12 @@ const chart = (f, w) => {
   const s = sweep(f, undefined, { today: TODAY })
   return { s, svg: drawChart(s.rows, w, namedAmounts(s)) }
 }
-const annotations = svg => [
+const annotations = svg => [...new Set([
   ...all(svg, n => n.tag === 'text' && n.attrs.class === 'user-label'),
   ...all(svg, n => n.tag === 'g' && (n.attrs['data-testid'] ?? '').startsWith('cmp3-marker-')).flatMap(g => all(g, n => n.tag === 'text')),
-].flatMap(n => {
+])].flatMap(n => {
   const ts = all(n, c => c.tag === 'tspan')
-  return ts.length ? ts.map(tbox) : [tbox(n)]
+  return ts.length ? ts.map(t => tbox(t, n.attrs['text-anchor'])) : [tbox(n)]
 })
 
 describe.each(Object.keys(INPUTS))('%s', (name) => {
@@ -82,18 +98,63 @@ describe.each(Object.keys(INPUTS))('%s', (name) => {
       for (const o of xl.filter(o => +o.attrs.y < +n.attrs.y).map(tbox)) expect(tick > o.l && tick < o.r, `${n.textContent} leader × ${o.s}`).toBe(false)
     }
   })
-  it('「你的金额」 placement is fixed: always centred on its marker, above (below / inward / beside only when blocked), in fixed 7 px steps', () => {
-    for (const w of WIDTHS) {
-      const { svg } = chart(INPUTS[name], w)
-      const u = all(svg, n => n.tag === 'circle' && n.attrs.class === 'pt user')[0]
-      const lab = tbox(all(svg, n => n.attrs.class === 'user-label')[0])
-      const cx = +u.attrs.cx
-      const near = (a, b) => Math.abs(a - b) < 1e-6
-      expect(near((lab.l + lab.r) / 2, cx) || near(lab.l, cx) || near(lab.r, cx) || near(lab.l, cx + 10) || near(lab.r, cx - 10), `${w} px x`).toBe(true)
-      const up = +u.attrs.cy - 12 - (lab.b - 3)
-      const down = (lab.b - 3) - (+u.attrs.cy + 21)
-      expect(Math.abs((lab.b - 3) - (+u.attrs.cy + 4)) < 1e-6 || Array.from({ length: 21 }, (_, k) => 7 * k).some(d => Math.abs(up - d) < 1e-6 || Math.abs(down - d) < 1e-6), `${w} px y ${up}`).toBe(true)
+  it.each([...WIDTHS, 800])('%i px: every annotation within 48 px of its own marker (leader when offset), 「你的金额」 inside the plot', (w) => {
+    const { svg } = chart(INPUTS[name], w)
+    const plot = svg.attrs['data-plot'] ? svg.attrs['data-plot'].split(' ').map(Number) : null
+    const u = all(svg, n => n.tag === 'circle' && n.attrs.class === 'pt user')[0]
+    const ul = all(svg, n => n.attrs.class === 'user-label')[0]
+    expect(ul, 'user label drawn').toBeTruthy()
+    const groups = [[ul, { l: +u.attrs.cx - 6, r: +u.attrs.cx + 6, t: +u.attrs.cy - 6, b: +u.attrs.cy + 6 }, all(svg, n => n.tag === 'g' && n.attrs['data-testid']?.startsWith('cmp3-point-') && n.children.includes(ul))[0]]]
+    for (const g of all(svg, n => n.tag === 'g' && /^cmp3-marker-(?:360|1800)$/.test(n.attrs['data-testid'] ?? ''))) {
+      const r = all(g, n => n.tag === 'rect')[0]
+      const tx = all(g, n => n.tag === 'text')[0]
+      if (tx)
+        groups.push([tx, { l: +r.attrs.x, r: +r.attrs.x + 10, t: +r.attrs.y, b: +r.attrs.y + 10 }, g])
+      else
+        expect(svg.attrs['data-unplaced'] ?? '', 'missing kink label must be reported').toContain(g.attrs['data-testid'].slice(12))
     }
+    for (const [tx, m, g] of groups) {
+      const ts = all(tx, c => c.tag === 'tspan')
+      const bs = ts.length ? ts.map(t => tbox(t, tx.attrs['text-anchor'])) : [tbox(tx)]
+      const box = { l: Math.min(...bs.map(b => b.l)), r: Math.max(...bs.map(b => b.r)), t: Math.min(...bs.map(b => b.t)) + 3, b: Math.max(...bs.map(b => b.b)) - 3 }
+      const gap = Math.max(0, box.l - m.r, m.l - box.r, box.t - m.b, m.t - box.b)
+      expect(gap, `${tx.textContent} gap`).toBeLessThanOrEqual(48)
+      if (gap > 12)
+        expect(all(g, n => n.tag === 'line' && n.attrs.class === 'ann-leader').length, `${tx.textContent} leader`).toBe(1)
+    }
+    if (plot) {
+      const [l, t, r, b] = plot
+      const bs = (all(ul, c => c.tag === 'tspan').length ? all(ul, c => c.tag === 'tspan').map(x => tbox(x, ul.attrs['text-anchor'])) : [tbox(ul)])
+      for (const x of bs) expect(x.l >= l && x.r <= r && x.t + 3 >= t && x.b - 1 <= b, `user label inside plot @${w}`).toBe(true)
+    }
+  })
+})
+
+describe.each(Object.keys(MATRIX))('%s', (name) => {
+  it.each(VIEWPORTS)('%i px viewport: labels left out only where allowed (exact list), markers still drawn', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const want = ALLOWED_UNPLACED[w]?.[name] ?? ''
+    expect(svg.attrs['data-unplaced'] ?? '').toBe(want)
+    const marks = all(svg, n => n.tag === 'g' && /^cmp3-marker-(?:360|1800)$/.test(n.attrs['data-testid'] ?? ''))
+    expect(marks.length).toBe(2)
+    for (const g of marks) {
+      expect(all(g, n => n.tag === 'rect' && n.attrs.class === 'kink').length, g.attrs['data-testid']).toBe(1)
+      expect(all(g, n => n.tag === 'text').length, g.attrs['data-testid']).toBe(want.split(' ').includes(g.attrs['data-testid'].slice(12)) ? 0 : 1)
+    }
+    expect(all(svg, n => n.attrs.class === 'user-label').length).toBe(1)
+  })
+})
+
+// regression (78cbb19 follow-up): a user amount exactly on a kink keeps both labels
+describe.each([360, 1800])('user amount on the %i kink', (k) => {
+  it.each([320, 343, 375, 800])('%i px: 「你的金额」 and 「拐点」 both drawn', (w) => {
+    const { svg } = chart(form({ savingsRate: k.toLocaleString('de-DE') }), w)
+    expect(svg.attrs['data-unplaced'] ?? '').toBe('')
+    const tx = n => n.textContent
+    expect(all(svg, n => n.attrs.class === 'user-label').length).toBe(1)
+    expect(all(svg, n => n.attrs.class === 'user-label')[0].textContent).toBe('你的金额')
+    const m = all(svg, n => n.tag === 'g' && n.attrs['data-testid'] === `cmp3-marker-${k}`)[0]
+    expect(all(m, n => n.tag === 'text').map(t => all(t, c => c.tag === 'tspan').length ? all(t, c => c.tag === 'tspan').map(tx).join(' ') : tx(t)).join('')).toBe(`拐点 ${k.toLocaleString('de-DE')} €`)
   })
 })
 
