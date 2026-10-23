@@ -27,17 +27,22 @@ export function formatNumberDe(value: number, decimals = 0): string {
   return `${r < 0 ? '-' : ''}${grouped}${frac !== undefined ? `,${frac}` : ''}`
 }
 
+/** Stage 5 (a): displayed negatives use the minus sign U+2212, as on the chart axes; formatNumberDe stays ASCII for input round-trips. */
+export function displayNumberDe(value: number, decimals = 0): string {
+  return formatNumberDe(value, decimals).replace(/^-/, '\u2212')
+}
+
 /** Summary amounts: whole euros, e.g. "228.547 €". */
 export function formatEuro(value: number): string {
-  return `${formatNumberDe(value, 0)}\u00A0€`
+  return `${displayNumberDe(value, 0)}\u00A0€`
 }
 
 /** Yearly table amounts: 2 decimals, e.g. "1.800,00 €". */
 export function formatEuro2(value: number): string {
-  return `${formatNumberDe(value, 2)}\u00A0€`
+  return `${displayNumberDe(value, 2)}\u00A0€`
 }
 
 /** Percent, e.g. "6,0 %". */
 export function formatPercentDe(value: number, decimals = 1): string {
-  return `${formatNumberDe(value, decimals)}\u00A0%`
+  return `${displayNumberDe(value, decimals)}\u00A0%`
 }

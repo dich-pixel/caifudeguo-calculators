@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, el, frame, PAD, plotTop, relLine, textBox, textWidth } from './chart'
+import { axes, el, frame, PAD, plotTop, relLine, textBox, textWidth, X_LABEL_GAP } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -45,7 +45,7 @@ export function drawEarlyChart(e: EarlyExit, width: number): SVGSVGElement {
   pts.forEach((p, i) => {
     const s = String(p.age)
     const w = textWidth(s)
-    const x = Math.max(2, Math.min(xs[i]! - w / 2, width - 2 - w))
+    const x = Math.max(2, Math.min(xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)) // stage 5 (b): clear of the right-axis labels
     if (x < lastR + 4 && i !== pts.length - 1)
       return
     if (x < lastR + 4)
@@ -81,13 +81,18 @@ function details(e: EarlyExit, p: ExitPoint): [StrKey, string, StrKey | null][] 
   return out
 }
 const hasSec = (e: EarlyExit) => e.points.some(p => p.secBalance > 0)
-const secText = (p: ExitPoint) => t('eeSecCell', { b: formatEuro(p.secBalance), t: formatEuro(-p.secTax), n: formatEuro(p.secBalance - p.secTax) })
+/** stage 5 table fix: the side account as a group row (eeSecLabel) + three rows reusing the result-table labels gross/tax/net */
+const SEC_PARTS: [StrKey, string, (p: ExitPoint) => number][] = [
+  ['gross', 'gross', p => p.secBalance],
+  ['tax', 'tax', p => -p.secTax],
+  ['net', 'net', p => p.secBalance - p.secTax],
+]
 
 /** wide table (≥ 1000 px): one column per point */
 export function wideTable(e: EarlyExit): HTMLElement {
   const head = h('tr', {}, h('th', { scope: 'col' }, t('eeColWhen')), ...e.points.map(p => h('th', { 'scope': 'col', 'data-testid': `ee-col-${p.year}` }, when(p))))
-  const line = (label: Node | string, cls: string, cells: (p: ExitPoint) => Node | string) =>
-    h('tr', { class: cls }, h('th', { scope: 'row' }, label), ...e.points.map(p => h('td', { 'data-testid': `ee-${cls}-${p.year}` }, cells(p))))
+  const line = (label: Node | string, cls: string, cells: (p: ExitPoint) => Node | string, extra = '') =>
+    h('tr', { class: extra ? `${cls} ${extra}` : cls }, h('th', { scope: 'row' }, label), ...e.points.map(p => h('td', { 'data-testid': `ee-${cls}-${p.year}` }, cells(p))))
   const rows: HTMLElement[] = []
   const d0 = e.points.length ? details(e, e.points[0]!) : []
   d0.forEach(([key, , small], k) => {
@@ -95,7 +100,7 @@ export function wideTable(e: EarlyExit): HTMLElement {
     rows.push(line(label, `d${k}`, p => num(details(e, p)[k]![1])))
   })
   if (hasSec(e))
-    rows.splice(e.mode === 'consume' ? 6 : 5, 0, line(t('eeSecLabel'), 'sec', p => num(secText(p))))
+    rows.splice(e.mode === 'consume' ? 6 : 5, 0, line(t('eeSecLabel'), 'sec', () => ''), ...SEC_PARTS.map(([key, cls, v]) => line(t(key), `sec-${cls}`, p => num(formatEuro(v(p))), 'sub')))
   rows.push(line(t('eeColAvNet'), 'av', p => eur(p.avNet)))
   rows.push(line(t('eeColNormalNet'), 'normal', p => eur(p.normalNet)))
   rows.push(line(t('eeColDiff'), 'diff', p => num(signed(p.diff))))
@@ -109,7 +114,7 @@ export function cards(e: EarlyExit): HTMLElement {
     const item = (key: StrKey, cls: string, v: Node | string) => h('div', { 'class': `ee-item ${cls}`, 'data-testid': `ee-card-${cls}-${p.year}` }, h('dt', {}, t(key)), h('dd', {}, v))
     const extra = details(e, p).map(([key, v, small]) => h('div', { class: 'ee-item' }, h('dt', {}, t(key), small ? txt('span', small, { class: 'small' }) : null), h('dd', {}, num(v))))
     if (hasSec(e))
-      extra.push(h('div', { class: 'ee-item sec' }, h('dt', {}, t('eeSecLabel')), h('dd', {}, num(secText(p)))))
+      extra.push(h('div', { class: 'ee-item sec' }, h('dt', {}, t('eeSecLabel'))), ...SEC_PARTS.map(([key, cls, v]) => h('div', { 'class': 'ee-item sub', 'data-testid': `ee-card-sec-${cls}-${p.year}` }, h('dt', {}, t(key)), h('dd', {}, num(formatEuro(v(p)))))))
     return h('li', { 'class': 'ee-card', 'data-testid': `ee-card-${p.year}` },
       h('h3', {}, when(p)),
       h('dl', { class: 'ee-main' },

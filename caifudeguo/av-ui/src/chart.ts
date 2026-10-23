@@ -19,6 +19,8 @@ import { t } from './strings'
 
 const NS = 'http://www.w3.org/2000/svg'
 /** right = tick labels (start-anchored at width − right + 6) + the rotated right axis title at width − 8 */
+/** min horizontal gap between an x label and the right-axis tick labels */
+export const X_LABEL_GAP = 4
 export const PAD = { left: 78, right: 66, top: 46, bottom: 44 }
 /** x-axis labels below 400 px */
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
@@ -331,7 +333,8 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
     if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow)) {
       const s = formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)
       const w = textWidth(s)
-      const x = Math.max(2, Math.min(g.xs[i]! - w / 2, width - 2 - w))
+      // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
+      const x = Math.max(2, Math.min(g.xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w))
       pl.occupy(textBox(x, bottom + 14, s))
       xl.push(el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': r.tier ? 'xl' : 'xl user' }, s))
     }

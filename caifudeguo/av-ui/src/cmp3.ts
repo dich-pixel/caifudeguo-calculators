@@ -11,7 +11,7 @@ import type { StrKey } from './strings'
 import { drawChart } from './chart'
 import { amountId, flipText, kindName, maxText, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
-import { formatEuro, formatNumberDe } from './format'
+import { displayNumberDe, formatEuro } from './format'
 import { ONE_CONTRACT_CAP } from './model'
 import { t } from './strings'
 
@@ -21,7 +21,7 @@ const num = (s: string) => h('span', { class: 'num' }, s)
 
 /** Stage 5 B: relative difference in % (2 decimals, 1 from 10 %); null → dash (B.3) */
 export function relText(rel: number | null): string {
-  return rel === null ? t('dash') : t('relCell', { p: formatNumberDe(rel, Math.abs(rel) >= 10 ? 1 : 2) })
+  return rel === null ? t('dash') : t('relCell', { p: displayNumberDe(rel, Math.abs(rel) >= 10 ? 1 : 2) })
 }
 
 export interface Cmp3View {
@@ -195,7 +195,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
       cell('rel', r.rel === null ? t('dash') : num(relText(r.rel))),
       cell('verdict', h('span', { 'data-verdict': r.kind }, kindName(r.kind)), r.flip ? h('span', { 'class': 'flip', 'data-testid': 'cmp3-flip' }, flipText(r.flip)) : null),
       cell('marginal', m
-        ? num(t('cmp3MarginalCell', { a: formatNumberDe(m.av, 2), b: formatNumberDe(m.normal, 2) }))
+        ? num(t('cmp3MarginalCell', { a: displayNumberDe(m.av, 2), b: displayNumberDe(m.normal, 2) }))
         : t('dash')),
       cell('monthly', num(t('cmp3MonthlyCell', { a: formatEuro(r.result.monthlyNet.avDepot), b: formatEuro(r.result.monthlyNet.normalDepot) }))),
       h('td', { 'data-testid': `cmp3-split-${id}`, 'data-label': label.split, 'class': 'split' }, r.split === null ? t('dash') : num(formatEuro(r.split))),
