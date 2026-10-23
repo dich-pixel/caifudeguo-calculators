@@ -214,6 +214,8 @@ describe('view (C.5)', () => {
     expect(all(svg, x => x.attrs.class === 'pt')).toHaveLength(e.points.length)
     expect(all(svg, x => x.attrs.class === 'rel-pt')).toHaveLength(e.points.filter(p => p.rel !== null).length)
     const right = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text')
+    expect(all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'line')).toHaveLength(0)
+    for (const r of right) expect(r.textContent).toMatch(/^−?\d[\d.,]* %$/)
     if (width < 400)
       expect(right.length).toBeLessThanOrEqual(3)
     const est = (t: string) => [...t].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)

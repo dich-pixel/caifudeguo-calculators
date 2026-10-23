@@ -167,16 +167,20 @@ describe('right axis with negative values (stage 5 follow-up)', () => {
       expect(g.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
     const svg = drawChart(s.rows, width) as unknown as FakeEl
     const labels = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').map(x => x.textContent)
-    expect(labels.some(l => /^[−-]\d/.test(l))).toBe(true)
+    expect(labels.some(l => /^−\d/.test(l))).toBe(true)
+    // no hyphen-minus, no dash glyph before positive labels; negatives use U+2212
+    for (const l of labels) {
+      expect(l).not.toMatch(/-/)
+      expect(l).toMatch(/^−?\d[\d.,]* %$/)
+    }
     // Q4: zeros aligned, no separate 0 % line (only the left grid's zero line, at the same y)
     expect(byTestId(svg, 'chart-zero-r')).toHaveLength(0)
     expect(all(svg, x => x.attrs.class === 'zero-r')).toHaveLength(0)
     const zeroLines = all(svg, x => x.tag === 'line' && x.attrs.class === 'zero')
     expect(zeroLines.length).toBeLessThanOrEqual(1)
-    const t0 = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'line' && x.attrs.class === 'tick')
-      .find(l => Math.abs(Number(l.attrs.y1) - g.yR(0)) < 1e-9)
+    const t0 = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').find(x => x.textContent === '0 %')
     expect(t0).toBeDefined()
-    expect(Number(t0!.attrs.y1)).toBeCloseTo(g.y(0), 9)
+    expect(Number(t0!.attrs.y) - 4).toBeCloseTo(g.y(0), 9)
     for (const l of zeroLines) expect(Number(l.attrs.y1)).toBeCloseTo(g.y(0), 9)
     const pt = byTestId(svg, 'chart-rel-pt-13680')[0]!
     expect(Number(pt.attrs.cy)).toBeGreaterThan(g.yR(0))
@@ -189,5 +193,32 @@ describe('right axis with negative values (stage 5 follow-up)', () => {
     const n = axes([10, -3], [40, -1.2], 0, 200, true)
     expect(n.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
     expect(Math.min(...n.ticksR)).toBeLessThan(0)
+  })
+})
+
+describe('axis tick labels (stage 5 follow-up: no dash next to numbers)', () => {
+  it.each([375, 800, 1280])('%i px: no tick-mark lines on the right axis, left/right negatives start with −', (width) => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const svg = drawChart(s.rows, width) as unknown as FakeEl
+    const right = byTestId(svg, 'chart-axis-right')[0]!
+    expect(all(right, x => x.tag === 'line')).toHaveLength(0)
+    expect(all(svg, x => x.attrs.class === 'tick')).toHaveLength(0)
+    // left labels (placed start-anchored): they end 4 px before the grid line start at PAD.left
+    const g = geometry(s.rows, width)
+    const left = all(svg, x => x.tag === 'text' && Math.abs(Number(x.attrs.x) + est(x.textContent) - (PAD.left - 4)) < 1e-6)
+    expect(left.length).toBe(g.ticks.length)
+    for (const l of left) {
+      expect(l.textContent).not.toMatch(/-/)
+      expect(l.textContent).toMatch(/^−?\d/)
+    }
+    expect(left.some(l => l.textContent.startsWith('−'))).toBe(Math.min(...g.ticks) < 0)
+  })
+  it('axisNumber: U+2212 for negatives, de-DE grouping', async () => {
+    const { axisNumber } = await import('../src/chart')
+    expect(axisNumber(-20000)).toBe('\u221220.000')
+    expect(axisNumber(-2.5, 1)).toBe('\u22122,5')
+    expect(axisNumber(15)).toBe('15')
+    expect(axisNumber(0)).toBe('0')
   })
 })

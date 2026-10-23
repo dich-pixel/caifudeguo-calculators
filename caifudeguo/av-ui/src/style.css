@@ -206,7 +206,6 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .legend .sample { stroke-width: 2.5; }
 .cmp3-svg .legend .sample.line { stroke: var(--av); }
 .cmp3-svg .axis-right text, .cmp3-svg .axis-title-right { fill: #8a4b00; }
-.cmp3-svg line.tick { stroke: var(--fg); stroke-width: 1; }
 
 /* stage 5 C: early withdrawal */
 .ee-disclaimer { border-left: 3px solid #8a4b00; padding: 4px 8px; background: var(--bg-soft); }

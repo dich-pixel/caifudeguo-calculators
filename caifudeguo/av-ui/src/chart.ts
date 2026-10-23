@@ -250,6 +250,9 @@ export function around(x: number, y: number, r: number, slope: 'start' | 'end' |
   return out
 }
 
+/** axis label number in de-DE style with a real minus sign (U+2212) for negatives */
+export const axisNumber = (v: number, digits = 0) => formatNumberDe(v, digits).replace(/^[-\u2212]/, '\u2212')
+
 /** Frame shared by both charts: title, legend, grid + both tick columns, axis titles. Returns the placer. */
 export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width: number, height: number, title: StrKey, xAxis: StrKey }): Placer {
   const { width, height } = o
@@ -266,12 +269,13 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
   svg.append(lg)
   for (const v of a.ticks) {
     svg.append(el('line', { x1: PAD.left, x2: width - PAD.right, y1: a.y(v), y2: a.y(v), class: v === 0 ? 'zero' : 'grid' }))
-    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', formatNumberDe(v)), formatNumberDe(v)))
+    const sl = axisNumber(v)
+    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', sl), sl))
   }
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
   for (const v of a.ticksR) {
-    const s = `${formatNumberDe(v, Number.isInteger(v) ? 0 : 1)} %`
-    rg.append(el('line', { x1: width - PAD.right, x2: width - PAD.right + 4, y1: a.yR(v), y2: a.yR(v), class: 'tick' }))
+    // no tick marks: a dash touching the number read as a minus sign; the grid lines give the position
+    const s = `${axisNumber(v, Number.isInteger(v) ? 0 : 1)} %`
     rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
   }
   svg.append(rg)
