@@ -27,14 +27,26 @@ export const X_LABEL_MIN_GAP = 8
 /** stage 5 follow-up: baseline offset between x-label rows (only used for must-keep ticks that do not fit) */
 export const X_ROW2_DY = 13
 
+/** free space (px) on each side of a leader line */
+export const LEADER_CLEAR = 2
+
 export interface XLabel { tick: number, w: number, must?: boolean }
 export interface XPlaced { i: number, l: number, row: number }
 
 /** Lay out one row: each label still touches its tick (l ≤ tick ≤ l + w), inside [minL, maxR], ≥ gap apart. */
-function fitRow(ls: XLabel[], idx: number[], minL: number, maxR: number, gap: number): number[] | null {
+function fitRow(ls: XLabel[], idx: number[], minL: number, maxR: number, gap: number, avoid: number[] = []): number[] | null {
   const o = [...idx].sort((x, y) => ls[x]!.tick - ls[y]!.tick)
   const lo = o.map(i => Math.max(minL, ls[i]!.tick - ls[i]!.w))
   const hi = o.map(i => Math.min(maxR - ls[i]!.w, ls[i]!.tick))
+  // follow-up: leader lines of deeper rows (at x ∈ avoid) pass this row; no label may cover them
+  o.forEach((i, k) => {
+    for (const x of avoid) {
+      if (ls[i]!.tick < x)
+        hi[k] = Math.min(hi[k]!, x - LEADER_CLEAR - ls[i]!.w)
+      else if (ls[i]!.tick > x)
+        lo[k] = Math.max(lo[k]!, x + LEADER_CLEAR)
+    }
+  })
   const l = o.map((i, k) => Math.min(hi[k]!, Math.max(lo[k]!, ls[i]!.tick - ls[i]!.w / 2)))
   for (let k = 1; k < o.length; k++) l[k] = Math.max(l[k]!, l[k - 1]! + ls[o[k - 1]!]!.w + gap)
   for (let k = o.length - 1; k >= 0; k--) l[k] = Math.min(l[k]!, hi[k]!, k < o.length - 1 ? l[k + 1]! - ls[o[k]!]!.w - gap : Infinity)
@@ -60,21 +72,42 @@ export function placeLabels(ls: XLabel[], o: { minL: number, maxR: number, gap?:
   const one = fitRow(ls, all, o.minL, o.maxR, gap)
   if (one)
     return all.map(i => ({ i, l: one[i]!, row: 0 }))
-  const order = [0, n - 1, ...all.filter(i => ls[i]!.must), ...all].filter((i, k, a) => i >= 0 && i < n && a.indexOf(i) === k)
+  // protected labels (first, last, must-keep) left to right, so stacked ones form a staircase whose leaders stay free
+  const isProt = (i: number) => i === 0 || i === n - 1 || !!ls[i]!.must
+  const byTick = (x: number, y: number) => ls[x]!.tick - ls[y]!.tick
+  const order = [...all.filter(isProt).sort(byTick), ...all.filter(i => !isProt(i))]
   const rowsIdx: number[][] = Array.from({ length: Math.max(1, o.rows ?? 1) }, () => [])
-  for (const i of order) {
-    const tries = ls[i]!.must ? rowsIdx.map((_, r) => r) : [0]
-    for (const r of tries) {
-      if (fitRow(ls, [...rowsIdx[r]!, i], o.minL, o.maxR, gap)) {
-        rowsIdx[r]!.push(i)
-        break
-      }
+  const fit = (rs: number[][]) => rs.map((idx, r) => fitRow(ls, idx, o.minL, o.maxR, gap, rs.slice(r + 1).flat().map(i => ls[i]!.tick)))
+  const ok = (rs: number[][]) => fit(rs).every(Boolean)
+  const withI = (rs: number[][], r: number, i: number) => rs.map((idx, k) => k === r ? [...idx, i] : idx)
+  // protected labels: depth-first over rows (lowest rows first), so an earlier label can step down to free a leader
+  const prot = order.filter(isProt)
+  let budget = 20000
+  const dfs = (k: number, rs: number[][]): number[][] | null => {
+    if (k === prot.length)
+      return rs
+    for (let r = 0; r < rs.length && budget-- > 0; r++) {
+      const next = withI(rs, r, prot[k]!)
+      const done = ok(next) ? dfs(k + 1, next) : null
+      if (done)
+        return done
     }
+    return null
   }
+  const found = dfs(0, rowsIdx)
+  for (const i of found ? order.filter(i => !isProt(i)) : order) {
+    const cur = found ?? rowsIdx
+    const tries = isProt(i) ? cur.map((_, r) => r) : [0]
+    const r = tries.find(r => ok(withI(cur, r, i)))
+    if (r !== undefined)
+      cur[r]!.push(i)
+  }
+  if (found)
+    found.forEach((idx, r) => { rowsIdx[r] = idx })
   const out: XPlaced[] = []
+  const f = fit(rowsIdx)
   rowsIdx.forEach((idx, r) => {
-    const l = fitRow(ls, idx, o.minL, o.maxR, gap)!
-    for (const i of idx) out.push({ i, l: l[i]!, row: r })
+    for (const i of idx) out.push({ i, l: f[r]![i]!, row: r })
   })
   return out.sort((x, y) => x.i - y.i)
 }
@@ -85,6 +118,8 @@ export const PAD = { left: 78, right: 84, top: 46, bottom: 44 }
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
 /** A.3: minimum gap between texts / to the 0 line */
 export const GAP = 4
+/** follow-up: line distance of the two-line 6.840 label */
+export const CAP_LINE_DY = 14
 /** right axis: at most this many ticks below 400 px (B.2) */
 export const NARROW_RIGHT_TICKS = 3
 
@@ -246,6 +281,17 @@ export class Placer {
     this.boxes.push(b)
   }
 
+  /** follow-up: curves, markers and dashed lines: labels keep 1 px clear; in the fallback a text overlap costs more */
+  readonly soft: Box[] = []
+  /** markers (points): no label may touch them, but 1 px clearance is enough */
+  readonly marks: Box[] = []
+  occupyMark(b: Box) {
+    this.marks.push(b)
+  }
+  occupySoft(b: Box) {
+    this.soft.push(b)
+  }
+
   /** a text that is always drawn at this place (titles, ticks, legend); it still occupies its box */
   fixed(x: number, y: number, anchor: string, text: string): Placed {
     const w = textWidth(text)
@@ -261,7 +307,36 @@ export class Placer {
       return false
     if (this.zeroY !== null && b.r > this.plot.l && b.l < this.plot.r && !(b.b + GAP <= this.zeroY || this.zeroY + GAP <= b.t))
       return false
-    return this.boxes.every(o => apart(b, o, GAP))
+    return this.hardOk(b, own) && this.soft.every(o => apart(b, o, 1))
+  }
+
+  /** clear of every text / tick / legend box and the own point; curves and markers may be crossed */
+  hardOk(b: Box, own: Box | null): boolean {
+    if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
+      return false
+    if (own && !apart(b, own, 1))
+      return false
+    if (this.zeroY !== null && b.r > this.plot.l && b.l < this.plot.r && !(b.b + GAP <= this.zeroY || this.zeroY + GAP <= b.t))
+      return false
+    return this.marks.every(o => o === own || apart(b, o, 1)) && this.boxes.every(o => o === own || apart(b, o, GAP)) // the own point only needs 1 px (checked above)
+  }
+
+  /** how much of the curves / markers / dashed lines a box covers */
+  softCost(b: Box): number {
+    const ov = (o: Box) => Math.max(0, Math.min(b.r, o.r + 1) - Math.max(b.l, o.l - 1)) * Math.max(0, Math.min(b.b, o.b + 1) - Math.max(b.t, o.t - 1))
+    return this.soft.reduce((n, o) => n + ov(o), 0)
+  }
+
+  /** best candidate: first fully free; else the text-free one crossing the least curve; else the least collision */
+  pick(boxes: Box[], own: Box | null): number {
+    const i = boxes.findIndex(b => this.ok(b, own))
+    if (i >= 0)
+      return i
+    const by = (f: (b: Box) => number, ix: number[]) => ix.reduce((a, j) => f(boxes[j]!) < f(boxes[a]!) ? j : a)
+    const hard = boxes.map((_, j) => j).filter(j => this.hardOk(boxes[j]!, own))
+    if (hard.length)
+      return by(b => this.softCost(b), hard)
+    return by(b => this.cost(b, own), boxes.map((_, j) => j))
   }
 
   /** collision cost of a box: overlap with every grown box, the zero-line strip and the own point; out of bounds = ∞ */
@@ -269,7 +344,7 @@ export class Placer {
     if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
       return Infinity
     const ov = (o: Box, g: number) => Math.max(0, Math.min(b.r, o.r + g) - Math.max(b.l, o.l - g)) * Math.max(0, Math.min(b.b, o.b + g) - Math.max(b.t, o.t - g))
-    let c = this.boxes.reduce((n, o) => n + ov(o, GAP) + 100 * ov(o, 0), 0)
+    let c = this.boxes.reduce((n, o) => o === own ? n : n + ov(o, GAP) + 100 * ov(o, 0), 0) + this.marks.reduce((n, o) => o === own ? n : n + 100 * ov(o, 1), 0) + this.soft.reduce((n, o) => n + ov(o, 1), 0)
     if (own)
       c += 100 * ov(own, 1)
     if (this.zeroY !== null)
@@ -282,11 +357,54 @@ export class Placer {
     const w = textWidth(text)
     const fitted = candidates.map(([x, y, a]): Placed => ({ 'x': Math.max(2, Math.min(anchoredLeft(x, a, w), this.width - 2 - w)), y, 'text-anchor': 'start' }))
     // first candidate that fits; otherwise the one with the least collision (overlap area, gap included)
-    const p = fitted.find(c => this.ok(textBox(c.x, c.y, text), own))
-      ?? fitted.reduce((best, c) => this.cost(textBox(c.x, c.y, text), own) < this.cost(textBox(best.x, best.y, text), own) ? c : best)
+    const p = fitted[this.pick(fitted.map(c => textBox(c.x, c.y, text)), own)]!
     this.occupy(textBox(p.x, p.y, text))
     return p
   }
+}
+
+/** follow-up: small boxes every CURVE_STEP px along a polyline (null = gap), so labels can avoid the curve */
+export const CURVE_STEP = 3
+const REL_PT_R = 2.5
+export function curveBoxes(pts: (readonly [number, number] | null)[]): Box[] {
+  const out: Box[] = []
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]
+    const b = pts[i]
+    if (!a || !b)
+      continue
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / CURVE_STEP))
+    for (let k = 0; k <= n; k++) {
+      const x = a[0] + ((b[0] - a[0]) * k) / n
+      const y = a[1] + ((b[1] - a[1]) * k) / n
+      out.push({ l: x - 1, r: x + 1, t: y - 1, b: y + 1 })
+    }
+  }
+  return out
+}
+
+/** follow-up (b): fixed placement of「你的金额」: centred directly above its marker (moved away in 7 px steps if taken); flipped below only when above is blocked, shifted inward at the plot edge */
+export function userAbove(x: number, y: number, r: number): [number, number, string][] {
+  const up = Array.from({ length: 21 }, (_, k) => 7 * k).map((d): [number, number, string] => [x, y - r - 6 - d, 'middle'])
+  const down = Array.from({ length: 21 }, (_, k) => 7 * k).map((d): [number, number, string] => [x, y + r + 15 + d, 'middle'])
+  // near the plot edge: same rows, starting / ending at the marker's x
+  const side = [...up, ...down].flatMap(([, yy]): [number, number, string][] => [[x, yy, 'start'], [x, yy, 'end'], [x + r + 4, yy, 'start'], [x - r - 4, yy, 'end']])
+  // last: beside the marker, on its level
+  return [...up, ...down, ...side, [x + r + 4, y + 4, 'start'], [x - r - 4, y + 4, 'end']]
+}
+
+/** follow-up: last-resort candidates for crowded narrow charts: every 4 px baseline of the plot */
+export const scanYs = (top: number, bottom: number): number[] => Array.from({ length: Math.max(0, Math.floor((bottom - top) / 4) + 1) }, (_, k) => top + 4 * k)
+/** ... and the same baselines with the label shifted sideways in 20 px steps, nearest first */
+export const scanAround = (x: number, top: number, bottom: number): [number, number, string][] =>
+  [0, 20, -20, 40, -40, 60, -60, 80, -80, 100, -100, 120, -120, 140, -140, 160, -160].flatMap(sx => scanYs(top, bottom).map((y): [number, number, string] => [x + sx, y, 'middle']))
+
+/** the fixed spots of userAbove; only when none of them is clear of every text and marker, the plot-wide scan is added */
+function userCands(pl: Placer, x: number, y: number, top: number, bottom: number, own: Box): [number, number, string][] {
+  const fixed = userAbove(x, y, 6)
+  const w = textWidth(t('cmp3UserTag'))
+  const free = fixed.some(([cx, cy, a]) => pl.hardOk(textBox(Math.max(2, Math.min(anchoredLeft(cx, a, w), pl.width - 2 - w)), cy, t('cmp3UserTag')), own))
+  return free ? fixed : [...fixed, ...scanAround(x, top, bottom)]
 }
 
 /** Candidate positions around a point (A.3): above (3 heights), below, left, right; slope side first. */
@@ -304,7 +422,7 @@ export function around(x: number, y: number, r: number, slope: 'start' | 'end' |
   out.push([x - r - 6, y + 4, 'end'], [x + r + 6, y + 4, 'start'])
   // sideways shifted rows for crowded narrow charts
   for (const gap of [10, 24, 38, 52, 66, 80]) {
-    for (const sx of [40, -40, 80, -80, 120, -120])
+    for (const sx of [40, -40, 80, -80, 120, -120, 160, -160])
       out.push([x + sx, y - gap, 'middle'], [x + sx, y + gap + 9, 'middle'])
     out.push([x + 6, y - gap, 'start'], [x + 6, y + gap + 9, 'start'], [x - 6, y - gap, 'end'], [x - 6, y + gap + 9, 'end'])
   }
@@ -364,7 +482,7 @@ export function relLine(svg: SVGSVGElement, xs: number[], rel: (number | null)[]
     if (v === null)
       return flush()
     seg.push(`${xs[i]},${yR(v)}`)
-    g.append(el('circle', { 'cx': xs[i]!, 'cy': yR(v), 'r': 2.5, 'class': 'rel-pt', 'data-testid': `chart-rel-pt-${ids[i]}` }))
+    g.append(el('circle', { 'cx': xs[i]!, 'cy': yR(v), 'r': REL_PT_R, 'class': 'rel-pt', 'data-testid': `chart-rel-pt-${ids[i]}` }))
   })
   flush()
   svg.append(g)
@@ -394,46 +512,96 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   // the user amount (not a tier) has its own「你的金额」label, so it is the first to give way: placed after the tiers
   const tiersFirst = [...cand.filter(c => !c.user), ...cand.filter(c => c.user)]
   // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
-  const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 4 })
+  const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 6 })
   const extra = Math.max(0, ...placed.map(p => p.row)) * X_ROW2_DY
   const height = g.height + extra
   const svg = el('svg', { 'width': g.width, 'height': height, 'viewBox': `0 0 ${g.width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false' })
   const pl = frame(svg, g, { width, height, title: 'chartTitle', xAxis: 'chartXAxis', extraBottom: extra })
   const ys = rows.map(r => g.y(r.diff))
+  const leaders: SVGLineElement[] = []
   const xl: SVGTextElement[] = placed.sort((p, q) => tiersFirst[p.i]!.label.tick - tiersFirst[q.i]!.label.tick).map((p) => {
     const c = tiersFirst[p.i]!
     const y = bottom + 14 + p.row * X_ROW2_DY
     pl.occupy(textBox(p.l, y, c.s))
-    return el('text', { 'x': p.l, 'y': y, 'text-anchor': 'start', 'class': c.user ? 'xl user' : 'xl' }, c.s)
+    if (p.row > 0) // follow-up: stacked label → short leader from the axis down to the label, at its tick
+      leaders.push(el('line', { 'x1': c.label.tick, 'x2': c.label.tick, 'y1': bottom + 2, 'y2': y - 11, 'class': 'xl-leader', 'data-tick': c.label.tick }))
+    return el('text', { 'x': p.l, 'y': y, 'text-anchor': 'start', 'class': c.user ? 'xl user' : 'xl', 'data-tick': c.label.tick }, c.s)
   })
+  // follow-up: annotations keep clear of both curves (sampled) and of every marker, so these are occupied first
+  const isKink = (r: CmpRow) => r.tier && (r.amount === 360 || r.amount === 1800)
+  const own = rows.map((r, i): Box => {
+    const rad = r.user ? 6 : isKink(r) ? 5 : 3
+    return { l: g.xs[i]! - rad, r: g.xs[i]! + rad, t: ys[i]! - rad, b: ys[i]! + rad }
+  })
+  for (const b of own) pl.occupyMark(b)
+  const relPts = rows.map((r, i) => r.rel === null ? null : [g.xs[i]!, g.yR(r.rel)] as const)
+  for (const b of curveBoxes(g.xs.map((x, i) => [x, ys[i]!] as const))) pl.occupySoft(b)
+  for (const b of curveBoxes(relPts)) pl.occupySoft(b)
+  for (const q of relPts) { // dashed-curve markers
+    if (q)
+      pl.occupyMark({ l: q[0] - REL_PT_R, r: q[0] + REL_PT_R, t: q[1] - REL_PT_R, b: q[1] + REL_PT_R })
+  }
   // 6.840 € dashed line; its label goes where it fits (bottom, then top, either side)
+  const iu = rows.findIndex(r => r.user)
   const i6840 = rows.findIndex(r => r.amount === ONE_CONTRACT_CAP)
   if (i6840 >= 0) {
     const x = g.xs[i6840]!
     const m = el('g', { 'data-testid': 'cmp3-marker-6840' })
     m.append(el('line', { 'x1': x, 'x2': x, 'y1': g.top, 'y2': bottom, 'stroke-dasharray': '4 3', 'class': 'cap' }))
+    const capLine = { l: x - 1, r: x + 1, t: g.top, b: bottom }
     const text = t('chartCap')
     const cands: [number, number, string][] = []
     for (const y of [bottom - 8, g.top + 12, bottom - 24, g.top + 28, (g.top + bottom) / 2])
       cands.push([x - 8, y, 'end'], [x + 8, y, 'start'])
-    m.append(el('text', pl.place(text, cands, { l: x - 1, r: x + 1, t: g.top, b: bottom }), text))
+    for (const d of [8, 28, 48, 68]) {
+      for (const y of scanYs(g.top + 12, bottom - 4))
+        cands.push([x - d, y, 'end'], [x + d, y, 'start'])
+    }
+    // follow-up: one line where it fits, else the same words on two lines (narrow charts); free spots first,
+    // then spots clear of every text that cross the least curve, one line before two
+    const lines = [text.slice(0, Math.floor(text.length / 2)), text.slice(Math.floor(text.length / 2))]
+    const w2 = Math.max(...lines.map(textWidth))
+    const w1 = textWidth(text)
+    const opts: { x: number, y: number, two: boolean, box: Box }[] = []
+    for (const [cx, y, an] of cands) {
+      const lx = Math.max(2, an === 'end' ? cx - w1 : cx)
+      if (lx + w1 <= width - 2)
+        opts.push({ x: lx, y, two: false, box: textBox(lx, y, text) })
+    }
+    const y2s = [bottom - 8 - CAP_LINE_DY, g.top + 12, bottom - 24 - CAP_LINE_DY, g.top + 28, (g.top + bottom) / 2, g.top + 44, bottom - 40 - CAP_LINE_DY]
+    for (const d of [8, 28, 48, 68, 88, 108, 128]) {
+      for (const y of [...(d === 8 ? y2s : []), ...scanYs(g.top + 12, bottom - 4 - CAP_LINE_DY)]) {
+        for (const lx of [x - d - w2, x + d]) {
+          if (lx >= 2 && lx + w2 <= width - 2)
+            opts.push({ x: lx, y, two: true, box: { l: lx, r: lx + w2, t: y - 11, b: y + CAP_LINE_DY + 3 } })
+        }
+      }
+    }
+    const freeOne = opts.findIndex(o => !o.two && pl.ok(o.box, capLine))
+    const p = opts[freeOne >= 0 ? freeOne : pl.pick(opts.map(o => o.box), capLine)]!
+    pl.occupy(p.box)
+    if (!p.two) {
+      m.append(el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start' }, text))
+    }
+    else {
+      const tx = el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start', 'class': 'cap-label' })
+      lines.forEach((ln, k) => tx.append(el('tspan', { x: p.x, y: p.y + k * CAP_LINE_DY }, ln)))
+      m.append(tx)
+    }
     svg.append(m)
+    pl.occupy(capLine) // follow-up (a): later annotations keep clear of the dashed 6.840 line
   }
+  // follow-up (b): 「你的金额」 next, always at its marker (above; below / inward only when blocked)
+  const userLabel = iu < 0 ? null : el('text', { ...pl.place(t('cmp3UserTag'), userCands(pl, g.xs[iu]!, ys[iu]!, g.top + 12, bottom - 8, own[iu]!), own[iu]!), class: 'user-label' }, t('cmp3UserTag'))
   svg.append(el('polyline', { points: g.xs.map((x, i) => `${x},${ys[i]}`).join(' '), class: 'line' }))
   relLine(svg, g.xs, rows.map(r => r.rel), g.yR, rows.map(r => amountId(r.amount)))
-  const isKink = (r: CmpRow) => r.tier && (r.amount === 360 || r.amount === 1800)
-  // own marks first, so no label covers any point of its own kind
-  const own = rows.map((r, i): Box => {
-    const rad = r.user ? 6 : isKink(r) ? 5 : 3
-    return { l: g.xs[i]! - rad, r: g.xs[i]! + rad, t: ys[i]! - rad, b: ys[i]! + rad }
-  })
   // priority: kink labels, then the user label (A.3)
   const kinkText = new Map<number, [SVGTextElement]>()
   rows.forEach((r, i) => {
     if (!isKink(r))
       return
     const s = t('chartKink', { a: formatNumberDe(r.amount) })
-    kinkText.set(i, [el('text', pl.place(s, around(g.xs[i]!, ys[i]!, 5, slopeOf(ys, i)), own[i]!), s)])
+    kinkText.set(i, [el('text', pl.place(s, [...around(g.xs[i]!, ys[i]!, 5, slopeOf(ys, i)), ...scanAround(g.xs[i]!, g.top + 12, bottom - 8)], own[i]!), s)])
   })
   rows.forEach((r, i) => {
     const x = g.xs[i]!
@@ -442,8 +610,7 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
     const pt = el('g', { 'data-testid': `cmp3-point-${id}` })
     pt.append(el('circle', { cx: x, cy: y, r: r.user ? 6 : 3, class: r.user ? 'pt user' : 'pt' }))
     if (r.user) {
-      const s = t('cmp3UserTag')
-      pt.append(el('text', { ...pl.place(s, around(x, y, 6, slopeOf(ys, i)), own[i]!), class: 'user-label' }, s))
+      pt.append(userLabel!)
     }
     svg.append(pt)
     const k = kinkText.get(i)
@@ -453,6 +620,6 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
       svg.append(m)
     }
   })
-  svg.append(...xl)
+  svg.append(...leaders, ...xl)
   return svg
 }

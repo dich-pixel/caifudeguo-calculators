@@ -79,14 +79,17 @@ describe('chart drawing (stage 5 B)', () => {
 })
 
 function boxesOf(svg: FakeEl, width: number) {
-  return all(svg, e => e.tag === 'text' && e.attrs.transform === undefined).map((e) => {
+  // follow-up: a two-line label (tspans) is one box per line
+  const texts = all(svg, e => e.tag === 'text' && e.attrs.transform === undefined)
+    .flatMap(e => all(e, c => c.tag === 'tspan').length ? all(e, c => c.tag === 'tspan').map(c => ({ ...c, parent: e, attrs: { ...c.attrs, 'text-anchor': e.attrs['text-anchor'], 'class': e.attrs.class } }) as unknown as FakeEl) : [e])
+  return texts.map((e) => {
     const x = Number(e.attrs.x)
     const y = Number(e.attrs.y)
     expect(e.attrs['text-anchor'], e.textContent).toMatch(/^(?:start|middle)$/)
     const l = e.attrs['text-anchor'] === 'middle' ? x - est(e.textContent) / 2 : x
     expect(l, e.textContent).toBeGreaterThanOrEqual(0)
     expect(l + est(e.textContent), e.textContent).toBeLessThanOrEqual(width)
-    return { text: e.textContent, cls: e.attrs.class ?? '', l, r: l + est(e.textContent), t: y - 11, b: y + 3 }
+    return { text: e.textContent, cls: e.attrs.class ?? '', grp: (e as unknown as { parent?: unknown }).parent ?? e, l, r: l + est(e.textContent), t: y - 11, b: y + 3 }
   })
 }
 
@@ -135,10 +138,10 @@ describe('label sweep (stage 5 E)', () => {
         continue
       const svg = drawChart(s.rows, width) as unknown as FakeEl
       const bs = boxesOf(svg, width)
-      const movable = bs.filter(b => /拐点|你的金额|上限/.test(b.text))
+      const movable = bs.filter(b => /拐点|你的金额|上限|一份合同/.test(b.text))
       for (const m of movable) {
         for (const o of bs) {
-          if (o === m)
+          if (o === m || o.grp === m.grp) // lines of one two-line label sit 14 px apart by design
             continue
           const apart = m.r + GAP <= o.l || o.r + GAP <= m.l || m.b + GAP <= o.t || o.b + GAP <= m.t
           if (!apart)

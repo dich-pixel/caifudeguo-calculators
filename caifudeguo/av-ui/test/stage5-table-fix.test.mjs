@@ -42,6 +42,21 @@ describe('ee table: side account split into three rows', () => {
     const c = cards(e)
     for (const k of ['gross', 'tax', 'net']) expect(byTestId(c, `ee-card-sec-${k}-10`)).toHaveLength(1)
   })
+  it.each(cases)('follow-up (d): cards (%s) list the side-account group at the same place as the table (after the AV rows)', async (name, v) => {
+    const { cards, wideTable } = await import('../src/early-exit-view')
+    {
+      const e = earlyExitFor(v, TODAY)
+      const tableLabels = all(wideTable(e), x => x.tag === 'th' && x.attrs.scope === 'row').map(x => x.textContent)
+      const card = all(cards(e), x => x.attrs['data-testid'] === `ee-details-${e.points[0].year}`)[0]
+      const cardLabels = all(card, x => x.tag === 'dt').map(x => x.textContent)
+      expect(cardLabels).toEqual(tableLabels.slice(0, cardLabels.length))
+      if (name === 'E4') {
+        const i = cardLabels.indexOf(tr('eeSecLabel'))
+        expect(cardLabels.slice(i, i + 4)).toEqual([tr('eeSecLabel'), tr('gross'), tr('tax'), tr('net')])
+        expect(cardLabels.slice(i + 4).length).toBeGreaterThan(0) // no longer last: the normal-account rows follow
+      }
+    }
+  })
   it('label column min-width ≥ 12em, wide enough that no label breaks per character', async () => {
     const m = /\.ee-table th\[scope='row'\]\s*\{[^}]*min-width:\s*([\d.]+)em/.exec(css)
     expect(m).not.toBeNull()

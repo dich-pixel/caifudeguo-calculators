@@ -107,7 +107,8 @@ export function cards(e: EarlyExit): HTMLElement {
     const item = (key: StrKey, cls: string, v: Node | string) => h('div', { 'class': `ee-item ${cls}`, 'data-testid': `ee-card-${cls}-${p.year}` }, h('dt', {}, t(key)), h('dd', {}, v))
     const extra = details(e, p).map(([key, v, small]) => h('div', { class: 'ee-item' }, h('dt', {}, t(key), small ? txt('span', small, { class: 'small' }) : null), h('dd', {}, num(v))))
     if (hasSec(e))
-      extra.push(h('div', { class: 'ee-item sec' }, h('dt', {}, t('eeSecLabel'))), ...SEC_PARTS.map(([key, cls, v]) => h('div', { 'class': 'ee-item sub', 'data-testid': `ee-card-sec-${cls}-${p.year}` }, h('dt', {}, t(key)), h('dd', {}, num(formatEuro(v(p)))))))
+      // follow-up (d): same place as in the table, right after the AV rows
+      extra.splice(e.mode === 'consume' ? 6 : 5, 0, h('div', { class: 'ee-item sec' }, h('dt', {}, t('eeSecLabel'))), ...SEC_PARTS.map(([key, cls, v]) => h('div', { 'class': 'ee-item sub', 'data-testid': `ee-card-sec-${cls}-${p.year}` }, h('dt', {}, t(key)), h('dd', {}, num(formatEuro(v(p)))))))
     return h('li', { 'class': 'ee-card', 'data-testid': `ee-card-${p.year}` },
       h('h3', {}, when(p)),
       h('dl', { class: 'ee-main' },

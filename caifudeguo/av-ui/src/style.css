@@ -171,6 +171,7 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .user-label { font-weight: 700; }
 .cmp3-svg .kink { fill: #fff; stroke: var(--fg); stroke-width: 1.5; }
 .cmp3-svg .cap { stroke: var(--normal); stroke-width: 1.5; }
+.cmp3-svg .xl-leader { stroke: currentColor; stroke-width: 0.75; opacity: 0.6; }
 .cmp3-figure figcaption { font-size: 0.9rem; margin-top: 4px; }
 
 /* ---- stage 3: narrow-screen error banner ---- */
