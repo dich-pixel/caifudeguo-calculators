@@ -20,7 +20,7 @@ def est_soli(x):
     soli = 0 if t <= 20350 else min(0.055*t, 0.119*(t-20350))
     return t + math.floor(soli*100+1e-9)/100
 
-def run(name, c, mode, N, count_reinvest=True):
+def run(name, c, mode, N, count_reinvest=True, count_spent=False):
     g = min(c, 360)*0.5 + max(0, min(c, 1800)-360)*0.25          # Grundzulage
     s = max(0, est_soli(ZVE) - est_soli(ZVE-(min(c, 1800)+g)) - g)  # §10a 额外好处
     r = min(s, 13680-c) if mode == 'avDepot' else 0
@@ -36,21 +36,24 @@ def run(name, c, mode, N, count_reinvest=True):
     T = round(est_soli(ZVE+G) - est_soli(ZVE), 2)
     sec_tax = max(0, (sec-secc)*TFS - SPB)*ABG
     av_net = B - RZ - RS - T + sec - sec_tax
+    spent = RS if (count_spent and mode == 'consume') else 0  # Q15(b)：已拿到并花掉的退税，名义值
+    av_net += spent
     etf_tax = max(0, (E-N*c)*TFS - SPB)*ABG
     etf_net = E - etf_tax
     diff = av_net - etf_net
-    return dict(name=name, mode=mode, savingsRate=c, N=N, countReinvest=count_reinvest,
+    return dict(name=name, mode=mode, savingsRate=c, N=N, countReinvest=count_reinvest, spentRefundAdded=spent,
                 s_y=s, zulage_y=g, B=round(B, 2), sec=round(sec, 2), G=round(G, 2),
                 T_av=T, avNet=round(av_net, 2), E=round(E, 2), T_etf=round(etf_tax, 2),
                 etfNet=round(etf_net, 2), diff=round(diff, 2), relPct=round(diff/av_net*100, 2))
 
 res = [run('E1', 1800, 'avDepot', 10), run('E2', 1800, 'avDepot', 20),
-       run('E3', 3600, 'consume', 10), run('E4', 1800, 'secondaryDepot', 10),
+       run('E3', 3600, 'consume', 10), run('E3_b', 3600, 'consume', 10, count_spent=True), run('E4', 1800, 'secondaryDepot', 10),
        run('E1_cf', 1800, 'avDepot', 10, False), run('E2_cf', 1800, 'avDepot', 20, False)]
-expect = {'E1': 139.45, 'E2': -810.43, 'E3': -4383.83, 'E4': 486.95}
+expect = {'E1': 139.45, 'E2': -810.43, 'E3': -4383.83, 'E4': 486.95, 'E3_b': -1663.83}
+expect_rel = {'E3_b': -3.79}
 lines = []
 for x in res:
-    ok = '' if x['name'] not in expect else ('  OK' if abs(x['diff']-expect[x['name']]) < 0.005 else '  MISMATCH')
+    ok = '' if x['name'] not in expect else ('  OK' if abs(x['diff']-expect[x['name']]) < 0.005 and abs(x['relPct']-expect_rel.get(x['name'], x['relPct'])) < 0.005 else '  FAIL')
     lines.append(f"{x['name']:6} B={x['B']:.2f} G={x['G']:.2f} T_AV={x['T_av']:.2f} AVnet={x['avNet']:.2f} "
                  f"ETFnet={x['etfNet']:.2f} diff={x['diff']:+.2f} rel={x['relPct']:+.2f}%{ok}")
 print("\n".join(lines))
