@@ -28,19 +28,22 @@ export const CASES = {
   'default': {},
   'zve20k-consume': { f: { zveSavingsPhase: '20.000' }, m: 'consume' },
   'zve15k-ret8k': { f: { zveSavingsPhase: '15.000', zveRetirement: '8.000' } },
-  'zve80k-sec': { f: { zveSavingsPhase: '80.000' }, m: 'secondaryDepot' },
+  'zve80k-sec': { f: { zveSavingsPhase: '80.000', zveRetirement: '40.000' }, m: 'secondaryDepot' }, // same input as the validator
 }
-export const WIDTHS = (process.env.W ? process.env.W.split(",").map(Number) : [288, 320, 343, 375, 800])
+export const WIDTHS = (process.env.W ? process.env.W.split(",").map(Number) : [288, 320, 343, 375, 800, 1280])
 /** max edge gap (glyph box → own marker box) of an annotation, at every width (800/1280 px measured 13–48 px) */
 const MAX_GAP = 48
+/** PM rule (23.10.2026): any two texts' glyph boxes ≥ 4 px apart; scope in ONE place ('all' | 'tick-xlabel') */
+const GLYPH_GAP = 4
+const GLYPH_GAP_SCOPE = 'all'
 /** PM decision (option a): only at these screen widths may exactly these kink labels be left out (marker and tick stay) */
 export const ALLOWED_UNPLACED = {
   288: { 'default': '1800', 'zve20k-consume': '360 1800', 'zve15k-ret8k': '1800', 'zve80k-sec': '360 1800' },
-  320: { 'default': '1800', 'zve20k-consume': '360', 'zve15k-ret8k': '1800' },
+  320: { 'default': '1800', 'zve20k-consume': '360', 'zve15k-ret8k': '1800', 'zve80k-sec': '360' },
 }
 
 /** runs inside the page: returns a list of failures for the chart */
-function check({ MAX_GAP, unplaced }) {
+function check({ MAX_GAP, unplaced, GLYPH_GAP, GLYPH_GAP_SCOPE }) {
   const svg = document.querySelector('[data-testid=cmp3-chart] svg')
   if (!svg)
     return ['no chart']
@@ -92,6 +95,24 @@ function check({ MAX_GAP, unplaced }) {
     if (text && mk)
       anchored(`kink ${g.dataset.testid.slice(12)}`, text, mk, g.querySelector('line.ann-leader'))
   }
+  if ((svg.dataset.unplaced ?? '').split(' ').includes('user'))
+    out.push('你的金额 left out (data-unplaced contains "user")')
+  // PM rule: glyph boxes (full box trimmed 2.5 px top / bottom) of any two texts (not legend / title) ≥ GLYPH_GAP px apart;
+  // the scope is GLYPH_GAP_SCOPE ('all' or 'tick-xlabel' = axis numbers × x-axis labels only)
+  const texts = [...svg.querySelectorAll('text')].filter(e => !e.closest('.legend') && !e.classList.contains('title'))
+  const kind = e => e.matches('.xl') ? 'xlabel' : (!e.getAttribute('class') && !e.getAttribute('transform') && /^[−\d.]+(?: %)?$/.test(e.textContent) ? 'tick' : 'other')
+  const scoped = (p, q) => GLYPH_GAP_SCOPE === 'all' || (p === 'tick' && q === 'xlabel') || (p === 'xlabel' && q === 'tick')
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      if (!scoped(kind(texts[i]), kind(texts[j])))
+        continue
+      const a = glyph(texts[i])
+      const c = glyph(texts[j])
+      const gap = Math.max(c.l - a.r, a.l - c.r, c.t - a.b, a.t - c.b)
+      if (gap < GLYPH_GAP)
+        out.push(`text gap ${gap.toFixed(1)} px (< ${GLYPH_GAP}): "${texts[i].textContent}" × "${texts[j].textContent}"`)
+    }
+  }
   if ((svg.dataset.unplaced ?? '') !== unplaced)
     out.push(`left out: "${svg.dataset.unplaced ?? ''}", expected exactly "${unplaced}"`)
   for (const g of svg.querySelectorAll('g[data-testid^=cmp3-marker-]')) {
@@ -110,9 +131,10 @@ function check({ MAX_GAP, unplaced }) {
   }
   const ul = svg.querySelector('text.user-label')
   if (ul) {
-    const b = anchored('你的金额', ul, ul.parentNode.querySelector('circle.pt'), ul.parentNode.querySelector('line.ann-leader'))
-    if (!inside(b, plot))
-      out.push(`你的金额: outside the plot area (${b.t.toFixed(0)}–${b.b.toFixed(0)} vs ${plot.t.toFixed(0)}–${plot.b.toFixed(0)})`)
+    anchored('你的金额', ul, ul.parentNode.querySelector('circle.pt'), ul.parentNode.querySelector('line.ann-leader'))
+    const fb = box(R(ul)) // full bounding box, not the trimmed glyph box
+    if (!inside(fb, plot))
+      out.push(`你的金额: not fully inside the plot area (${fb.l.toFixed(0)}–${fb.r.toFixed(0)} × ${fb.t.toFixed(0)}–${fb.b.toFixed(0)} vs ${plot.l.toFixed(0)}–${plot.r.toFixed(0)} × ${plot.t.toFixed(0)}–${plot.b.toFixed(0)})`)
   }
   // amounts named in the summary sentences: their x-axis label must be visible
   const sum = document.querySelector('[data-testid=cmp3-summary]').textContent
@@ -151,7 +173,7 @@ const b = await chromium.launch()
 const all = []
 for (const [name, v] of Object.entries(CASES)) {
   for (const w of WIDTHS) {
-    const p = await b.newPage({ viewport: { width: w, height: 900 } })
+    const p = await b.newPage({ viewport: { width: w, height: 900 }, isMobile: w < 800, hasTouch: w < 800 })
     await p.goto(`http://localhost:${port}/index.html`)
     await p.waitForTimeout(800)
     if (v.m) {
@@ -172,7 +194,7 @@ for (const [name, v] of Object.entries(CASES)) {
     if (await t.getAttribute('aria-expanded') !== 'true')
       await t.click()
     await p.waitForTimeout(800)
-    const r = await p.evaluate(check, { MAX_GAP, unplaced: ALLOWED_UNPLACED[w]?.[name] ?? '' })
+    const r = await p.evaluate(check, { MAX_GAP, unplaced: ALLOWED_UNPLACED[w]?.[name] ?? '', GLYPH_GAP, GLYPH_GAP_SCOPE })
     const fails = Array.isArray(r) ? r : r.fails
     all.push(...fails.map(f => `${name} @ ${w}: ${f}`))
     console.log(`${fails.length ? '✗' : '✓'} ${name} @ ${w} px${r.named ? ` (chart ${r.svgWidth} px; named: ${r.named.join(', ')})` : ''}`)

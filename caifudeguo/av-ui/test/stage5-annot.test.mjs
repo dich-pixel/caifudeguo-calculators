@@ -31,14 +31,25 @@ const INPUTS = {
 // the e2e matrix (viewport 288/320/343/375/800 px = chart 264/296/319/351/776 px)
 const MATRIX = {
   ...INPUTS,
-  'zvE 80.000 / secondary depot': form({ zveSavingsPhase: '80.000' }, 'secondaryDepot'),
+  'zvE 80.000 / secondary depot': form({ zveSavingsPhase: '80.000', zveRetirement: '40.000' }, 'secondaryDepot'), // same input as the validator / e2e
 }
-const VIEWPORTS = [288, 320, 343, 375, 800]
+const VIEWPORTS = [288, 320, 343, 375, 800, 1280]
 // PM decision (option a): only at these screen widths may exactly these kink labels be left out; markers stay drawn
 const ALLOWED_UNPLACED = {
   288: { 'default': '1800', 'zvE 20.000 / refunds spent': '360 1800', 'zvE 15.000 / retirement 8.000': '1800', 'zvE 80.000 / secondary depot': '360 1800' },
-  320: { 'default': '1800', 'zvE 20.000 / refunds spent': '360', 'zvE 15.000 / retirement 8.000': '1800' },
+  320: { 'default': '1800', 'zvE 20.000 / refunds spent': '360', 'zvE 15.000 / retirement 8.000': '1800', 'zvE 80.000 / secondary depot': '360' },
 }
+// PM-approved single-combination exceptions (23.10.2026) — nowhere else
+// 「你的金额」 may cross the dashed 6.840 line only at these [viewport, input] combinations
+const EXC_USER_CROSS = [[288, 'zvE 80.000 / secondary depot'], [288, 'zvE 15.000 / retirement 8.000']]
+const CAP_TEXT = '一份合同每年的上限'
+// PM rule (23.10.2026): glyph boxes of two texts ≥ 4 px apart. Scope in ONE place: 'all' = every pair of texts;
+// 'tick-xlabel' = only axis numbers × x-axis labels (cases C / D), should the PM narrow it later
+const GLYPH_GAP = 4
+const GLYPH_GAP_SCOPE = 'all'
+const kindOf = n => /^xl(?: user)?$/.test(n.attrs.class ?? '') ? 'xlabel' : (n.attrs.class === undefined && /^[−\d.]+(?: %)?$/.test(n.textContent) ? 'tick' : 'other')
+const inGlyphScope = (a, b) => GLYPH_GAP_SCOPE === 'all' || (a === 'tick' && b === 'xlabel') || (a === 'xlabel' && b === 'tick')
+const inLegend = (svg, n) => all(svg, g => g.tag === 'g' && g.attrs.class === 'legend').some(g => all(g, x => x === n).length > 0)
 const WIDTHS = [288, 320, 343, 375]
 
 let drawChart, sweep, namedAmounts, clearSweepCache
@@ -134,6 +145,7 @@ describe.each(Object.keys(MATRIX))('%s', (name) => {
   it.each(VIEWPORTS)('%i px viewport: labels left out only where allowed (exact list), markers still drawn', (w) => {
     const { svg } = chart(MATRIX[name], w - 24)
     const want = ALLOWED_UNPLACED[w]?.[name] ?? ''
+    expect((svg.attrs['data-unplaced'] ?? '').split(' '), '「你的金额」 is never left out').not.toContain('user')
     expect(svg.attrs['data-unplaced'] ?? '').toBe(want)
     const marks = all(svg, n => n.tag === 'g' && /^cmp3-marker-(?:360|1800)$/.test(n.attrs['data-testid'] ?? ''))
     expect(marks.length).toBe(2)
@@ -142,6 +154,89 @@ describe.each(Object.keys(MATRIX))('%s', (name) => {
       expect(all(g, n => n.tag === 'text').length, g.attrs['data-testid']).toBe(want.split(' ').includes(g.attrs['data-testid'].slice(12)) ? 0 : 1)
     }
     expect(all(svg, n => n.attrs.class === 'user-label').length).toBe(1)
+  })
+  it.each(VIEWPORTS)('%i px viewport: 「你的金额」 fully inside the plot (rendered box: 1.5 px above / below the layout box)', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const [l, t, r, b] = svg.attrs['data-plot'].split(' ').map(Number)
+    const ul = all(svg, n => n.attrs.class === 'user-label')[0]
+    expect(ul, 'user label drawn').toBeTruthy()
+    const ts = all(ul, c => c.tag === 'tspan')
+    for (const x of ts.length ? ts.map(c => tbox(c, ul.attrs['text-anchor'])) : [tbox(ul)])
+      expect(x.l >= l && x.r <= r && x.t - 1.5 >= t && x.b + 1.5 <= b, `user label ${JSON.stringify(x)} inside plot ${[l, t, r, b]}`).toBe(true)
+  })
+  it.each(VIEWPORTS)('%i px viewport: glyph boxes of any two texts ≥ 4 px apart (scope: GLYPH_GAP_SCOPE)', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    // glyph box of a 12 px text: baseline −10.5 … +1.5 (the full line box trimmed 2.5 px top and bottom, as in the e2e)
+    // one box per <text> (a multi-line label is one text: the union of its lines, like getBoundingClientRect)
+    const glyphs = (n) => {
+      const bs = all(n, c => c.tag === 'tspan').length ? all(n, c => c.tag === 'tspan').map(c => tbox(c, n.attrs['text-anchor'])) : [tbox(n)]
+      return [{ l: Math.min(...bs.map(b => b.l)), r: Math.max(...bs.map(b => b.r)), t: Math.min(...bs.map(b => b.t)) + 0.5, b: Math.max(...bs.map(b => b.b)) - 1.5, s: n.textContent, kind: kindOf(n) }]
+    }
+    const texts = all(svg, n => n.tag === 'text' && !n.attrs.transform && n.attrs.class !== 'title' && !inLegend(svg, n)).flatMap(glyphs)
+    expect(texts.filter(x => x.kind === 'tick').length).toBeGreaterThanOrEqual(4)
+    for (let i = 0; i < texts.length; i++) {
+      for (let j = i + 1; j < texts.length; j++) {
+        const [a, b] = [texts[i], texts[j]]
+        if (!inGlyphScope(a.kind, b.kind))
+          continue
+        const gap = Math.max(b.l - a.r, a.l - b.r, b.t - a.b, a.t - b.b)
+        expect(gap, `"${a.s}" (${a.kind}) × "${b.s}" (${b.kind})`).toBeGreaterThanOrEqual(GLYPH_GAP)
+      }
+    }
+  })
+  it.each(VIEWPORTS)('%i px viewport: cap label and annotations clear of every axis tick text (left and right)', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const [l, , r] = svg.attrs['data-plot'].split(' ').map(Number)
+    const ticks = all(svg, n => n.tag === 'text' && !n.attrs.transform && n.attrs.class === undefined && /^[−\d.]+(?: %)?$/.test(n.textContent) && (Number(n.attrs.x) < l || Number(n.attrs.x) >= r)).map(n => tbox(n))
+    expect(ticks.length).toBeGreaterThanOrEqual(4)
+    const cap = all(svg, n => n.tag === 'g' && n.attrs['data-testid'] === 'cmp3-marker-6840').flatMap(g => all(g, n => n.tag === 'text')).flatMap(n => all(n, c => c.tag === 'tspan').length ? all(n, c => c.tag === 'tspan').map(c => tbox(c, n.attrs['text-anchor'])) : [tbox(n)])
+    for (const a of [...cap, ...annotations(svg)]) for (const k of ticks) expect(hit(a, k), `${a.s} × ${k.s}`).toBe(false)
+  })
+  it.each(VIEWPORTS)('%i px viewport: PM exception only at its approved combinations; cap label clear of text, curves, markers; 「你的金额」 not below the zero line; kink labels nearest their own marker', (w) => {
+    const { svg } = chart(MATRIX[name], w - 24)
+    const boxes = n => (all(n, c => c.tag === 'tspan').length ? all(n, c => c.tag === 'tspan').map(c => tbox(c, n.attrs['text-anchor'])) : [tbox(n)])
+    const capG = all(svg, n => n.tag === 'g' && n.attrs['data-testid'] === 'cmp3-marker-6840')[0]
+    const capT = all(capG, n => n.tag === 'text')[0]
+    const capLine = all(capG, n => n.tag === 'line' && n.attrs.class === 'cap')[0]
+    const capX = +capLine.attrs.x1
+    // the cap label is never on more than two lines, same characters
+    expect(all(capT, c => c.tag === 'tspan').length).toBeLessThanOrEqual(2)
+    expect(capT.textContent.replace(/\s/g, '')).toBe(CAP_TEXT)
+    // 「你的金额」 across the 6.840 line: only the PM-approved combinations
+    const ul = all(svg, n => n.attrs.class === 'user-label')[0]
+    const ub = boxes(ul)
+    if (ub.some(b => b.l < capX && b.r > capX)) expect(EXC_USER_CROSS.some(([x, n]) => x === w && n === name), '「你的金额」 crosses the 6.840 line outside its exception').toBe(true)
+    // cap label clear of all other text, curves, markers, ticks
+    const cb = boxes(capT)
+    const others = all(svg, n => n.tag === 'text' && n !== capT && !n.attrs.transform && !all(capT, () => true).includes(n)).flatMap(boxes)
+    const markers = [
+      ...all(svg, n => n.tag === 'circle').map(c => ({ l: +c.attrs.cx - +c.attrs.r, r: +c.attrs.cx + +c.attrs.r, t: +c.attrs.cy - +c.attrs.r, b: +c.attrs.cy + +c.attrs.r })),
+      ...all(svg, n => n.tag === 'rect' && n.attrs.class === 'kink').map(r => ({ l: +r.attrs.x, r: +r.attrs.x + 10, t: +r.attrs.y, b: +r.attrs.y + 10 })),
+    ]
+    const curves = all(svg, n => n.tag === 'polyline').flatMap(p => samples(pts(p.attrs.points)))
+    for (const a of cb) {
+      for (const o of others) expect(hit(a, o), `cap ${a.s} × ${o.s}`).toBe(false)
+      for (const m of markers) expect(hit(a, m), `cap ${a.s} × marker`).toBe(false)
+      for (const [x, y] of curves) expect(x > a.l && x < a.r && y > a.t && y < a.b, `cap ${a.s} × curve @${x},${y}`).toBe(false)
+    }
+    // 「你的金额」 not below the zero line
+    const zero = all(svg, n => n.tag === 'line' && n.attrs.class === 'zero')[0]
+    if (zero) for (const b of ub) expect(b.b, '「你的金额」 below zero line').toBeLessThanOrEqual(+zero.attrs.y1)
+    // each kink label nearer its own marker than any other annotated marker (a user dot on the kink excluded)
+    const u = all(svg, n => n.tag === 'circle' && n.attrs.class === 'pt user')[0]
+    const kinks = all(svg, n => n.tag === 'g' && /^cmp3-marker-(?:360|1800)$/.test(n.attrs['data-testid'] ?? ''))
+    const ctr = g => { const r = all(g, n => n.tag === 'rect')[0]; return [+r.attrs.x + 5, +r.attrs.y + 5] }
+    for (const g of kinks) {
+      const tx = all(g, n => n.tag === 'text')[0]
+      if (!tx) continue
+      const bs = boxes(tx)
+      const bb = { l: Math.min(...bs.map(b => b.l)), r: Math.max(...bs.map(b => b.r)), t: Math.min(...bs.map(b => b.t)), b: Math.max(...bs.map(b => b.b)) }
+      const d = ([x, y]) => Math.hypot(Math.max(0, bb.l - x, x - bb.r), Math.max(0, bb.t - y, y - bb.b))
+      const own = ctr(g)
+      const rivals = kinks.filter(o => o !== g).map(ctr)
+      if (u && Math.hypot(+u.attrs.cx - own[0], +u.attrs.cy - own[1]) > 6) rivals.push([+u.attrs.cx, +u.attrs.cy])
+      for (const p of rivals) expect(d(own), `${tx.textContent} nearer to marker @${p}`).toBeLessThan(d(p))
+    }
   })
 })
 

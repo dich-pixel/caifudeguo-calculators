@@ -24,8 +24,9 @@ export const X_LABEL_GAP = 4
 
 /** stage 5 follow-up: min horizontal gap between two x labels (tester: 65/66 at 800 px) */
 export const X_LABEL_MIN_GAP = 8
-/** stage 5 follow-up: baseline offset between x-label rows (only used for must-keep ticks that do not fit) */
-export const X_ROW2_DY = 13
+/** baseline offset between x-label rows: glyph boxes (baseline −10.5 … +1.5) of stacked rows stay ≥ 4 px apart
+ * (stage 5 follow-up, was 13) (only used for must-keep ticks that do not fit) */
+export const X_ROW2_DY = 16
 
 /** free space (px) on each side of a leader line */
 export const LEADER_CLEAR = 2
@@ -120,6 +121,10 @@ export function placeLabels(ls: XLabel[], o: { minL: number, maxR: number, gap?:
 export const RIGHT_TITLE_INSET = 22
 export const PAD = { left: 78, right: 84, top: 46, bottom: 44 }
 /** x-axis labels below 400 px */
+/** first x-label row: baseline this far below the plot bottom; its glyphs stay ≥ 4 px below the lowest axis numbers */
+export const X_ROW0_DY = 21
+/** min distance between two labelled axis values (glyphs 12 px + 4 px apart) */
+export const MIN_TICK_DY = 16
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
 /** A.3: minimum gap between texts / to the 0 line */
 export const GAP = 4
@@ -209,7 +214,10 @@ export function axes(left: number[], right: (number | null)[], top: number, bott
   const h = bottom - top
   const y = (v: number) => top + ((hiL - v) / (hiL - loL)) * h
   const yR = (v: number) => top + ((hiR - v) / (hiR - loR)) * h
-  return { y, yR, ticks: ticksIn(loL, hiL, L.step).map(v => Math.round(v)), ticksR }
+  // labelled values ≥ MIN_TICK_DY apart (glyph boxes ≥ 4 px apart): a coarser step (multiples keep the 0)
+  let stepL = L.step
+  while (stepL * h / (hiL - loL || 1) < MIN_TICK_DY && stepL < hiL - loL) stepL *= 2
+  return { y, yR, ticks: ticksIn(loL, hiL, stepL).map(v => Math.round(v)), ticksR }
 }
 
 /** estimated text width (12 px font): 13 px per CJK character, 7 px otherwise */
@@ -316,14 +324,14 @@ export class Placer {
   }
 
   /** clear of every text / tick / legend box and the own point; curves and markers may be crossed */
-  hardOk(b: Box, own: Box | null, ignoreMarks?: ReadonlySet<Box>): boolean {
+  hardOk(b: Box, own: Box | null, ignoreMarks?: ReadonlySet<Box>, ignoreBoxes?: ReadonlySet<Box>): boolean {
     if (b.t < 0 || b.b > this.height || b.l < 0 || b.r > this.width)
       return false
     if (own && !apart(b, own, 1))
       return false
     if (this.zeroY !== null && b.r > this.plot.l && b.l < this.plot.r && !(b.b + GAP <= this.zeroY || this.zeroY + GAP <= b.t))
       return false
-    return this.marks.every(o => o === own || ignoreMarks?.has(o) || apart(b, o, 1)) && this.boxes.every(o => o === own || apart(b, o, GAP)) // the own point only needs 1 px (checked above)
+    return this.marks.every(o => o === own || ignoreMarks?.has(o) || apart(b, o, 1)) && this.boxes.every(o => o === own || ignoreBoxes?.has(o) || apart(b, o, GAP)) // the own point only needs 1 px (checked above)
   }
 
   /** how much of the curves / markers / dashed lines a box covers */
@@ -449,7 +457,7 @@ export const splitLabel = (text: string): string[] | null => {
  * than to any of `rivals` (the other annotated markers). Curves may be crossed, but the spot crossing the least wins.
  * Returns null when no such spot exists (the caller then keeps the label out rather than detaching it).
  */
-export function placeAnn(pl: Placer, text: string, own: Box, region: Box, rivals: Box[], spaceIdx = true, ignoreMarks?: ReadonlySet<Box>): Ann | null {
+export function placeAnn(pl: Placer, text: string, own: Box, region: Box, rivals: Box[], spaceIdx = true, ignoreMarks?: ReadonlySet<Box>, ignoreBoxes?: ReadonlySet<Box>): Ann | null {
   const variants = [[text], ...(spaceIdx && splitLabel(text) ? [splitLabel(text)!] : [])]
   const cx = (own.l + own.r) / 2
   const cy = (own.t + own.b) / 2
@@ -480,7 +488,7 @@ export function placeAnn(pl: Placer, text: string, own: Box, region: Box, rivals
         continue
       // the gap is measured to the inked part of the text (the layout box has ascent / descent / width slack)
       const gap = boxGap({ l: b.l, r: b.r, t: b.t + 3, b: b.b - 3 }, own)
-      if (gap > ANN_MAX_GAP || !pl.hardOk(b, own, ignoreMarks) || !rivals.every(o => boxGap(b, o) >= gap + 4))
+      if (gap > ANN_MAX_GAP || !pl.hardOk(b, own, ignoreMarks, ignoreBoxes) || !rivals.every(o => boxGap(b, o) >= gap + 4))
         continue
       const relHits = ignoreMarks ? [...ignoreMarks].filter(o => !apart(b, o, 1)).length : 0
       const soft = pl.softCost(b)
@@ -538,14 +546,14 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
   for (const v of a.ticks) {
     svg.append(el('line', { x1: PAD.left, x2: width - PAD.right, y1: a.y(v), y2: a.y(v), class: v === 0 ? 'zero' : 'grid' }))
     const sl = axisNumber(v)
-    // the lowest tick on the x axis itself sits 4 px higher, so it stays clear of the first x-axis label row
-    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + (a.y(v) >= bottom - 1 ? 0 : 4), 'end', sl), sl))
+    // centred on its grid line (also the lowest one: the first x-label row sits X_ROW0_DY below the plot)
+    svg.append(el('text', pl.fixed(PAD.left - 4, a.y(v) + 4, 'end', sl), sl))
   }
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
   for (const v of a.ticksR) {
     // no tick marks: a dash touching the number read as a minus sign; the grid lines give the position
     const s = `${axisNumber(v, Number.isInteger(v) ? 0 : 2)} %` // stage 5 (5): percentages with decimals use exactly 2
-    rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + (a.yR(v) >= bottom - 1 ? 0 : 4), 'start', s), s))
+    rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
   }
   svg.append(rg)
   svg.append(el('text', pl.fixed(PAD.left + (width - PAD.left - PAD.right) / 2, height - 6, 'middle', t(o.xAxis)), t(o.xAxis)))
@@ -611,7 +619,7 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   const leaders: SVGLineElement[] = []
   const xl: SVGTextElement[] = placed.sort((p, q) => tiersFirst[p.i]!.label.tick - tiersFirst[q.i]!.label.tick).map((p) => {
     const c = tiersFirst[p.i]!
-    const y = bottom + 14 + p.row * X_ROW2_DY
+    const y = bottom + X_ROW0_DY + p.row * X_ROW2_DY
     pl.occupy(textBox(p.l, y, c.s))
     if (p.row > 0) // follow-up: stacked label → short leader from the axis down to the label, at its tick
       leaders.push(el('line', { 'x1': c.label.tick, 'x2': c.label.tick, 'y1': bottom + 2, 'y2': y - 11, 'class': 'xl-leader', 'data-tick': c.label.tick }))
@@ -698,7 +706,7 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
       }
       else {
         const tx = el('text', { 'x': p.x, 'y': p.y, 'text-anchor': 'start', 'class': 'cap-label' })
-        lines.forEach((ln, k) => tx.append(el('tspan', { x: p.x, y: p.y + k * CAP_LINE_DY }, ln)))
+        ;lines.forEach((ln, k) => tx.append(el('tspan', { x: p.x, y: p.y + k * CAP_LINE_DY }, ln)))
         m.append(tx)
       }
       return { m, free, hard }
@@ -726,8 +734,12 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
         const i = it.i
         const r = rows[i]!
         const text = it.user ? t('cmp3UserTag') : t('chartKink', { a: formatNumberDe(r.amount) })
-        const region = it.user ? plotBox : { l: 2, r: width - 2, t: 2, b: bottom }
-        tryAnns.set(key(it), placeAnn(pl, text, own[i]!, region, annIdx.filter(j => j !== i && g.xs[j] !== g.xs[i]).map(j => own[j]!), true))
+        // 「你的金额」 fully inside the plot: the rendered text box is ~1.5 px taller (top and bottom) and may be ~1 px
+        // wider than the layout box, so the region is inset by that much
+        const region = it.user ? { l: plotBox.l + 1, r: plotBox.r - 1, t: plotBox.t + 1.5, b: plotBox.b - 1.5 } : { l: 2, r: width - 2, t: 2, b: bottom }
+        const rivals = annIdx.filter(j => j !== i && g.xs[j] !== g.xs[i]).map(j => own[j]!)
+        // PM exception: 「你的金额」 may cross the dashed 6.840 line (never a text or marker) when it has no other spot
+        tryAnns.set(key(it), placeAnn(pl, text, own[i]!, region, rivals, true) ?? (it.user && capLineBox ? placeAnn(pl, text, own[i]!, region, rivals, true, undefined, new Set([capLineBox])) : null))
       }
       const miss = (m: Map<string, Ann | null>) => [...m.values()].filter(a => !a).length
       if (anns.size === 0 || miss(tryAnns) < miss(anns))
@@ -757,7 +769,9 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   ]
   const rank = ({ anns, cap }: ReturnType<typeof orders[number]>) => {
     const miss = [...anns].filter(([, a]) => !a).map(([k]) => k)
-    return (miss.some(k => k[0] === 'u') ? 1e6 : 0) + (cap && !cap.hard ? 1e5 : 0) + (width <= OMIT_MAX_WIDTH ? 100 : 1e4) * miss.length + (cap && !cap.free ? 1 : 0)
+    // PM exception:「你的金额」 across the dashed line only when nothing else works
+    const crossed = capLineBox && [...anns].some(([k, a]) => k[0] === 'u' && a && !apart(a.box, capLineBox, GAP))
+    return (miss.some(k => k[0] === 'u') ? 1e8 : 0) + (cap && !cap.hard ? 1e7 : 0) + (crossed ? 3e6 : 0) + (width <= OMIT_MAX_WIDTH ? 100 : 1e4) * miss.length + (cap && !cap.free ? 1 : 0)
   }
   let bestOrder = 0
   let bestRank = Infinity

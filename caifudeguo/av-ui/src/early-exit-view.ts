@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, el, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP } from './chart'
+import { axes, el, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -44,8 +44,8 @@ export function drawEarlyChart(e: EarlyExit, width: number): SVGSVGElement {
   const xl: SVGTextElement[] = placed.map(({ i, l }) => {
     const p = pts[i]!
     const s = String(p.age)
-    pl.occupy(textBox(l, bottom + 14, s))
-    return el('text', { 'x': l, 'y': bottom + 14, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s)
+    pl.occupy(textBox(l, bottom + X_ROW0_DY, s))
+    return el('text', { 'x': l, 'y': bottom + X_ROW0_DY, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s)
   })
   svg.append(el('polyline', { points: xs.map((x, i) => `${x},${a.y(pts[i]!.diff)}`).join(' '), class: 'line' }))
   pts.forEach((p, i) => svg.append(el('circle', { 'cx': xs[i]!, 'cy': a.y(p.diff), 'r': 3, 'class': 'pt', 'data-testid': `ee-point-${p.year}` })))
