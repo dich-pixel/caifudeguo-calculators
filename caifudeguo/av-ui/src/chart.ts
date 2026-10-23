@@ -38,9 +38,9 @@ export function thinLabels(spans: { l: number, r: number }[], extra: number[] = 
   }
   return kept.sort((x, y) => x - y)
 }
-/** stage 5 (5): baseline of the rotated right title; its glyphs (ascent ≈ 11 px towards the edge) end ≥ 3 px inside the SVG */
-export const RIGHT_TITLE_INSET = 14
-export const PAD = { left: 78, right: 72, top: 46, bottom: 44 }
+/** stage 5 (5): baseline of the rotated right title; its glyphs (≈ 13 px towards the edge in the browser) end ≥ 8 px inside the SVG */
+export const RIGHT_TITLE_INSET = 22
+export const PAD = { left: 78, right: 84, top: 46, bottom: 44 }
 /** x-axis labels below 400 px */
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
 /** A.3: minimum gap between texts / to the 0 line */

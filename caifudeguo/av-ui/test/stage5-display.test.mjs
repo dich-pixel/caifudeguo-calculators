@@ -80,14 +80,27 @@ describe('(4) x labels never overlap, first and last kept', () => {
 })
 
 describe('(5) right title margin, 2-decimal %, 375 px spacing', () => {
-  it.each([800, 375, 1280])('right title stays ≥ 3 px inside at %i px', async (w) => {
-    const { drawChart, RIGHT_TITLE_INSET } = await import('../src/chart')
-    clearSweepCache()
-    const svg = drawChart(sweep(form(), undefined, { today: TODAY }).rows, w)
+  // follow-up: ≥ 8 px from the right edge and clear of the right tick labels, both charts. Browser-calibrated
+  // (Chromium, 2026-10-23): rotate(90) glyphs reach ≈ 13 px right of the baseline and ≈ 4 px left of it.
+  const titleChecks = (svg, w) => {
     const title = all(svg, x => (x.attrs.class ?? '').includes('axis-title-right'))[0]
-    const m = /translate\(([\d.]+) /.exec(title.attrs.transform)
-    expect(Number(m[1]) + 11).toBeLessThanOrEqual(w - 3) // rotate(90): ascent ≈ 11 px towards the edge
-    expect(RIGHT_TITLE_INSET).toBeGreaterThanOrEqual(14)
+    const cx = Number(/translate\(([\d.]+) /.exec(title.attrs.transform)[1])
+    expect(w - (cx + 13), `edge @ ${w}`).toBeGreaterThanOrEqual(8)
+    for (const r of all(byTestId(svg, 'chart-axis-right')[0], x => x.tag === 'text'))
+      expect(cx - 4 - (Number(r.attrs.x) + est(r.textContent)), `${r.textContent} @ ${w}`).toBeGreaterThanOrEqual(4)
+  }
+  it.each([320, 375, 800, 1280])('right title ≥ 8 px from the edge, no tick overlap, cmp3 chart %i px', async (w) => {
+    const { drawChart, RIGHT_TITLE_INSET } = await import('../src/chart')
+    expect(RIGHT_TITLE_INSET).toBeGreaterThanOrEqual(21)
+    for (const amount of ['300', '1.800', '6.840']) {
+      clearSweepCache()
+      titleChecks(drawChart(sweep(form({ savingsRate: amount }), undefined, { today: TODAY }).rows, w), w)
+    }
+  })
+  it.each([320, 375, 800, 1280])('right title ≥ 8 px from the edge, no tick overlap, early-exit chart %i px', async (w) => {
+    const { drawEarlyChart } = await import('../src/early-exit-view')
+    for (const mode of ['avDepot', 'consume', 'secondaryDepot'])
+      titleChecks(drawEarlyChart(earlyExitFor(form({}, mode), TODAY), w), w)
   })
   it('relText: always exactly 2 decimals, de-DE, U+2212', () => {
     expect(relText(15)).toBe('15,00 %')
