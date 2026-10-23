@@ -368,6 +368,6 @@ describe('stage 5 relative difference', () => {
     const { relText } = await import('../src/cmp3')
     expect(relText(null)).toBe('—')
     expect(relText(-1.2054)).toBe('-1,21 %'.replace('-', relText(-1).startsWith('−') ? '−' : '-'))
-    expect(relText(12.87)).toBe('12,9 %')
+    expect(relText(12.87)).toBe('12,87 %')
   })
 })

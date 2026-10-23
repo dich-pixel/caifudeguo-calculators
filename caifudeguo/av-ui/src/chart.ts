@@ -18,10 +18,29 @@ import { ONE_CONTRACT_CAP } from './model'
 import { t } from './strings'
 
 const NS = 'http://www.w3.org/2000/svg'
-/** right = tick labels (start-anchored at width − right + 6) + the rotated right axis title at width − 8 */
+/** right = tick labels (start-anchored at width − right + 6) + the rotated right axis title at width − RIGHT_TITLE_INSET */
 /** min horizontal gap between an x label and the right-axis tick labels */
 export const X_LABEL_GAP = 4
-export const PAD = { left: 78, right: 66, top: 46, bottom: 44 }
+
+/**
+ * Stage 5 (4): x labels never overlap each other. Keeps the first and the last label, then `extra` priorities
+ * (e.g. the user amount), then the rest from left to right; a label is kept only if it stays ≥ X_LABEL_GAP px
+ * from every label kept so far. Returns the kept indices in x order.
+ */
+export function thinLabels(spans: { l: number, r: number }[], extra: number[] = []): number[] {
+  const n = spans.length
+  const order = [0, n - 1, ...extra, ...spans.map((_, i) => i)].filter((i, k, a) => i >= 0 && i < n && a.indexOf(i) === k)
+  const kept: number[] = []
+  for (const i of order) {
+    const a = spans[i]!
+    if (kept.every(j => a.r + X_LABEL_GAP <= spans[j]!.l || spans[j]!.r + X_LABEL_GAP <= a.l))
+      kept.push(i)
+  }
+  return kept.sort((x, y) => x - y)
+}
+/** stage 5 (5): baseline of the rotated right title; its glyphs (ascent ≈ 11 px towards the edge) end ≥ 3 px inside the SVG */
+export const RIGHT_TITLE_INSET = 14
+export const PAD = { left: 78, right: 72, top: 46, bottom: 44 }
 /** x-axis labels below 400 px */
 const NARROW_TICKS = [120, 360, 1800, 6840, 13680]
 /** A.3: minimum gap between texts / to the 0 line */
@@ -277,7 +296,7 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
   const rg = el('g', { 'class': 'axis-right', 'data-testid': 'chart-axis-right' })
   for (const v of a.ticksR) {
     // no tick marks: a dash touching the number read as a minus sign; the grid lines give the position
-    const s = `${axisNumber(v, Number.isInteger(v) ? 0 : 1)} %`
+    const s = `${axisNumber(v, Number.isInteger(v) ? 0 : 2)} %` // stage 5 (5): percentages with decimals use exactly 2
     rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
   }
   svg.append(rg)
@@ -287,8 +306,8 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
   const vbox = (cx: number, text: string) => pl.occupy({ l: cx - 9, r: cx + 5, t: mid - textWidth(text) / 2, b: mid + textWidth(text) / 2 })
   svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'transform': `translate(12 ${mid}) rotate(-90)` }, t('chartYAxis')))
   vbox(12, t('chartYAxis'))
-  svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'class': 'axis-title-right', 'transform': `translate(${width - 8} ${mid}) rotate(90)` }, t('chartYAxisRight')))
-  vbox(width - 8, t('chartYAxisRight'))
+  svg.append(el('text', { 'x': 0, 'y': 0, 'text-anchor': 'middle', 'class': 'axis-title-right', 'transform': `translate(${width - RIGHT_TITLE_INSET} ${mid}) rotate(90)` }, t('chartYAxisRight')))
+  vbox(width - RIGHT_TITLE_INSET, t('chartYAxisRight'))
   return pl
 }
 
@@ -327,17 +346,21 @@ export function drawChart(rows: CmpRow[], width: number): SVGSVGElement {
   const narrow = width < 400
   const pl = frame(svg, g, { width, height: g.height, title: 'chartTitle', xAxis: 'chartXAxis' })
   const ys = rows.map(r => g.y(r.diff))
-  // x labels (fixed)
-  const xl: SVGTextElement[] = []
+  // x labels (fixed), thinned by the available width (stage 5 (4))
+  const cand: { s: string, x: number, user: boolean }[] = []
   rows.forEach((r, i) => {
     if ((!narrow || NARROW_TICKS.includes(r.amount)) && (r.tier || !narrow)) {
       const s = formatNumberDe(r.amount, Number.isInteger(r.amount) ? 0 : 2)
       const w = textWidth(s)
       // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
-      const x = Math.max(2, Math.min(g.xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w))
-      pl.occupy(textBox(x, bottom + 14, s))
-      xl.push(el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': r.tier ? 'xl' : 'xl user' }, s))
+      cand.push({ s, x: Math.max(2, Math.min(g.xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)), user: !r.tier })
     }
+  })
+  const keep = thinLabels(cand.map(c => ({ l: c.x, r: c.x + textWidth(c.s) })), cand.flatMap((c, i) => c.user ? [i] : []))
+  const xl: SVGTextElement[] = keep.map((i) => {
+    const c = cand[i]!
+    pl.occupy(textBox(c.x, bottom + 14, c.s))
+    return el('text', { 'x': c.x, 'y': bottom + 14, 'text-anchor': 'start', 'class': c.user ? 'xl user' : 'xl' }, c.s)
   })
   // 6.840 € dashed line; its label goes where it fits (bottom, then top, either side)
   const i6840 = rows.findIndex(r => r.amount === ONE_CONTRACT_CAP)

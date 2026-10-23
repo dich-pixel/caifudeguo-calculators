@@ -233,6 +233,11 @@ input[type='text'] { min-height: 44px; }
 .ee-item dd { margin: 0; text-align: right; }
 .ee-main .ee-item dd { font-weight: 700; }
 .ee-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+@media (max-width: 520px) {
+  /* stage 5 (5): air between the two notes and between them and the chart title */
+  .ee-region > p.help { margin: 10px 0; }
+  .ee-region > .cmp3-figure { margin-top: 18px; }
+}
 @media (max-width: 999px) {
   .ee-table { display: none; }
   .ee-cards { display: block; }

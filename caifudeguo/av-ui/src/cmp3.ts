@@ -19,9 +19,9 @@ export const DEBOUNCE_MS = 300
 
 const num = (s: string) => h('span', { class: 'num' }, s)
 
-/** Stage 5 B: relative difference in % (2 decimals, 1 from 10 %); null → dash (B.3) */
+/** Stage 5 B: relative difference in %, always exactly 2 decimals (PM, stage 5 (5)); null → dash (B.3) */
 export function relText(rel: number | null): string {
-  return rel === null ? t('dash') : t('relCell', { p: displayNumberDe(rel, Math.abs(rel) >= 10 ? 1 : 2) })
+  return rel === null ? t('dash') : t('relCell', { p: displayNumberDe(rel, 2) })
 }
 
 export interface Cmp3View {

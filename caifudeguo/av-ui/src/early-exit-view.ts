@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, el, frame, PAD, plotTop, relLine, textBox, textWidth, X_LABEL_GAP } from './chart'
+import { axes, el, frame, PAD, plotTop, relLine, textBox, textWidth, thinLabels, X_LABEL_GAP } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -39,20 +39,16 @@ export function drawEarlyChart(e: EarlyExit, width: number): SVGSVGElement {
   const a0 = pts[0]!.age
   const a1 = pts[pts.length - 1]!.age
   const xs = pts.map(p => PAD.left + (a1 === a0 ? inner / 2 : ((p.age - a0) / (a1 - a0)) * inner))
-  // x labels = ages; a label that would come closer than 4 px to the previous one is skipped
-  let lastR = -Infinity
-  const xl: SVGTextElement[] = []
-  pts.forEach((p, i) => {
+  // x labels = ages, thinned by the available width (stage 5 (4)): first and last always kept, ≥ X_LABEL_GAP px apart
+  const cand = pts.map((p, i) => {
     const s = String(p.age)
     const w = textWidth(s)
-    const x = Math.max(2, Math.min(xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)) // stage 5 (b): clear of the right-axis labels
-    if (x < lastR + 4 && i !== pts.length - 1)
-      return
-    if (x < lastR + 4)
-      xl.pop()
+    return { p, s, x: Math.max(2, Math.min(xs[i]! - w / 2, width - PAD.right + 6 - X_LABEL_GAP - w)) } // stage 5 (b): clear of the right-axis labels
+  })
+  const xl: SVGTextElement[] = thinLabels(cand.map(c => ({ l: c.x, r: c.x + textWidth(c.s) }))).map((i) => {
+    const { p, s, x } = cand[i]!
     pl.occupy(textBox(x, bottom + 14, s))
-    xl.push(el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s))
-    lastR = x + w
+    return el('text', { 'x': x, 'y': bottom + 14, 'text-anchor': 'start', 'class': 'xl', 'data-testid': `ee-xl-${p.year}` }, s)
   })
   svg.append(el('polyline', { points: xs.map((x, i) => `${x},${a.y(pts[i]!.diff)}`).join(' '), class: 'line' }))
   pts.forEach((p, i) => svg.append(el('circle', { 'cx': xs[i]!, 'cy': a.y(p.diff), 'r': 3, 'class': 'pt', 'data-testid': `ee-point-${p.year}` })))
@@ -161,11 +157,12 @@ export function createEarlyExit(): EarlyExitView {
   const summary = h('div', { 'class': 'ee-summary', 'data-testid': 'ee-summary', 'aria-live': 'polite' })
   const region = h('div', { 'id': 'ee-region', 'class': 'ee-region', 'hidden': true })
   const toggle = txt('button', 'eeToggle', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': 'ee-region' })
+  const more = txt('a', 'eeMore', { 'href': '#ee', 'data-testid': 'ee-more' })
   const brief = h('div', { 'class': 'ee-brief', 'role': 'group', 'aria-labelledby': 'ee-brief-h', 'data-testid': 'ee-brief' },
     h('h2', { id: 'ee-brief-h' }, txt('span', 'eeHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
     txt('p', 'eeDisclaimer', { class: 'ee-disclaimer' }),
     summary,
-    h('p', { class: 'ee-more' }, txt('a', 'eeMore', { 'href': '#ee', 'data-testid': 'ee-more' })),
+    h('p', { class: 'ee-more' }, more),
   )
   const section = h('section', { 'id': 'ee', 'class': 'cmp3 ee', 'aria-labelledby': 'ee-h', 'data-testid': 'ee' },
     h('h2', { id: 'ee-h' }, txt('span', 'eeDetailHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
@@ -175,14 +172,33 @@ export function createEarlyExit(): EarlyExitView {
   let data: EarlyExit | null = null
   let observer: ResizeObserver | undefined
   const open = () => toggle.getAttribute('aria-expanded') === 'true'
-  toggle.addEventListener('click', () => {
-    const o = !open()
+  const setOpen = (o: boolean) => {
     toggle.setAttribute('aria-expanded', String(o))
     region.hidden = !o
     if (o)
       render()
     else region.replaceChildren()
+  }
+  toggle.addEventListener('click', () => setOpen(!open()))
+  /** stage 5 (2): the「详细计算结果和曲线见下方。」link (and a page opened with #ee) expands the detail and puts its top at the viewport top */
+  const reveal = () => {
+    if (!open())
+      setOpen(true)
+    section.scrollIntoView?.({ block: 'start' })
+  }
+  more.addEventListener('click', (ev) => {
+    ev.preventDefault()
+    reveal()
+    if (typeof history !== 'undefined' && typeof location !== 'undefined' && location.hash !== '#ee')
+      history.pushState(null, '', '#ee')
   })
+  const fromHash = () => {
+    if (typeof location !== 'undefined' && location.hash === '#ee')
+      reveal()
+  }
+  if (typeof window !== 'undefined')
+    window.addEventListener('hashchange', fromHash)
+  let first = true
 
   function render() {
     observer?.disconnect()
@@ -222,6 +238,13 @@ export function createEarlyExit(): EarlyExitView {
     data = main ? earlyExit(avDepot.schema.parse(main.coreInput), main.result) : null
     summary.replaceChildren(...(data ? summaryLines(data) : [txt('p', 'eeInvalid')]))
     render()
+    if (first) {
+      first = false
+      // after the first content is in place (the section is attached by main.ts), honour a #ee in the URL
+      if (typeof requestAnimationFrame !== 'undefined')
+        requestAnimationFrame(fromHash)
+      else fromHash()
+    }
   }
   return { brief, section, update }
 }

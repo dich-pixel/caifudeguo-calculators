@@ -12,13 +12,16 @@ export interface FakeEl {
   append: (...c: (FakeEl | string)[]) => void
   replaceChildren: (...c: (FakeEl | string)[]) => void
   insertBefore: (c: FakeEl, ref: FakeEl) => void
-  addEventListener: (type: string, fn: () => void) => void
+  addEventListener: (type: string, fn: (ev: { preventDefault: () => void }) => void) => void
   click: () => void
+  /** count of scrollIntoView calls and the last options (stage 5 (2)) */
+  scrolled: { n: number, opts?: unknown }
+  scrollIntoView: (opts?: unknown) => void
   classList: { toggle: (c: string, on?: boolean) => void, contains: (c: string) => boolean }
 }
 
 export function make(tag: string): FakeEl {
-  const listeners: Record<string, (() => void)[]> = {}
+  const listeners: Record<string, ((ev: { preventDefault: () => void }) => void)[]> = {}
   const e: FakeEl = {
     tag,
     attrs: {},
@@ -38,7 +41,9 @@ export function make(tag: string): FakeEl {
     replaceChildren: (...c) => { e.children = [...c] },
     insertBefore: (c, ref) => { e.children.splice(Math.max(0, e.children.indexOf(ref)), 0, c) },
     addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn) },
-    click: () => { for (const fn of listeners.click ?? []) fn() },
+    click: () => { for (const fn of listeners.click ?? []) fn({ preventDefault: () => {} }) },
+    scrolled: { n: 0 },
+    scrollIntoView: (opts) => { e.scrolled = { n: e.scrolled.n + 1, opts } },
     classList: {
       toggle: (c, on) => {
         const set = new Set((e.attrs.class ?? '').split(' ').filter(Boolean))
