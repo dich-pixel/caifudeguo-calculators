@@ -28,7 +28,7 @@ const byAmount = (s: ReturnType<typeof run>, a: number) => s.rows.find(r => r.am
 
 beforeEach(() => clearSweepCache())
 
-describe('tiers and ids', () => {
+describe('tiers and ids', { timeout: 15000 }, () => {
   it('t3-14 TIERS', () => {
     expect([...TIERS]).toEqual([120, 300, 360, 600, 1200, 1800, 2400, 3600, 6840, 8400, 10000, 13680])
   })
@@ -82,10 +82,10 @@ describe('t3-15/16 every field = one separate core run', () => {
       expect(formatCurrencyAdaptive(row.normalNet)).toBe(core.payoutTotal.net.normalDepot)
       expect(formatCurrencyAdaptive(row.result.totalContributions.avDepot)).toBe(core.totalContributions.avDepot)
     }
-  })
+  }, 15000) // CI runners took 5.0–5.5 s for 'secondary' (runs 39906750031 #1/#2)
 })
 
-describe('known values (TESTPLAN appendix A)', () => {
+describe('known values (TESTPLAN appendix A)', { timeout: 15000 }, () => {
   it('a1 defaults', () => {
     const s = run(form())
     expect(s.rows.map(r => c2(r.diff))).toEqual([1179.70, 2860.02, 3539.11, 6820.58, 13733.46, 25107.30, 23596.85, 20881.94, 10168.83, 4123.11, -2652.71, -15296.36])
@@ -139,7 +139,7 @@ describe('b3 rule 3: 多存 1 €', () => {
     expect(m(form(), 1800)).toEqual([1200, 3.78, 3.19])
     expect(m(form(), 2400)).toEqual([1800, 3.10, 3.17])
     expect(m(form({ savingsRate: '1.850' }), 2400)).toEqual([1800, 3.10, 3.17])
-  })
+  }, 15000)
   it('user row', () => {
     expect(m(form({ savingsRate: '1.850' }), 1850)).toEqual([1200, 3.73, 3.18])
     // TESTPLAN T3-33 says 3,19 for normal; the core gives 3,1845… → 3,18 (3,19 is the 1.800 row)
@@ -149,7 +149,7 @@ describe('b3 rule 3: 多存 1 €', () => {
     expect(m(form({ savingsRate: '125' }), 125)).toBeNull()
     expect(m(form({ savingsRate: '219' }), 219)).toBeNull()
     expect(m(form({ savingsRate: '1.799' }), 1800)).toEqual([1200, 3.78, 3.19])
-  })
+  }, 15000) // CI runner took 5.8 s for this test (run 39955498783)
   it('t3-20 user amount equal to a tier: no extra row', () => {
     const s = run(form())
     expect(s.rows).toHaveLength(12)
@@ -158,11 +158,12 @@ describe('b3 rule 3: 多存 1 €', () => {
     const s2 = run(form({ savingsRate: '1.800,50' }))
     expect(s2.rows.map(r => r.amount).slice(5, 8)).toEqual([1800, 1800.5, 2400])
     expect(s2.rows.filter(r => r.user)).toHaveLength(1)
-  })
+  }, 15000)
 })
 
 const sens = (v: FormValues) => { clearSweepCache(); const s = run(v); return [sensitivityText(s), maxText(s), s.marginalHigher, s.flips.map(flipText)] as const }
-describe('b3 / f6 sentences', () => {
+// heavy core sweeps: 15 s per test (CI run 39957317788: t3-95 took 5.0 s)
+describe('b3 / f6 sentences', { timeout: 15000 }, () => {
   it('defaults', () => {
     const [a, b, c, f] = sens(form())
     expect(a).toBe('按你现在的其他输入，在 6.840–8.400 € 之间变成两者基本相同，在 10.000–13.680 € 之间又变成普通账户多拿。')
@@ -220,7 +221,7 @@ describe('b3 / f6 sentences', () => {
   })
 })
 
-describe('t3-44/71 core calls (spy)', () => {
+describe('t3-44/71 core calls (spy)', { timeout: 15000 }, () => {
   it('≤ 17 per round, user row from the main result', () => {
     const v = form({ age: '18', savingsRate: '12.000' }, { kids: ['2020', '2023'] })
     const main = ref(v, 12000)
@@ -285,7 +286,7 @@ describe('t3-68 round time (Node 22.14.0 gate)', () => {
   })
 })
 
-describe('g3: Förderung row in the main result', () => {
+describe('g3: Förderung row in the main result', { timeout: 15000 }, () => {
   it('t3-39 label follows the tax-saving mode', async () => {
     const { foerderungKey } = await import('../src/compare')
     const { t } = await import('../src/strings')
@@ -310,7 +311,7 @@ describe('g3: Förderung row in the main result', () => {
   })
 })
 
-describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
+describe('g6: chunked rounds (pendingAmounts + prefetch)', { timeout: 15000 }, async () => {
   const { pendingAmounts, prefetch } = await import('../src/compare')
   it('one prefetch per pending amount, then sweep needs 0 core runs', () => {
     const v = form({ age: '18', savingsRate: '12.000' }, { kids: ['2020', '2023'] })
@@ -339,5 +340,35 @@ describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
     run(form(), evaluate, ref(form(), 1800))
     const v = form({ age: '40' })
     expect(pendingAmounts(v, { main: ref(v, 1800), today: TODAY }).length).toBe(15) // 11 tiers + 5.040/6.600/8.200/11.880
+  })
+})
+
+// Stage 5 B.2 / Q14: rel = D ÷ max_y capitalEnd.avDepot × 100 (secondary account included); reference = scratch/b.json "Bincl"
+describe('stage 5 relative difference', { timeout: 15000 }, () => {
+  it.each([
+    ['avDepot', 1800, 10.985623402669923],
+    ['avDepot', 13680, -1.2054294792595226],
+    ['secondaryDepot', 1800, 12.872505724227857],
+    ['consume', 1800, -0.9154122057864972],
+    ['consume', 120, 5.975576591019951],
+  ] as const)('%s %i: %f %', async (mode, amount, want) => {
+    const { relOf } = await import('../src/compare')
+    clearSweepCache()
+    const s = sweep(form({}, { taxSavingsMode: mode }), undefined, { today: TODAY })!
+    const r = s.rows.find(x => x.amount === amount)!
+    expect(Math.abs(r.rel! - want)).toBeLessThan(0.01)
+    const peak = Math.max(...r.result.years.map(y => y.capitalEnd.avDepot))
+    expect(r.relBase).toBe(peak)
+    expect(relOf(r.diff, r.result, amount)).toEqual({ rel: (r.diff / peak) * 100, relBase: peak })
+  })
+  it('not drawn only when the base is below the yearly amount (strict)', async () => {
+    const { relOf } = await import('../src/compare')
+    const res = (b: number) => ({ years: [{ capitalEnd: { avDepot: b } }] }) as unknown as Result
+    expect(relOf(10, res(119.99), 120).rel).toBeNull()
+    expect(relOf(12, res(120), 120).rel).toBe(10)
+    const { relText } = await import('../src/cmp3')
+    expect(relText(null)).toBe('—')
+    expect(relText(-1.2054)).toBe('-1,21 %'.replace('-', relText(-1).startsWith('−') ? '−' : '-'))
+    expect(relText(12.87)).toBe('12,87 %')
   })
 })

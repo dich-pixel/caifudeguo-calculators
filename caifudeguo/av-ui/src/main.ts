@@ -8,6 +8,7 @@ import type { StrKey } from './strings'
 import { createCmp3 } from './cmp3'
 import { foerderung, foerderungKey, verdictSentence } from './compare'
 import { h, txt } from './dom'
+import { createEarlyExit } from './early-exit-view'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
@@ -20,6 +21,7 @@ const inputs = new Map<string, HTMLInputElement>()
 const errorEls = new Map<string, HTMLElement>()
 let lastChanged = ''
 const cmp3 = createCmp3()
+const early = createEarlyExit()
 /** Kid rows touched (typed into or blurred); untouched rows are not calculated (plan f4). */
 const kidTouched: boolean[] = []
 
@@ -285,6 +287,7 @@ function update() {
       status.append(h('p', { 'class': 'err', 'data-testid': 'error-form' }, t(formErr.key, formErr.vars)))
   }
   cmp3.update(counted.values, outcome.ok ? outcome.result : null)
+  early.update(counted.values, outcome.ok ? outcome : null)
 }
 
 // ---------- page ----------
@@ -333,6 +336,8 @@ function build() {
   const results = h('section', { 'class': 'results', 'aria-labelledby': 'results-h' },
     txt('h2', 'resultsHeading', { id: 'results-h' }),
     status, monthlyBox, compare,
+    // stage 5 follow-up: early-withdrawal short summary right after the result footnotes
+    early.brief,
   )
 
   const yearly = h('section', { class: 'yearly-sec' }, toggle('yearly', 'yearly-region', yearlyBody), yearlyBody)
@@ -356,6 +361,7 @@ function build() {
     bar,
     h('div', { class: 'grid' }, form, results),
     cmp3.section,
+    early.section,
     // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
     yearly,

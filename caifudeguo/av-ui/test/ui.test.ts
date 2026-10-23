@@ -79,7 +79,7 @@ describe('rounding and German format (T2-22, T2-24, T2-55)', () => {
   it('formats', () => {
     expect(formatEuro(228547)).toBe('228.547\u00A0€')
     expect(formatEuro(872.5)).toBe('873\u00A0€')
-    expect(formatEuro(-1234.5)).toBe('-1.235\u00A0€')
+    expect(formatEuro(-1234.5)).toBe('\u22121.235\u00A0€') // stage 5 (a): U+2212
     expect(formatEuro2(1800)).toBe('1.800,00\u00A0€')
     expect(formatEuro2(151.5)).toBe('151,50\u00A0€')
     expect(formatNumberDe(1800)).toBe('1.800')

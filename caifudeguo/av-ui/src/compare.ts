@@ -39,8 +39,13 @@ export interface CmpRow {
   normalNet: number
   /** D = avNet − normalNet, unrounded */
   diff: number
-  /** D ÷ larger net total (display only) */
-  share: number
+  /**
+   * Stage 5 B: D ÷ largest AV balance at retirement (max over years of core capitalEnd.avDepot, incl. the
+   * separate account, Q14) × 100. null when that balance is below the yearly savings amount (point not drawn).
+   */
+  rel: number | null
+  /** the denominator of rel */
+  relBase: number
   kind: Kind
   /** b3 rule 3; null = "—" */
   marginal: Marginal | null
@@ -93,6 +98,12 @@ export function foerderungKey(mode: TaxSavingsMode): StrKey {
 
 export function foerderung(r: Result): number {
   return r.years.reduce((s, y) => s + y.contribution.avDepot, 0) - r.totalContributions.avDepot
+}
+
+/** Stage 5 B (PLAN_stage5.md B.1, Q5, Q6): relative difference against the AV balance at retirement. */
+export function relOf(diff: number, result: Result, amount: number): { rel: number | null, relBase: number } {
+  const relBase = Math.max(...result.years.map(y => y.capitalEnd.avDepot))
+  return { rel: relBase < amount ? null : (diff / relBase) * 100, relBase }
 }
 
 /** Cache (plan e3): results per amount while all inputs except savingsRate stay the same. */
@@ -197,7 +208,7 @@ export function sweep(values: FormValues, evaluateFn: EvaluateFn = evaluate, opt
       avNet,
       normalNet,
       diff: v.diff,
-      share: v.diff / Math.max(Math.abs(avNet), Math.abs(normalNet)),
+      ...relOf(v.diff, result, amount),
       kind: v.kind,
       marginal: null,
       split: null,
@@ -302,6 +313,15 @@ export function sensitivityText(s: SweepResult): string {
   const parts = s.flips.slice(0, 3).map((f, i) =>
     t(i === 0 ? 'sensFirst' : 'sensAgain', { x: formatNumberDe(f.from), y: formatNumberDe(f.to), k: afterZh(f.kind) }))
   return `${t('sensPrefix')}${first !== 'av' ? t('sensStart', { k: kindName(first) }) : ''}${parts.join('，')}${s.flips.length > 3 ? t('sensMore') : ''}。`
+}
+
+/** Stage 5 follow-up: the tier amounts the two summary sentences name (flips written by sensitivityText, max by maxText);
+ *  the chart keeps these x ticks visible whatever the inputs. */
+export function namedAmounts(s: SweepResult): number[] {
+  const a = s.flips.slice(0, 3).flatMap(f => [f.from, f.to])
+  if (s.max.type === 'max')
+    a.push(s.max.amount)
+  return [...new Set(a)]
 }
 
 /** e / b3 rule 2: second summary line. */

@@ -1,12 +1,20 @@
-// Stage 3 g5: chart geometry (PLAN_stage3.md c).
+// Stage 3 g5 / stage 4 Q7 / stage 5 B, E: chart geometry, dual axis, label placement.
+import type { CmpRow } from '../src/compare'
 import type { FormValues } from '../src/model'
-import { describe, expect, it } from 'vitest'
-import { chartHeight, geometry } from '../src/chart'
+import type { FakeEl } from './fake-dom'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { axes, chartHeight, drawChart, GAP, geometry, NARROW_RIGHT_TICKS, PAD } from '../src/chart'
 import { clearSweepCache, sweep } from '../src/compare'
 import { DEFAULTS } from '../src/model'
+import { all, byTestId, installFakeDom } from './fake-dom'
 
 const TODAY = new Date(2026, 9, 17)
-const form = (f: Partial<FormValues['fields']> = {}): FormValues => ({ ...structuredClone(DEFAULTS), fields: { ...DEFAULTS.fields, ...f } })
+const form = (f: Partial<FormValues['fields']> = {}, mode?: FormValues['taxSavingsMode']): FormValues => ({ ...structuredClone(DEFAULTS), ...(mode ? { taxSavingsMode: mode } : {}), fields: { ...DEFAULTS.fields, ...f } })
+const est = (s: string) => [...s].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)
+
+let restore: () => void
+beforeAll(() => { restore = installFakeDom() })
+afterAll(() => restore())
 
 describe('chart geometry', () => {
   it('height 200–320, depends only on width', () => {
@@ -15,35 +23,76 @@ describe('chart geometry', () => {
     expect(chartHeight(800)).toBe(320)
     expect(chartHeight(600)).toBe(270)
   })
-  it.each([['1.800', 12], ['9.000', 13], ['1.800,50', 13]])('user %s: %i evenly spaced points, band ⇔ verdict', (amount, n) => {
+  it.each([['1.800', 12], ['9.000', 13], ['1.800,50', 13]])('user %s: %i evenly spaced points, no band, diff sign kept', (amount, n) => {
     clearSweepCache()
     const s = sweep(form({ savingsRate: amount }), undefined, { today: TODAY })!
     const g = geometry(s.rows, 800)
     expect(g.xs).toHaveLength(n)
+    expect('band' in g).toBe(false)
     const gaps = g.xs.slice(1).map((x, i) => x - g.xs[i]!)
     for (const d of gaps) expect(d).toBeCloseTo(gaps[0]!, 9)
-    expect(s.rows.map(r => r.amount)).toEqual([...s.rows.map(r => r.amount)].sort((a, b) => a - b))
-    s.rows.forEach((r, i) => {
-      const inside = Math.abs(r.diff) < g.band[i]!
-      expect(inside).toBe(r.kind === 'same')
-      expect(g.y(0) - g.y(r.diff)).toBeGreaterThanOrEqual(r.diff > 0 ? 0 : -Infinity)
-    })
+    for (const r of s.rows) {
+      expect(Math.sign(g.y(0) - g.y(r.diff))).toBe(Math.sign(r.diff))
+      if (r.rel !== null)
+        expect(Math.sign(g.y(0) - g.yR(r.rel))).toBe(Math.sign(r.rel))
+    }
+  })
+  it('both axes share the zero line', () => {
+    for (const [l, r] of [[[-500, 3000], [-2, 4]], [[100, 900], [-30, 1]], [[-9000, -10], [0.5, 12]]] as const) {
+      const a = axes([...l], [...r], 50, 250, false)
+      expect(a.y(0)).toBeCloseTo(a.yR(0), 9)
+      for (const v of l) expect(a.y(v)).toBeGreaterThanOrEqual(50 - 1e-9)
+      for (const v of r) expect(a.yR(v)).toBeLessThanOrEqual(250 + 1e-9)
+    }
+  })
+  it('narrow: at most 3 right ticks', () => {
+    for (const r of [[-1, 37], [-12, 13], [0.1, 0.9], [-80, 5]]) {
+      const a = axes([-100, 2000], r, 50, 160, true)
+      expect(a.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
+      expect(a.ticksR).toContain(0)
+    }
   })
 })
 
-// Stage 4 (Q7): below 400 px the chart labels must not overlap (estimated boxes, same width rule as chart.ts).
-interface FakeEl { tag: string, attrs: Record<string, string>, textContent: string, children: FakeEl[], setAttribute: (k: string, v: string) => void, append: (...c: FakeEl[]) => void }
-function fakeDocument() {
-  const make = (tag: string): FakeEl => {
-    const e: FakeEl = { tag, attrs: {}, textContent: '', children: [], setAttribute: (k, v) => { e.attrs[k] = v }, append: (...c) => { e.children.push(...c) } }
-    return e
-  }
-  return { createElementNS: (_ns: string, tag: string) => make(tag) }
+describe('chart drawing (stage 5 B)', () => {
+  it('no band, dashed rel line, right axis, legend', () => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const svg = drawChart(s.rows, 800) as unknown as FakeEl
+    expect(all(svg, e => (e.attrs.class ?? '').includes('band'))).toEqual([])
+    expect(byTestId(svg, 'chart-rel')).toHaveLength(1)
+    const lines = all(svg, e => e.tag === 'polyline' && e.attrs.class === 'rel')
+    expect(lines.length).toBeGreaterThan(0)
+    for (const l of lines) expect(l.attrs['stroke-dasharray']).toBe('5 3')
+    expect(byTestId(svg, 'chart-axis-right')[0]!.textContent).toContain('%')
+    expect(byTestId(svg, 'chart-legend')[0]!.textContent).toContain('虚线')
+  })
+  it('rel null breaks the dashed line and drops the point', () => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const rows: CmpRow[] = s.rows.map((r, i) => (i === 3 ? { ...r, rel: null } : r))
+    const svg = drawChart(rows, 800) as unknown as FakeEl
+    const lines = all(svg, e => e.tag === 'polyline' && e.attrs.class === 'rel')
+    expect(lines).toHaveLength(2)
+    expect(all(svg, e => e.attrs.class === 'rel-pt')).toHaveLength(rows.length - 1)
+  })
+})
+
+function boxesOf(svg: FakeEl, width: number) {
+  // follow-up: a two-line label (tspans) is one box per line
+  const texts = all(svg, e => e.tag === 'text' && e.attrs.transform === undefined)
+    .flatMap(e => all(e, c => c.tag === 'tspan').length ? all(e, c => c.tag === 'tspan').map(c => ({ ...c, parent: e, attrs: { ...c.attrs, 'text-anchor': e.attrs['text-anchor'], 'class': e.attrs.class } }) as unknown as FakeEl) : [e])
+  return texts.map((e) => {
+    const x = Number(e.attrs.x)
+    const y = Number(e.attrs.y)
+    expect(e.attrs['text-anchor'], e.textContent).toMatch(/^(?:start|middle|end)$/)
+    const a = e.attrs['text-anchor']
+    const l = a === 'middle' ? x - est(e.textContent) / 2 : a === 'end' ? x - est(e.textContent) : x
+    expect(l, e.textContent).toBeGreaterThanOrEqual(0)
+    expect(l + est(e.textContent), e.textContent).toBeLessThanOrEqual(width)
+    return { text: e.textContent, cls: e.attrs.class ?? '', grp: (e as unknown as { parent?: unknown }).parent ?? e, l, r: l + est(e.textContent), t: y - 11, b: y + 3 }
+  })
 }
-function texts(e: FakeEl): FakeEl[] {
-  return [...(e.tag === 'text' ? [e] : []), ...e.children.flatMap(texts)]
-}
-const est = (s: string) => [...s].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 12 : 7), 0)
 
 describe('chart labels on narrow screens (stage 4, Q7)', () => {
   it.each([
@@ -55,36 +104,125 @@ describe('chart labels on narrow screens (stage 4, Q7)', () => {
     [375, '300'],
     [320, '1.700'],
     [375, '6.840'],
-  ])('%i px, user %s: kink and user labels do not overlap', async (width, amount) => {
-    const g = globalThis as { document?: unknown }
-    const saved = g.document
-    g.document = fakeDocument()
-    try {
-      const { drawChart } = await import('../src/chart')
+  ])('%i px, user %s: kink and user labels do not overlap', (width, amount) => {
+    clearSweepCache()
+    const s = sweep(form({ savingsRate: amount }), undefined, { today: TODAY })!
+    const svg = drawChart(s.rows, width) as unknown as FakeEl
+    const marks = svg.children.filter((c): c is FakeEl => typeof c !== 'string' && /^cmp3-marker-(?:360|1800)$/.test(c.attrs['data-testid'] ?? ''))
+    expect(marks.map(m => m.attrs['data-testid'])).toEqual(['cmp3-marker-360', 'cmp3-marker-1800'])
+    const labels = boxesOf(svg, width).filter(b => /拐点|你的金额/.test(b.text))
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i + 1; j < labels.length; j++) {
+        const a = labels[i]!
+        const b = labels[j]!
+        expect(a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b, `${a.text} / ${b.text}`).toBe(false)
+      }
+    }
+  })
+})
+
+// Stage 5 E: user amount swept in 120 € steps; kink / user / cap labels keep ≥ 4 px from each other and every other text
+describe('label sweep (stage 5 E)', () => {
+  const amounts = Array.from({ length: Math.floor(6840 / 120) }, (_, i) => (i + 1) * 120)
+  const cases: [string, FormValues['taxSavingsMode'] | undefined, Partial<FormValues['fields']>][] = [
+    ['default', undefined, {}],
+    ['consume', 'consume', {}],
+    ['secondaryDepot', 'secondaryDepot', {}],
+    ['zvE 20.000', undefined, { zveSavingsPhase: '20.000' }],
+  ]
+  it.each(cases.flatMap(([n, m, f]) => [1280, 375].map(w => [n, m, f, w] as const)))('%s @ %d px', (_n, mode, f, width) => {
+    const bad: string[] = []
+    for (const a of amounts) {
       clearSweepCache()
-      const s = sweep(form({ savingsRate: amount }), undefined, { today: TODAY })!
+      const s = sweep(form({ ...f, savingsRate: String(a).replace(/\B(?=(\d{3})+$)/g, '.') }, mode), undefined, { today: TODAY })
+      if (!s)
+        continue
       const svg = drawChart(s.rows, width) as unknown as FakeEl
-      const marks = svg.children.filter(c => /^cmp3-marker-(?:360|1800)$/.test(c.attrs['data-testid'] ?? ''))
-      expect(marks.map(m => m.attrs['data-testid'])).toEqual(['cmp3-marker-360', 'cmp3-marker-1800'])
-      const labels = [...marks.flatMap(texts), ...svg.children.flatMap(texts).filter(e => e.attrs.class === 'user-label')]
-      const boxes = labels.map((e) => {
-        const x = Number(e.attrs.x)
-        const y = Number(e.attrs.y)
-        expect(e.attrs['text-anchor']).toBe('start')
-        expect(x).toBeGreaterThanOrEqual(0)
-        expect(x + est(e.textContent)).toBeLessThanOrEqual(width)
-        return { l: x, r: x + est(e.textContent), t: y - 11, b: y + 3 }
-      })
-      for (let i = 0; i < boxes.length; i++) {
-        for (let j = i + 1; j < boxes.length; j++) {
-          const a = boxes[i]!
-          const b = boxes[j]!
-          expect(a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b, `${labels[i]!.textContent} / ${labels[j]!.textContent}`).toBe(false)
+      const bs = boxesOf(svg, width)
+      const movable = bs.filter(b => /拐点|你的金额|上限|一份合同/.test(b.text))
+      for (const m of movable) {
+        for (const o of bs) {
+          if (o === m || o.grp === m.grp) // lines of one two-line label sit 14 px apart by design
+            continue
+          const apart = m.r + GAP <= o.l || o.r + GAP <= m.l || m.b + GAP <= o.t || o.b + GAP <= m.t
+          if (!apart)
+            bad.push(`${a}: ${m.text} / ${o.text}`)
         }
       }
     }
-    finally {
-      g.document = saved
+    expect([...new Set(bad)].join('\n')).toBe('')
+  }, 120_000)
+})
+
+void PAD
+
+describe('right axis with negative values (stage 5 follow-up)', () => {
+  it.each([375, 1280])('default 13.680 tier at %i px: below the 0 tick, negative tick label, 0 reference line', (width) => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const r = s.rows.find(x => x.amount === 13680)!
+    expect(r.rel!).toBeLessThan(0)
+    const g = geometry(s.rows, width)
+    expect(g.ticksR).toContain(0)
+    expect(Math.min(...g.ticksR)).toBeLessThan(0)
+    expect(g.yR(r.rel!)).toBeGreaterThan(g.yR(0))
+    expect(g.yR(0)).toBeCloseTo(g.y(0), 9)
+    if (width < 400)
+      expect(g.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
+    const svg = drawChart(s.rows, width) as unknown as FakeEl
+    const labels = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').map(x => x.textContent)
+    expect(labels.some(l => /^−\d/.test(l))).toBe(true)
+    // no hyphen-minus, no dash glyph before positive labels; negatives use U+2212
+    for (const l of labels) {
+      expect(l).not.toMatch(/-/)
+      expect(l).toMatch(/^−?\d[\d.,]* %$/)
     }
+    // Q4: zeros aligned, no separate 0 % line (only the left grid's zero line, at the same y)
+    expect(byTestId(svg, 'chart-zero-r')).toHaveLength(0)
+    expect(all(svg, x => x.attrs.class === 'zero-r')).toHaveLength(0)
+    const zeroLines = all(svg, x => x.tag === 'line' && x.attrs.class === 'zero')
+    expect(zeroLines.length).toBeLessThanOrEqual(1)
+    const t0 = all(byTestId(svg, 'chart-axis-right')[0]!, x => x.tag === 'text').find(x => x.textContent === '0 %')
+    expect(t0).toBeDefined()
+    expect(Number(t0!.attrs.y) - 4).toBeCloseTo(g.y(0), 9)
+    for (const l of zeroLines) expect(Number(l.attrs.y1)).toBeCloseTo(g.y(0), 9)
+    const pt = byTestId(svg, 'chart-rel-pt-13680')[0]!
+    expect(Number(pt.attrs.cy)).toBeGreaterThan(g.yR(0))
+  })
+  it('axes(): all-positive right values keep 0 as lowest tick; mixed values get a tick ≤ min', () => {
+    expect(Math.min(...axes([1, 2], [5, 30], 0, 200, false).ticksR)).toBe(0)
+    const a = axes([10, -3], [12, -7], 0, 200, false)
+    expect(Math.min(...a.ticksR)).toBeLessThanOrEqual(-7)
+    expect(a.yR(-7)).toBeGreaterThan(a.yR(0))
+    const n = axes([10, -3], [40, -1.2], 0, 200, true)
+    expect(n.ticksR.length).toBeLessThanOrEqual(NARROW_RIGHT_TICKS)
+    expect(Math.min(...n.ticksR)).toBeLessThan(0)
+  })
+})
+
+describe('axis tick labels (stage 5 follow-up: no dash next to numbers)', () => {
+  it.each([375, 800, 1280])('%i px: no tick-mark lines on the right axis, left/right negatives start with −', (width) => {
+    clearSweepCache()
+    const s = sweep(form(), undefined, { today: TODAY })!
+    const svg = drawChart(s.rows, width) as unknown as FakeEl
+    const right = byTestId(svg, 'chart-axis-right')[0]!
+    expect(all(right, x => x.tag === 'line')).toHaveLength(0)
+    expect(all(svg, x => x.attrs.class === 'tick')).toHaveLength(0)
+    // left labels (placed start-anchored): they end 4 px before the grid line start at PAD.left
+    const g = geometry(s.rows, width)
+    const left = all(svg, x => x.tag === 'text' && Math.abs(Number(x.attrs.x) + est(x.textContent) - (PAD.left - 4)) < 1e-6)
+    expect(left.length).toBe(g.ticks.length)
+    for (const l of left) {
+      expect(l.textContent).not.toMatch(/-/)
+      expect(l.textContent).toMatch(/^−?\d/)
+    }
+    expect(left.some(l => l.textContent.startsWith('−'))).toBe(Math.min(...g.ticks) < 0)
+  })
+  it('axisNumber: U+2212 for negatives, de-DE grouping', async () => {
+    const { axisNumber } = await import('../src/chart')
+    expect(axisNumber(-20000)).toBe('\u221220.000')
+    expect(axisNumber(-2.5, 1)).toBe('\u22122,5')
+    expect(axisNumber(15)).toBe('15')
+    expect(axisNumber(0)).toBe('0')
   })
 })

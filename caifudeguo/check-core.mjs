@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import process from 'node:process'
+import { generate as generateExposed } from './av-ui/scripts/exposed-core.mjs'
 import { generate } from './av-ui/scripts/precise-core.mjs'
 
 const root = new URL('..', import.meta.url).pathname
@@ -60,6 +61,10 @@ for (const f of files)
 const precisePath = 'caifudeguo/av-ui/src/generated/av-depot-precise.ts'
 if (readFileSync(join(root, precisePath), 'utf8') !== generate())
   problems.push(`stale generated copy: ${precisePath} (run node caifudeguo/av-ui/scripts/precise-core.mjs)`)
+// Stage 5: the early-withdrawal layer uses the same copy plus one export line (scripts/exposed-core.mjs).
+const exposedPath = 'caifudeguo/av-ui/src/generated/av-depot-exposed.ts'
+if (readFileSync(join(root, exposedPath), 'utf8') !== generateExposed())
+  problems.push(`stale generated copy: ${exposedPath} (run node caifudeguo/av-ui/scripts/exposed-core.mjs)`)
 
 if (problems.length) {
   console.error(
@@ -72,5 +77,5 @@ if (problems.length) {
 }
 const changed = files.filter((f) => hashes[f] !== manifest.files[f])
 console.warn(
-  `core check ok: ${files.length} files + generated precise copy up to date, ${changed.length} allowed change(s)${changed.length ? `: ${changed.join(', ')}` : ''}`,
+  `core check ok: ${files.length} files + generated precise and exposed copies up to date, ${changed.length} allowed change(s)${changed.length ? `: ${changed.join(', ')}` : ''}`,
 )

@@ -3,7 +3,7 @@
  * Plugin Name:       caifudeguo AV-Depot 计算器
  * Plugin URI:        https://github.com/dich-pixel/caifudeguo-calculators
  * Description:       养老投资账户（Altersvorsorgedepot）计算器，中文界面。短代码 [caifudeguo_av_depot]。纯浏览器端计算，不建数据表、不存选项、不用 cookie。
- * Version:           0.2.0
+ * Version:           0.3.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Rich Dr (caifudeguo.de)
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CAIFUDEGUO_AV_DEPOT_VERSION', '0.2.0');
+define('CAIFUDEGUO_AV_DEPOT_VERSION', '0.3.0');
 
 /**
  * Origins allowed to report the iframe height via postMessage.
