@@ -28,7 +28,7 @@ const byAmount = (s: ReturnType<typeof run>, a: number) => s.rows.find(r => r.am
 
 beforeEach(() => clearSweepCache())
 
-describe('tiers and ids', () => {
+describe('tiers and ids', { timeout: 15000 }, () => {
   it('t3-14 TIERS', () => {
     expect([...TIERS]).toEqual([120, 300, 360, 600, 1200, 1800, 2400, 3600, 6840, 8400, 10000, 13680])
   })
@@ -85,7 +85,7 @@ describe('t3-15/16 every field = one separate core run', () => {
   }, 15000) // CI runners took 5.0–5.5 s for 'secondary' (runs 39906750031 #1/#2)
 })
 
-describe('known values (TESTPLAN appendix A)', () => {
+describe('known values (TESTPLAN appendix A)', { timeout: 15000 }, () => {
   it('a1 defaults', () => {
     const s = run(form())
     expect(s.rows.map(r => c2(r.diff))).toEqual([1179.70, 2860.02, 3539.11, 6820.58, 13733.46, 25107.30, 23596.85, 20881.94, 10168.83, 4123.11, -2652.71, -15296.36])
@@ -162,7 +162,8 @@ describe('b3 rule 3: 多存 1 €', () => {
 })
 
 const sens = (v: FormValues) => { clearSweepCache(); const s = run(v); return [sensitivityText(s), maxText(s), s.marginalHigher, s.flips.map(flipText)] as const }
-describe('b3 / f6 sentences', () => {
+// heavy core sweeps: 15 s per test (CI run 39957317788: t3-95 took 5.0 s)
+describe('b3 / f6 sentences', { timeout: 15000 }, () => {
   it('defaults', () => {
     const [a, b, c, f] = sens(form())
     expect(a).toBe('按你现在的其他输入，在 6.840–8.400 € 之间变成两者基本相同，在 10.000–13.680 € 之间又变成普通账户多拿。')
@@ -220,7 +221,7 @@ describe('b3 / f6 sentences', () => {
   })
 })
 
-describe('t3-44/71 core calls (spy)', () => {
+describe('t3-44/71 core calls (spy)', { timeout: 15000 }, () => {
   it('≤ 17 per round, user row from the main result', () => {
     const v = form({ age: '18', savingsRate: '12.000' }, { kids: ['2020', '2023'] })
     const main = ref(v, 12000)
@@ -285,7 +286,7 @@ describe('t3-68 round time (Node 22.14.0 gate)', () => {
   })
 })
 
-describe('g3: Förderung row in the main result', () => {
+describe('g3: Förderung row in the main result', { timeout: 15000 }, () => {
   it('t3-39 label follows the tax-saving mode', async () => {
     const { foerderungKey } = await import('../src/compare')
     const { t } = await import('../src/strings')
@@ -310,7 +311,7 @@ describe('g3: Förderung row in the main result', () => {
   })
 })
 
-describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
+describe('g6: chunked rounds (pendingAmounts + prefetch)', { timeout: 15000 }, async () => {
   const { pendingAmounts, prefetch } = await import('../src/compare')
   it('one prefetch per pending amount, then sweep needs 0 core runs', () => {
     const v = form({ age: '18', savingsRate: '12.000' }, { kids: ['2020', '2023'] })
@@ -343,7 +344,7 @@ describe('g6: chunked rounds (pendingAmounts + prefetch)', async () => {
 })
 
 // Stage 5 B.2 / Q14: rel = D ÷ max_y capitalEnd.avDepot × 100 (secondary account included); reference = scratch/b.json "Bincl"
-describe('stage 5 relative difference', () => {
+describe('stage 5 relative difference', { timeout: 15000 }, () => {
   it.each([
     ['avDepot', 1800, 10.985623402669923],
     ['avDepot', 13680, -1.2054294792595226],
