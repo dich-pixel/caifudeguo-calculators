@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, el, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
+import { axes, chartPlaceholder, el, FALLBACK_CHART_HEIGHT, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -23,6 +23,11 @@ const signed = (v: number) => `${v > 0 ? '+' : ''}${formatEuro(v)}`
 
 export function eeChartHeight(width: number): number {
   return Math.round(Math.min(300, Math.max(200, width * 0.4)))
+}
+
+/** follow-up: height the chart box reserves before drawing (= SVG height: no extra x-label rows in this chart) */
+export function eeReservedHeight(_e: EarlyExit, width: number): number {
+  return eeChartHeight(width)
 }
 
 /** Dual-axis chart: x = age at withdrawal (proportional), solid = diff (€), dashed = rel (%). */
@@ -218,12 +223,18 @@ export function createEarlyExit(): EarlyExitView {
     const e = data
     const box = h('div', { class: 'cmp3-chart-box' })
     let lastWidth = Math.floor(region.clientWidth)
-    if (lastWidth > 0)
-      box.append(drawEarlyChart(e, lastWidth))
+    if (lastWidth > 0) {
+      box.replaceChildren(chartPlaceholder(eeReservedHeight(e, lastWidth)))
+      box.replaceChildren(drawEarlyChart(e, lastWidth))
+    }
+    else {
+      box.append(chartPlaceholder(FALLBACK_CHART_HEIGHT))
+    }
     observer = new ResizeObserver(() => {
       const w = Math.floor(box.clientWidth)
       if (w > 0 && w !== lastWidth) {
         lastWidth = w
+        box.replaceChildren(chartPlaceholder(eeReservedHeight(e, w)))
         box.replaceChildren(drawEarlyChart(e, w))
       }
     })

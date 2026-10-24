@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs'
 // follow-up (after 6f2863a): stage 4 chart at ≤ 375 px — annotations never collide, stacked x labels have leader lines
 import { beforeEach, describe, expect, it } from 'vitest'
+import { earlyExitFor } from '../src/early-exit'
 import { DEFAULTS } from '../src/model'
 import { all, installFakeDom } from './fake-dom'
 
@@ -276,6 +278,7 @@ const markerBox = n => n.tag === 'circle'
   : { l: Number(n.attrs.x), r: Number(n.attrs.x) + Number(n.attrs.width), t: Number(n.attrs.y), b: Number(n.attrs.y) + Number(n.attrs.height) }
 const isMarker = n => (n.tag === 'circle' && /^(?:pt(?: user)?|rel-pt)$/.test(n.attrs.class ?? '')) || (n.tag === 'rect' && n.attrs.class === 'kink')
 const MAX_USER_GAP = 48
+const LEADER_FROM = 12
 describe.each(Object.keys(MATRIX))('%s (follow-up)', (name) => {
   it.each(VIEWPORTS)('%i px viewport: rotated texts (axis titles) glyph boxes ≥ GLYPH_GAP from every other text', (w) => {
     const { svg } = chart(MATRIX[name], w - 24)
@@ -302,18 +305,68 @@ describe.each(Object.keys(MATRIX))('%s (follow-up)', (name) => {
     const m = markerBox(own)
     const d = Math.hypot(Math.max(0, g.l - m.r, m.l - g.r), Math.max(0, g.t - m.b, m.t - g.b))
     expect(d, 'glyph box → own dot').toBeLessThanOrEqual(MAX_USER_GAP)
+    // tester: a leader line whenever the label is more than LEADER_FROM px from its dot
+    const grp = all(svg, n => n.tag === 'g' && n.children.includes(ul))[0]
+    const leaders = grp ? all(grp, n => n.tag === 'line' && n.attrs.class === 'ann-leader') : []
+    if (d > LEADER_FROM)
+      expect(leaders.length, `「你的金额」 ${d.toFixed(1)} px from its dot: leader line drawn`).toBe(1)
     for (const k of all(svg, isMarker).filter(n => n !== own))
       expect(hit(g, markerBox(k)), `「你的金额」 (glyph box) × ${k.tag}.${k.attrs.class} @ ${JSON.stringify(markerBox(k))}`).toBe(false)
   })
 })
 
-it('chart box reserves at least the rendered SVG height (no layout shift), all inputs × widths', async () => {
-  const { readFileSync } = await import('node:fs')
-  const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')
-  const rules = [...css.matchAll(/\.cmp3-chart-box\s*\{[^}]*min-height:\s*(\d+)px/g)].map(m => Number(m[1]))
-  expect(rules.length, 'one min-height rule for .cmp3-chart-box').toBe(1)
+// follow-up (PM scope change): the views reserve the exact SVG height before drawing (CSSOM min-height);
+// acceptance for every input × width: reserved ≥ SVG height and blank below ≤ MAX_BLANK px
+const MAX_BLANK = 24
+const EE_INPUTS = {
+  'default': form(),
+  'E3': form({ savingsRate: '3.600' }, 'consume'),
+  'E4': form({}, 'secondaryDepot'),
+  'E5': form({ savingsRate: '13.500' }),
+  'c120': form({ age: '65', savingsRate: '120' }, 'consume'),
+}
+const viewSrc = f => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8')
+it('views reserve the computed height before every draw (main + early-exit): placeholder SVG height attribute, no CSSOM', () => {
+  const main = viewSrc('cmp3.ts')
+  const ee = viewSrc('early-exit-view.ts')
+  expect(main.match(/box\.replaceChildren\(chartPlaceholder\(mainChartHeight\(s\.rows, (\w+), namedAmounts\(s\)\)\)\)\n\s+box\.replaceChildren\(drawChart\(s\.rows, \1, namedAmounts\(s\)\)\)/g)?.length).toBe(2)
+  expect(ee.match(/box\.replaceChildren\(chartPlaceholder\(eeReservedHeight\(e, (\w+)\)\)\)\n\s+box\.replaceChildren\(drawEarlyChart\(e, \1\)\)/g)?.length).toBe(2)
+  for (const f of ['cmp3.ts', 'early-exit-view.ts', 'dom.ts', 'chart.ts']) {
+    expect(viewSrc(f), f).not.toMatch(/\.style\b|cssText|setAttribute\(\s*'style'|'style':/)
+  }
+})
+it('placeholder SVG: height attribute only (no style attribute)', async () => {
+  const { chartPlaceholder, FALLBACK_CHART_HEIGHT } = await import('../src/chart')
+  const ph = chartPlaceholder(232)
+  expect(ph.attrs.height).toBe('232')
+  expect(ph.attrs.style).toBeUndefined()
+  expect(FALLBACK_CHART_HEIGHT).toBe(320)
+})
+it('main chart: reserved (mainChartHeight) ≥ SVG height and blank ≤ MAX_BLANK, all inputs × widths', async () => {
+  const { mainChartHeight } = await import('../src/chart')
   for (const name of Object.keys(MATRIX)) {
-    for (const w of VIEWPORTS)
-      expect(rules[0], `${name} @ ${w}`).toBeGreaterThanOrEqual(Number(chart(MATRIX[name], w - 24).svg.attrs.height))
+    for (const w of VIEWPORTS) {
+      const { s, svg } = chart(MATRIX[name], w - 24)
+      const h = Number(svg.attrs.height)
+      const r = mainChartHeight(s.rows, w - 24, namedAmounts(s))
+      expect(r, `${name} @ ${w}: reserved ≥ svg`).toBeGreaterThanOrEqual(h)
+      expect(r - h, `${name} @ ${w}: blank below`).toBeLessThanOrEqual(MAX_BLANK)
+    }
   }
 }, 120_000)
+it('early-exit chart: reserved (eeReservedHeight) ≥ SVG height and blank ≤ MAX_BLANK, all early-exit inputs × widths', async () => {
+  const { drawEarlyChart, eeReservedHeight } = await import('../src/early-exit-view')
+  for (const [name, f] of Object.entries(EE_INPUTS)) {
+    const e = earlyExitFor(f, TODAY)
+    expect(e.points.length, name).toBeGreaterThan(0)
+    for (const w of VIEWPORTS) {
+      const h = Number(drawEarlyChart(e, w - 24).attrs.height)
+      const r = eeReservedHeight(e, w - 24)
+      expect(r, `${name} @ ${w}: reserved ≥ svg`).toBeGreaterThanOrEqual(h)
+      expect(r - h, `${name} @ ${w}: blank below`).toBeLessThanOrEqual(MAX_BLANK)
+    }
+  }
+}, 120_000)
+it('chart box has no CSS min-height (the SVG / placeholder holds the height, so no blank space)', () => {
+  expect(viewSrc('style.css')).not.toMatch(/\.cmp3-chart-box\s*\{[^}]*min-height/)
+})

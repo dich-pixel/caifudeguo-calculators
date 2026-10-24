@@ -169,52 +169,119 @@ function check({ MAX_GAP, unplaced, GLYPH_GAP, GLYPH_GAP_SCOPE }) {
   return { fails: out, named, svgWidth: svg.getAttribute('width') }
 }
 
+/** follow-up (PM): early-exit chart inputs (validator names) */
+export const EE_CASES = {
+  'default': {},
+  'E3': { f: { savingsRate: '3.600' }, m: 'consume' },
+  'E4': { m: 'secondaryDepot' },
+  'E5': { f: { savingsRate: '13.500' } },
+  'c120': { f: { age: '65', savingsRate: '120' }, m: 'consume' },
+}
+/** reserved − SVG height (blank below the chart) */
+const MAX_BLANK = 24
+
 const b = await chromium.launch()
 const all = []
+// layout shifts of nodes inside the chart regions, from page start (hadRecentInput NOT excluded, so the first render
+// after the toggle click counts too), and CSP violations from the app (the reserved height is an SVG height attribute: no style attribute, no CSSOM).
+// Violations without a source file are Playwright's own evaluate() calls (script-src eval), not the app: ignored.
+async function page(w) {
+  const p = await b.newPage({ viewport: { width: w, height: 900 }, isMobile: w < 800, hasTouch: w < 800 })
+  await p.addInitScript(() => {
+    window.__shifts = []
+    window.__csp = []
+    document.addEventListener('securitypolicyviolation', (e) => {
+      if (e.sourceFile || e.blockedURI !== 'eval')
+        window.__csp.push(`${e.violatedDirective} ${e.blockedURI || ''} ${e.sourceFile || ''} ${e.sample || ''}`)
+    })
+    new PerformanceObserver(l => window.__shifts.push(...l.getEntries().map(e => ({ t: e.startTime, v: e.value, input: e.hadRecentInput,
+      region: [...new Set(e.sources.map(s => s.node?.closest?.('#cmp3-region, #ee-region')?.id).filter(Boolean))],
+      src: e.sources.map(s => s.node?.className || s.node?.nodeName || '?').join(',') })))).observe({ type: 'layout-shift', buffered: true })
+  })
+  const errors = []
+  p.on('console', m => { if (m.type() === 'error') errors.push(m.text()) })
+  await p.goto(`http://localhost:${port}/index.html`)
+  await p.waitForTimeout(800)
+  return { p, errors }
+}
+async function enter(p, v) {
+  if (v.m) {
+    await p.locator(`[data-testid=radio-${v.m}]`).evaluate((e) => {
+      e.checked = true
+      e.dispatchEvent(new Event('input', { bubbles: true }))
+      e.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+  }
+  for (const [k, val] of Object.entries(v.f ?? {})) {
+    await p.locator(`[data-testid=input-${k}]`).evaluate((e, val) => {
+      e.value = val
+      for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))
+    }, val)
+  }
+}
+async function rerender(p) { // as when the sweep finishes again (no user input)
+  await p.locator('[data-testid=input-zveSavingsPhase]').evaluate((e) => {
+    for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))
+  })
+  await p.waitForTimeout(800)
+}
+async function stable(p, errors, region, chart) {
+  const out = []
+  const r = await p.evaluate(({ region, chart }) => {
+    const fig = document.querySelector(`[data-testid=${chart}]`)
+    const box = fig?.querySelector('.cmp3-chart-box')
+    const svg = box?.querySelector('svg')
+    return { box: box?.getBoundingClientRect().height, svg: svg ? Number(svg.getAttribute('height')) : null, min: box ? getComputedStyle(box).minHeight : null,
+      styleAttr: box?.getAttribute('style') ?? null, shifts: window.__shifts.filter(e => e.region.includes(region)), csp: window.__csp }
+  }, { region, chart })
+  if (r.svg === null)
+    return { fails: [`${chart}: no chart`], r }
+  if (r.box < r.svg - 0.5)
+    out.push(`${chart}: box ${r.box} px < svg ${r.svg} px`)
+  if (r.box - r.svg > MAX_BLANK)
+    out.push(`${chart}: ${(r.box - r.svg).toFixed(1)} px blank below the chart (> ${MAX_BLANK})`)
+  const cls = r.shifts.reduce((n, e) => n + e.v, 0)
+  if (cls > 0)
+    out.push(`${chart}: CLS ${cls.toFixed(4)} inside #${region} incl. the first render (sources: ${[...new Set(r.shifts.map(e => e.src))].join(' | ')})`)
+  for (const c of r.csp) out.push(`CSP violation: ${c}`)
+  for (const e of errors.filter(e => /Content Security Policy|Refused to apply/i.test(e))) out.push(`console: ${e}`)
+  return { fails: out, r }
+}
+
 for (const [name, v] of Object.entries(CASES)) {
   for (const w of WIDTHS) {
-    const p = await b.newPage({ viewport: { width: w, height: 900 }, isMobile: w < 800, hasTouch: w < 800 })
-    // follow-up: record layout shifts (CLS sources) from page start
-    await p.addInitScript(() => {
-      window.__shifts = []
-      new PerformanceObserver(l => window.__shifts.push(...l.getEntries().map(e => ({ t: e.startTime, v: e.value, input: e.hadRecentInput, src: e.sources.map(s => s.node?.className || s.node?.nodeName || '?').join(',') })))).observe({ type: 'layout-shift', buffered: true })
-    })
-    await p.goto(`http://localhost:${port}/index.html`)
-    await p.waitForTimeout(800)
-    if (v.m) {
-      await p.locator(`[data-testid=radio-${v.m}]`).evaluate((e) => {
-        e.checked = true
-        e.dispatchEvent(new Event('input', { bubbles: true }))
-        e.dispatchEvent(new Event('change', { bubbles: true }))
-      })
-    }
-    for (const [k, val] of Object.entries(v.f ?? {})) {
-      await p.locator(`[data-testid=input-${k}]`).evaluate((e, val) => {
-        e.value = val
-        for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))
-      }, val)
-    }
+    const { p, errors } = await page(w)
+    await enter(p, v)
     await p.waitForTimeout(800)
     const t = p.locator('button[aria-controls=cmp3-region]')
     if (await t.getAttribute('aria-expanded') !== 'true')
       await t.click()
-    const t0 = await p.evaluate(() => performance.now())
     await p.waitForTimeout(800)
-    // re-render the chart (as when the sweep finishes again) and require CLS = 0 from the open region on
-    await p.locator(`[data-testid=input-zveSavingsPhase]`).evaluate((e) => {
-      for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))
-    })
-    await p.waitForTimeout(800)
-    const shifts = await p.evaluate(t0 => window.__shifts.filter(e => e.t > t0 + 500 && !e.input), t0)
-    const cls = shifts.reduce((n, e) => n + e.v, 0)
+    await rerender(p)
     const r = await p.evaluate(check, { MAX_GAP, unplaced: ALLOWED_UNPLACED[w]?.[name] ?? '', GLYPH_GAP, GLYPH_GAP_SCOPE })
     const fails = Array.isArray(r) ? r : r.fails
-    if (cls > 0)
-      fails.push(`CLS ${cls.toFixed(4)} after the chart region opened (sources: ${[...new Set(shifts.map(e => e.src))].join(' | ')})`)
+    const st = await stable(p, errors, 'cmp3-region', 'cmp3-chart')
+    fails.push(...st.fails)
     all.push(...fails.map(f => `${name} @ ${w}: ${f}`))
-    console.log(`${fails.length ? '✗' : '✓'} ${name} @ ${w} px${r.named ? ` (chart ${r.svgWidth} px; named: ${r.named.join(', ')})` : ''}`)
+    console.log(`${fails.length ? '✗' : '✓'} ${name} @ ${w} px${r.named ? ` (chart ${r.svgWidth} px; named: ${r.named.join(', ')})` : ''} [box ${st.r.box} / svg ${st.r.svg} px]`)
     if (shots)
       await p.locator('[data-testid=cmp3-chart] svg').screenshot({ path: join(shots, `cmp3-${name}-${w}-${suffix}.png`) })
+    await p.close()
+  }
+}
+for (const [name, v] of Object.entries(EE_CASES)) {
+  for (const w of WIDTHS) {
+    const { p, errors } = await page(w)
+    await enter(p, v)
+    await p.waitForTimeout(1500)
+    const t = p.locator('button[aria-controls=ee-region]')
+    if (await t.getAttribute('aria-expanded') !== 'true')
+      await t.click()
+    await p.waitForTimeout(800)
+    await rerender(p)
+    const st = await stable(p, errors, 'ee-region', 'ee-chart')
+    all.push(...st.fails.map(f => `ee ${name} @ ${w}: ${f}`))
+    console.log(`${st.fails.length ? '✗' : '✓'} ee ${name} @ ${w} px [box ${st.r.box} / svg ${st.r.svg} px]`)
     await p.close()
   }
 }

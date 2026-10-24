@@ -159,7 +159,7 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table tr.user { border: 2px solid var(--accent); }
 }
 .cmp3-figure { margin: 0 0 12px; }
-.cmp3-chart-box { width: 100%; min-height: 320px; } /* follow-up: ≥ the tallest SVG (chartHeight ≤ 320 px incl. extra x-label rows; 216–320 px measured), so nothing below shifts when the chart appears */
+.cmp3-chart-box { width: 100%; } /* follow-up: height held by the SVG itself (placeholder SVG with the precomputed height attribute, then the chart) */
 .cmp3-svg { display: block; }
 .cmp3-svg text { font-size: 12px; fill: var(--fg); }
 .cmp3-svg text.title { font-weight: 700; }

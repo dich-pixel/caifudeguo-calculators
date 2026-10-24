@@ -5,6 +5,7 @@
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
 import type { StrKey } from './strings'
+import { zodJitless } from './_zod-jitless'
 import { createCmp3 } from './cmp3'
 import { foerderung, foerderungKey, verdictSentence } from './compare'
 import { h, txt } from './dom'
@@ -15,6 +16,9 @@ import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_M
 import { parseAmount } from './parse'
 import { STR, t } from './strings'
 import './style.css'
+
+if (!zodJitless)
+  throw new Error('zod jitless config not applied (CSP: no eval)')
 
 const state: FormValues = structuredClone(DEFAULTS)
 const inputs = new Map<string, HTMLInputElement>()

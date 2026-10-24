@@ -8,7 +8,7 @@
 import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
-import { drawChart } from './chart'
+import { chartPlaceholder, drawChart, FALLBACK_CHART_HEIGHT, mainChartHeight } from './chart'
 import { amountId, flipText, kindName, maxText, namedAmounts, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { displayNumberDe, formatEuro } from './format'
@@ -79,12 +79,18 @@ export function createCmp3(): Cmp3View {
       txt('span', 'chartTableFirst')))
     // Draw before inserting (width of the open region = box width), so the chart never disappears for a frame.
     let lastWidth = Math.floor(region.clientWidth)
-    if (lastWidth > 0)
-      box.append(drawChart(s.rows, lastWidth, namedAmounts(s)))
+    if (lastWidth > 0) {
+      box.replaceChildren(chartPlaceholder(mainChartHeight(s.rows, lastWidth, namedAmounts(s))))
+      box.replaceChildren(drawChart(s.rows, lastWidth, namedAmounts(s)))
+    }
+    else {
+      box.append(chartPlaceholder(FALLBACK_CHART_HEIGHT))
+    }
     observer = new ResizeObserver(() => {
       const w = Math.floor(box.clientWidth)
       if (w > 0 && w !== lastWidth) {
         lastWidth = w
+        box.replaceChildren(chartPlaceholder(mainChartHeight(s.rows, w, namedAmounts(s))))
         box.replaceChildren(drawChart(s.rows, w, namedAmounts(s)))
       }
     })
