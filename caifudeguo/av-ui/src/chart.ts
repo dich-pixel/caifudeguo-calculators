@@ -595,9 +595,9 @@ export const slopeOf = (ys: number[], i: number): 'start' | 'end' | 'middle' => 
   return next < prev ? 'end' : 'start'
 }
 
-export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly number[] = []): SVGSVGElement {
+/** x-label layout of the B chart (shared by drawChart and mainChartHeight, so the reserved height is exactly the drawn one) */
+function xLayout(rows: CmpRow[], width: number, mustKeep: readonly number[]) {
   const g = geometry(rows, width)
-  const bottom = g.height - PAD.bottom
   const narrow = width < 400
   // x labels (stage 5 (4) + follow-up): all fitting ticks stay; the amounts the summary names (mustKeep) never go
   const cand: { s: string, user: boolean, label: XLabel }[] = []
@@ -612,6 +612,29 @@ export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly numb
   // stage 5 (b): end at least X_LABEL_GAP px before the right-axis label column (labels start at width − PAD.right + 6)
   const placed = placeLabels(tiersFirst.map(c => c.label), { minL: 2, maxR: width - PAD.right + 6 - X_LABEL_GAP, rows: 7 })
   const extra = Math.max(0, ...placed.map(p => p.row)) * X_ROW2_DY
+  return { g, tiersFirst, placed, extra }
+}
+
+/** follow-up: reserved height when the box has no width yet (the tallest chart: chartHeight ≤ 320 px) */
+export const FALLBACK_CHART_HEIGHT = 320
+
+/**
+ * follow-up: empty SVG that holds the chart box at the precomputed height until the chart replaces it.
+ * Height via the SVG height attribute only (no style attribute, no CSSOM: CSP style-src 'self').
+ */
+export function chartPlaceholder(height: number): SVGSVGElement {
+  return el('svg', { 'width': '100%', 'height': height, 'aria-hidden': 'true', 'class': 'cmp3-svg cmp3-placeholder', 'focusable': 'false' })
+}
+
+/** follow-up: SVG height of the B chart, computed before drawing (the chart box reserves exactly this) */
+export function mainChartHeight(rows: CmpRow[], width: number, mustKeep: readonly number[] = []): number {
+  const { g, extra } = xLayout(rows, width, mustKeep)
+  return g.height + extra
+}
+
+export function drawChart(rows: CmpRow[], width: number, mustKeep: readonly number[] = []): SVGSVGElement {
+  const { g, tiersFirst, placed, extra } = xLayout(rows, width, mustKeep)
+  const bottom = g.height - PAD.bottom
   const height = g.height + extra
   const svg = el('svg', { 'width': g.width, 'height': height, 'viewBox': `0 0 ${g.width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg', 'focusable': 'false', 'data-plot': `${PAD.left} ${g.top} ${width - PAD.right} ${bottom}` })
   const pl = frame(svg, g, { width, height, title: 'chartTitle', xAxis: 'chartXAxis', extraBottom: extra })
