@@ -162,7 +162,7 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table tr.user > th, .cmp3-table tr.user > td:not(.split) { background: none; }
   .cmp3-table tr.user { border: 2px solid var(--accent); }
 }
-.cmp3-figure { margin: 0 0 6px; }
+.cmp3-figure { margin: 10px 0 10px; } /* 0.3.2: plan E10 value (summary → chart, chart → toggle); was 0 0 6px, which left 2 px between summary and chart at 288 px */
 .cmp3-chart-box { width: 100%; } /* follow-up: height held by the SVG itself (placeholder SVG with the precomputed height attribute, then the chart) */
 .cmp3-svg { display: block; }
 .cmp3-svg text { font-size: 12px; fill: var(--fg); }
@@ -178,7 +178,7 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .xl-leader { stroke: var(--fg); stroke-width: 1; opacity: 0.85; }
 /* validator follow-up: short leader from an offset annotation back to its own marker; full contrast */
 .cmp3-svg .ann-leader { stroke: var(--fg); stroke-width: 1; }
-.cmp3-figure figcaption { font-size: 0.9rem; margin-top: 4px; }
+.cmp3-figure figcaption { font-size: 0.9rem; margin-top: 10px; }
 
 /* ---- stage 3: narrow-screen error banner ---- */
 .err-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border: 2px solid var(--err); border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }

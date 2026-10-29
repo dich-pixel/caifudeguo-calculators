@@ -287,9 +287,18 @@ describe('e10 spacing (perrule.json, 13 rules) with every other spacing kept', (
     ['.joint', 'margin', '4px 0 8px'],
     ['.banner', 'margin-bottom', '8px'],
     ['div.monthly', 'margin-bottom', '8px'],
-    ['.cmp3-figure', 'margin', '0 0 6px'],
+    ['.cmp3-figure', 'margin', '10px 0 10px'],
+    ['.cmp3-figure figcaption', 'margin-top', '10px'],
   ])('%s { %s: %s }', (sel, prop, value) => {
     expect(last(sel, prop)).toBe(value)
+  })
+  it('validator retest: summary → chart, chart → caption and caption/chart → toggle gaps are all ≥ 8 px (plan: 10 px), also at 288 px', () => {
+    const px = (v: string | undefined) => Number.parseFloat(v ?? '')
+    const fig = last('.cmp3-figure', 'margin')!.split(/\s+/).map(px) // top right bottom left → [t, h, b]
+    expect(fig[0]).toBeGreaterThanOrEqual(8) // summary → chart (the summary fills its min-height at 288 px)
+    expect(fig[2]).toBeGreaterThanOrEqual(8) // chart block → toggle
+    expect(px(last('.cmp3-figure figcaption', 'margin-top'))).toBeGreaterThanOrEqual(8) // chart → caption
+    expect(px(last('.ee > .cmp3-figure', 'margin-top'))).toBeGreaterThanOrEqual(8)
   })
   it('.vbar (narrow only) margin-bottom 8px', () => {
     expect(last('.vbar', 'margin', '(max-width: 999px)')).toBe('0 0 8px')
