@@ -351,3 +351,22 @@ describe('#ee', () => {
     finally { Object.assign(g, { location: saved.location, window: saved.window, requestAnimationFrame: saved.raf }) }
   })
 })
+
+describe('0.3.2 owner follow-up: the 逐年明细 fold sits before the 不同存钱额 section, still collapsed', () => {
+  const main = src('main.ts')
+  const app = main.slice(main.indexOf("const app = h('main'"))
+  const order = ['early.brief)', 'yearly,', 'cmp3.section,', 'early.section,', 'notes,']
+  it('app children order: grid, yearly, cmp3.section, early.section, notes (yearly is no longer last)', () => {
+    const at = order.map(k => app.indexOf(k))
+    expect(at.every(i => i >= 0)).toBe(true)
+    expect([...at].sort((a, b) => a - b)).toEqual(at)
+    expect(app.match(/\byearly,/g)).toHaveLength(1)
+  })
+  it('wording unchanged and collapsed by default (toggle aria-expanded=false, region hidden)', () => {
+    expect(t('yearly')).toBe('逐年明细')
+    expect(main).toContain("toggle('yearly', 'yearly-region', yearlyBody)")
+    const tg = main.slice(main.indexOf('function toggle('), main.indexOf('function toggle(') + 400)
+    expect(tg).toContain("'aria-expanded': 'false'")
+    expect(tg).toMatch(/region\.hidden = true/)
+  })
+})

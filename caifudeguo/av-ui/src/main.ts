@@ -352,11 +352,11 @@ function build() {
     bar,
     // 0.3.2: the early-withdrawal brief is the third grid child (left column under the form from 1000 px; DOM order unchanged below)
     h('div', { class: 'grid' }, form, results, early.brief),
+    // 0.3.2 (owner): the collapsed 逐年明细 fold sits before the 不同存钱额 section (it used to be the last element)
+    yearly,
     cmp3.section,
     early.section,
-    // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
-    yearly,
   )
   // Title shows the German term in brackets.
   app.querySelector('h1')!.textContent = `${t('title')}（${STR.title.de}）`
