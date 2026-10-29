@@ -329,8 +329,8 @@ const viewSrc = f => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8
 it('views reserve the computed height before every draw (main + early-exit): placeholder SVG height attribute, no CSSOM', () => {
   const main = viewSrc('cmp3.ts')
   const ee = viewSrc('early-exit-view.ts')
-  expect(main.match(/box\.replaceChildren\(chartPlaceholder\(mainChartHeight\(s\.rows, (\w+), namedAmounts\(s\)\)\)\)\n\s+box\.replaceChildren\(drawChart\(s\.rows, \1, namedAmounts\(s\)\)\)/g)?.length).toBe(2)
-  expect(ee.match(/box\.replaceChildren\(chartPlaceholder\(eeReservedHeight\(e, (\w+)\)\)\)\n\s+box\.replaceChildren\(drawEarlyChart\(e, \1\)\)/g)?.length).toBe(2)
+  expect(main.match(/box\.replaceChildren\(chartPlaceholder\(mainChartHeight\(s\.rows, (\w+), namedAmounts\(s\)\)\)\)\n\s+box\.replaceChildren\(labelChart\(drawChart\(s\.rows, \1, namedAmounts\(s\)\), /g)?.length).toBe(1) // 0.3.2: one draw() helper (labelChart adds role=img)
+  expect(ee.match(/box\.replaceChildren\(chartPlaceholder\(eeReservedHeight\(e, (\w+)\)\)\)\n\s+box\.replaceChildren\(labelChart\(drawEarlyChart\(e, \1\), /g)?.length).toBe(1)
   for (const f of ['cmp3.ts', 'early-exit-view.ts', 'dom.ts', 'chart.ts']) {
     expect(viewSrc(f), f).not.toMatch(/\.style\b|cssText|setAttribute\(\s*'style'|'style':/)
   }

@@ -8,7 +8,8 @@
  * ≥ 4 px from all other texts and from the 0 line and does not cover its own point.
  * The dual-axis frame and the label placer are shared with the early-withdrawal chart (early-exit-view.ts).
  * Inline SVG via createElementNS, no library, no requests, no style attributes (CSP style-src 'self').
- * The SVG is aria-hidden; the figcaption + the table are the text version.
+ * The SVG is aria-hidden when it is drawn; the views turn it into role=img with labelChart() (0.3.2: the chart is always
+ * visible, its accessible name = the two summary lines + a pointer to the table).
  */
 import type { CmpRow } from './compare'
 import type { StrKey } from './strings'
@@ -622,6 +623,14 @@ export const FALLBACK_CHART_HEIGHT = 320
  * follow-up: empty SVG that holds the chart box at the precomputed height until the chart replaces it.
  * Height via the SVG height attribute only (no style attribute, no CSSOM: CSP style-src 'self').
  */
+/** 0.3.2: make a drawn chart a named image (role=img + aria-label) instead of aria-hidden. Nothing else on the SVG changes. */
+export function labelChart<T extends Element>(svg: T, label: string): T {
+  svg.removeAttribute('aria-hidden')
+  svg.setAttribute('role', 'img')
+  svg.setAttribute('aria-label', label)
+  return svg
+}
+
 export function chartPlaceholder(height: number): SVGSVGElement {
   return el('svg', { 'width': '100%', 'height': height, 'aria-hidden': 'true', 'class': 'cmp3-svg cmp3-placeholder', 'focusable': 'false' })
 }

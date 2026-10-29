@@ -27,8 +27,8 @@ let restore
 beforeAll(() => { restore = installFakeDom() })
 afterAll(() => restore())
 
-describe('(2) link expands the detail and scrolls it to the top', () => {
-  it('click: prevents the jump, opens the region, scrollIntoView block start', async () => {
+describe('(2) the toggle expands the detail; #ee scrolls it to the top (0.3.2: the link down is deleted)', () => {
+  it('toggle click: opens the region (chart stays outside), no scroll', async () => {
     const { createEarlyExit } = await import('../src/early-exit-view')
     const v = createEarlyExit()
     const o = evaluate(form(), TODAY)
@@ -36,12 +36,11 @@ describe('(2) link expands the detail and scrolls it to the top', () => {
     const s = v.section
     const btn = all(s, x => x.tag === 'button')[0]
     expect(btn.attrs['aria-expanded']).toBe('false')
-    byTestId(v.brief, 'ee-more')[0].click()
+    expect(byTestId(v.brief, 'ee-more')).toHaveLength(0)
+    btn.click()
     expect(btn.attrs['aria-expanded']).toBe('true')
     expect(byTestId(s, 'ee-table')).toHaveLength(1)
-    expect(s.scrolled).toEqual({ n: 1, opts: { block: 'start' } })
-    byTestId(v.brief, 'ee-more')[0].click() // stays open on a second click
-    expect(btn.attrs['aria-expanded']).toBe('true')
+    expect(s.scrolled.n).toBe(0)
   })
   it('page opened with #ee expands on load; CSP-safe (no inline style in the view)', async () => {
     const g = globalThis
@@ -173,7 +172,7 @@ describe('(5) right title margin, 2-decimal %, 375 px spacing', () => {
   it('spacing between the notes and the chart title at every width (no media query); header nowrap; 999 px kept', () => {
     const top = css.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/g, '')
     const m1 = top.match(/\.ee-region > p\.help \{ margin: (\d+)px 0; \}/)
-    const m2 = top.match(/\.ee-region > \.cmp3-figure \{ margin-top: (\d+)px; \}/)
+    const m2 = top.match(/\.ee > \.cmp3-figure \{ margin-top: (\d+)px; \}/)
     expect(Number(m1[1])).toBeGreaterThanOrEqual(8)
     expect(Number(m2[1])).toBeGreaterThanOrEqual(12)
     expect(top).toMatch(/\.ee-table thead th\[scope='col'\] \{ white-space: nowrap; \}/)

@@ -2,17 +2,18 @@
  * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
  * Based on finanzfluss/calculators (AGPL-3.0). Licensed under AGPL-3.0-only.
  *
- * Stage 3 comparison block (PLAN_stage3.md b, b2, c, e): two-line summary (always), collapsible table (+ chart).
+ * Stage 3 comparison block (PLAN_stage3.md b, b2, c, e): two-line summary and chart (always visible; 0.3.2), collapsible table + notes.
  * All numbers come from compare.ts (core outputs); this file only formats them.
  */
 import type { CmpRow, SweepResult } from './compare'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
-import { chartPlaceholder, drawChart, FALLBACK_CHART_HEIGHT, mainChartHeight } from './chart'
-import { amountId, flipText, kindName, maxText, namedAmounts, pendingAmounts, prefetch, sensitivityText, sweep, verdictSentence } from './compare'
+import { chartPlaceholder, drawChart, FALLBACK_CHART_HEIGHT, labelChart, mainChartHeight } from './chart'
+import { amountId, flipText, kindName, maxText, namedAmounts, pendingAmounts, prefetch, sensitivityText, sweep } from './compare'
 import { h, txt } from './dom'
 import { displayNumberDe, formatEuro } from './format'
 import { ONE_CONTRACT_CAP } from './model'
+import { foldedNotes } from './notes'
 import { t } from './strings'
 
 export const DEBOUNCE_MS = 300
@@ -34,9 +35,15 @@ export function createCmp3(): Cmp3View {
   const summary = h('div', { 'class': 'cmp3-summary', 'data-testid': 'cmp3-summary', 'aria-live': 'polite', 'aria-busy': 'false', 'data-round': '0' })
   const region = h('div', { 'id': 'cmp3-region', 'class': 'cmp3-region', 'hidden': true, 'data-round': '0' })
   const toggle = txt('button', 'cmp3Toggle', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': 'cmp3-region' })
+  // 0.3.2: the chart is always visible (summary, chart, caption, toggle); only table + text sit in the fold.
+  const box = h('div', { class: 'cmp3-chart-box' })
+  const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'cmp3-chart', 'hidden': true }, box, h('figcaption', {},
+    txt('span', 'relNote'), ' ',
+    txt('span', 'chartTableFirst')))
   const section = h('section', { 'class': 'cmp3', 'aria-labelledby': 'cmp3-h', 'data-testid': 'cmp3' },
     h('h2', { id: 'cmp3-h' }, txt('span', 'cmp3Heading'), ' ', txt('span', 'cmp3Single', { class: 'tag' })),
     summary,
+    figure,
     toggle,
     region,
   )
@@ -65,37 +72,35 @@ export function createCmp3(): Cmp3View {
     )
   }
 
-  let observer: ResizeObserver | undefined
+  // The chart: drawn at the box width (set once; the observer redraws on a width change with the latest data).
+  let lastWidth = 0
+  const draw = (s: SweepResult, w: number) => {
+    box.replaceChildren(chartPlaceholder(mainChartHeight(s.rows, w, namedAmounts(s))))
+    box.replaceChildren(labelChart(drawChart(s.rows, w, namedAmounts(s)), `${sensitivityText(s)} ${maxText(s)} ${t('chartTableHint')}`))
+  }
+  const observer = new ResizeObserver(() => {
+    const w = Math.floor(box.clientWidth)
+    if (data && w > 0 && w !== lastWidth) {
+      lastWidth = w
+      draw(data.result, w)
+    }
+  })
+  observer.observe(box)
+  function renderChart() {
+    if (!data)
+      return
+    // Draw before the next paint (the figure is unhidden first so the box has its width), so the chart never disappears for a frame.
+    figure.hidden = false
+    lastWidth = Math.floor(box.clientWidth)
+    if (lastWidth > 0)
+      draw(data.result, lastWidth)
+    else box.replaceChildren(chartPlaceholder(FALLBACK_CHART_HEIGHT))
+  }
+
   function renderRegion() {
-    observer?.disconnect()
     if (!data || !open())
       return
-    const s = data.result
-    const box = h('div', { class: 'cmp3-chart-box' })
-    const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'cmp3-chart' }, box, h('figcaption', {},
-      h('span', { class: 'cap-verdict' }, verdictSentence(s.userRow.avNet, s.userRow.normalNet)), ' ',
-      h('span', { class: 'cap-sensitivity' }, sensitivityText(s)), ' ',
-      txt('span', 'relNote'), ' ',
-      txt('span', 'chartTableFirst')))
-    // Draw before inserting (width of the open region = box width), so the chart never disappears for a frame.
-    let lastWidth = Math.floor(region.clientWidth)
-    if (lastWidth > 0) {
-      box.replaceChildren(chartPlaceholder(mainChartHeight(s.rows, lastWidth, namedAmounts(s))))
-      box.replaceChildren(drawChart(s.rows, lastWidth, namedAmounts(s)))
-    }
-    else {
-      box.append(chartPlaceholder(FALLBACK_CHART_HEIGHT))
-    }
-    observer = new ResizeObserver(() => {
-      const w = Math.floor(box.clientWidth)
-      if (w > 0 && w !== lastWidth) {
-        lastWidth = w
-        box.replaceChildren(chartPlaceholder(mainChartHeight(s.rows, w, namedAmounts(s))))
-        box.replaceChildren(drawChart(s.rows, w, namedAmounts(s)))
-      }
-    })
-    region.replaceChildren(figure, ...table(data.values, s))
-    observer.observe(box)
+    region.replaceChildren(...table(data.values, data.result))
   }
 
   // Scheduling (plan e): debounce 300 ms, one core run per macrotask, newer input cancels the running round.
@@ -121,6 +126,9 @@ export function createCmp3(): Cmp3View {
       summary.removeAttribute('aria-live')
       summary.replaceChildren(txt('p', 'cmp3Invalid'))
       region.replaceChildren(txt('p', 'cmp3Invalid'))
+      figure.hidden = true
+      box.replaceChildren()
+      lastWidth = 0
       return
     }
     const snapshot = structuredClone(values)
@@ -151,6 +159,7 @@ export function createCmp3(): Cmp3View {
           return
         data = { values: snapshot, result }
         renderSummary()
+        renderChart()
         renderRegion()
         summary.setAttribute('data-round', String(n))
         region.setAttribute('data-round', String(n))
@@ -211,11 +220,9 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
     'subsidyFootnote',
     'singleOnlyFootnote',
     'spouseOnlyNotice',
-    'jointApproxNotice',
     'cmp3DiffNote',
     'relNote',
     s.rows.some(r => r.rel === null) ? 'relOmitted' : null,
-    'foerBonus',
     values.kids.length > 0 ? 'foerKids' : null,
     'cmp3SplitUnder',
     'cmp3SplitNote',
@@ -230,5 +237,7 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
       h('tbody', {}, ...s.rows.map(row)),
     ),
     ...notes.filter((k): k is StrKey => k !== null).map(k => txt('p', k, { class: 'help' })),
+    // 0.3.2: the two reference notes are folded (same order as before)
+    foldedNotes(['jointApproxNotice', 'foerBonus']),
   ]
 }

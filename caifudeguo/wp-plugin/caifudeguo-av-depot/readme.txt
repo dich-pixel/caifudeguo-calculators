@@ -4,7 +4,7 @@ Tags: calculator, altersvorsorgedepot, chinese
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: AGPL-3.0-only
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
