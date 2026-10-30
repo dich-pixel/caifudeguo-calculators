@@ -9,6 +9,7 @@ export interface FakeEl {
   setAttribute: (k: string, v: string) => void
   getAttribute: (k: string) => string | null
   removeAttribute: (k: string) => void
+  hasAttribute: (k: string) => boolean
   append: (...c: (FakeEl | string)[]) => void
   replaceChildren: (...c: (FakeEl | string)[]) => void
   insertBefore: (c: FakeEl, ref: FakeEl) => void
@@ -20,6 +21,12 @@ export interface FakeEl {
   classList: { toggle: (c: string, on?: boolean) => void, contains: (c: string) => boolean }
 }
 
+/** width every new fake element reports as clientWidth (0 = not laid out yet) */
+let fakeWidth = 0
+export function setFakeWidth(w: number): void {
+  fakeWidth = w
+}
+
 export function make(tag: string): FakeEl {
   const listeners: Record<string, ((ev: { preventDefault: () => void }) => void)[]> = {}
   const e: FakeEl = {
@@ -27,7 +34,7 @@ export function make(tag: string): FakeEl {
     attrs: {},
     children: [],
     hidden: false,
-    clientWidth: 0,
+    clientWidth: fakeWidth,
     get textContent() { return e.children.map(c => typeof c === 'string' ? c : c.textContent).join('') },
     set textContent(v: string) { e.children = [v] },
     setAttribute: (k, v) => {
@@ -37,6 +44,7 @@ export function make(tag: string): FakeEl {
     },
     getAttribute: k => e.attrs[k] ?? null,
     removeAttribute: (k) => { delete e.attrs[k] },
+    hasAttribute: k => k in e.attrs,
     append: (...c) => { e.children.push(...c) },
     replaceChildren: (...c) => { e.children = [...c] },
     insertBefore: (c, ref) => { e.children.splice(Math.max(0, e.children.indexOf(ref)), 0, c) },
@@ -76,3 +84,11 @@ export function all(e: FakeEl | string, pred: (x: FakeEl) => boolean): FakeEl[] 
   return [...(pred(e) ? [e] : []), ...e.children.flatMap(c => all(c, pred))]
 }
 export const byTestId = (root: FakeEl, id: string) => all(root, x => x.attrs['data-testid'] === id)
+
+/** Attribute-order-preserving serialisation (outerHTML stand-in): <tag a="v" ...>children</tag>. */
+export function serialize(e: FakeEl | string, skipAttrs: readonly string[] = []): string {
+  if (typeof e === 'string')
+    return e
+  const attrs = Object.entries(e.attrs).filter(([k]) => !skipAttrs.includes(k)).map(([k, v]) => ` ${k}="${v}"`).join('')
+  return `<${e.tag}${attrs}>${e.children.map(c => serialize(c, skipAttrs)).join('')}</${e.tag}>`
+}

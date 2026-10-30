@@ -11,8 +11,10 @@ import { foerderung, foerderungKey, verdictSentence } from './compare'
 import { h, txt } from './dom'
 import { createEarlyExit } from './early-exit-view'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
+import { startHeightReporting } from './height'
 import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
-import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, HEIGHT_MESSAGE_TYPE, PARAMS_CHECK_DATE } from './params'
+import { footerNotices, resultNotes } from './notes'
+import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
 import { STR, t } from './strings'
 import './style.css'
@@ -191,18 +193,6 @@ function payoutRows(rowKey: StrKey, p: PayoutMoney, id: string): HTMLElement[] {
   return [head, ...parts.map(([k, m, s]) => h('tr', { class: `sub ${s}` }, h('th', { scope: 'row' }, t(k)), cell(m.avDepot, `cell-${id}-${s}-av`), cell(m.normalDepot, `cell-${id}-${s}-normal`)))]
 }
 
-/** Notes under the Förderung row/column (plan b, f5). Kids note only when the calculation includes a child. */
-function foerderungNotes(): HTMLElement[] {
-  return [
-    txt('p', 'resultSubsidyFootnote', { class: 'help' }),
-    txt('p', 'singleOnlyFootnote', { class: 'help' }),
-    txt('p', 'spouseOnlyNotice', { class: 'help' }),
-    txt('p', 'jointApproxNotice', { class: 'help' }),
-    txt('p', 'foerBonus', { class: 'help' }),
-    countedKids().length > 0 ? txt('p', 'foerKids', { class: 'help' }) : null,
-  ].filter((n): n is HTMLParagraphElement => n !== null)
-}
-
 /** Kid rows that go into the calculation. */
 function countedKids(): string[] {
   return withTouchedKids(state, kidTouched).values.kids
@@ -241,7 +231,7 @@ function renderResult(r: Result) {
       ...payoutRows('rowRegular', r.regularPayoutYear, 'regularPayoutYear'),
       ...payoutRows('rowTotal', r.payoutTotal, 'payoutTotal'),
     ),
-  ), txt('p', 'taxNote', { class: 'help' }), ...foerderungNotes())
+  ), ...resultNotes(countedKids().length > 0))
 
   const cols: [StrKey, string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
   const label = (k: StrKey) => STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
@@ -340,8 +330,6 @@ function build() {
   const results = h('section', { 'class': 'results', 'aria-labelledby': 'results-h' },
     txt('h2', 'resultsHeading', { id: 'results-h' }),
     status, monthlyBox, compare,
-    // stage 5 follow-up: early-withdrawal short summary right after the result footnotes
-    early.brief,
   )
 
   const yearly = h('section', { class: 'yearly-sec' }, toggle('yearly', 'yearly-region', yearlyBody), yearlyBody)
@@ -349,8 +337,7 @@ function build() {
   const sha = forkCommit()
   const notes = h('footer', { 'class': 'notes', 'aria-labelledby': 'notes-h' },
     txt('h2', 'notesHeading', { id: 'notes-h' }),
-    notice('noticeSchaedlich', 'noticeSchaedlichDetails'),
-    notice('noticeKids', 'noticeKidsDetails'),
+    ...footerNotices(),
     h('p', { 'class': 'notice', 'data-testid': STR.noticeParams.id }, link(CORE_COMMIT_URL, t('noticeParams', { date: PARAMS_CHECK_DATE, sha: CORE_COMMIT_SHORT }))),
     txt('p', 'noticeDisclaimer', { class: 'notice' }),
     txt('p', 'noticeBrowser', { class: 'notice' }),
@@ -364,11 +351,11 @@ function build() {
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
     h('div', { class: 'grid' }, form, results),
+    // 0.3.2 (owner): the collapsed 逐年明细 fold sits before the 不同存钱额 section (it used to be the last element)
+    yearly,
     cmp3.section,
     early.section,
-    // Mandatory notices sit above the (possibly very long) yearly table so they are always reachable.
     notes,
-    yearly,
   )
   // Title shows the German term in brackets.
   app.querySelector('h1')!.textContent = `${t('title')}（${STR.title.de}）`
@@ -379,20 +366,11 @@ function build() {
 // ---------- iframe height (ResizeObserver → postMessage) ----------
 
 function reportHeight() {
-  if (window.parent === window)
-    return
-  document.documentElement.classList.add('embedded')
-  let last = 0
-  const send = () => {
-    const height = Math.ceil(document.documentElement.getBoundingClientRect().height)
-    if (height !== last) {
-      last = height
-      window.parent.postMessage({ type: HEIGHT_MESSAGE_TYPE, height }, '*')
-    }
-  }
-  new ResizeObserver(send).observe(document.body)
-  window.addEventListener('load', send)
-  send()
+  startHeightReporting({
+    win: window,
+    root: document.documentElement,
+    observe: (onResize) => { new ResizeObserver(onResize).observe(document.body) },
+  })
 }
 
 build()

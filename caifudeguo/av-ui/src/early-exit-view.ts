@@ -2,15 +2,15 @@
  * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
  * Based on finanzfluss/calculators (AGPL-3.0). Licensed under AGPL-3.0-only.
  *
- * Stage 5 C view (PLAN_stage5.md C.4, C.5): heading, disclaimer (always), two summary lines, a collapsible region
- * with the assumptions, the single-only notices, a dual-axis chart (x = age), a wide table (≥ 1000 px) and cards
+ * Stage 5 C view (PLAN_stage5.md C.4, C.5): heading, disclaimer, two summary lines and the dual-axis chart (x = age) are always
+ * visible (0.3.2); a collapsible region holds the assumptions, the single-only notices, a wide table (≥ 1000 px) and cards
  * (< 1000 px; 4 values, the rest in a <details>「明细」). All numbers come from early-exit.ts; no inline styles.
  */
 import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, chartPlaceholder, el, FALLBACK_CHART_HEIGHT, frame, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
+import { axes, chartPlaceholder, el, FALLBACK_CHART_HEIGHT, frame, labelChart, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -151,7 +151,7 @@ export function summaryLines(e: EarlyExit): HTMLElement[] {
 
 export interface EarlyExitView {
   section: HTMLElement
-  /** short summary placed directly below the overall result footnotes (heading, disclaimer, one line per age, link down) */
+  /** short summary (heading, disclaimer, one line per age); it is the first child of `section` (above the chart), exposed for tests */
   brief: HTMLElement
   update: (values: FormValues, main: { result: Result, coreInput: Record<string, unknown> } | null) => void
 }
@@ -160,20 +160,24 @@ export function createEarlyExit(): EarlyExitView {
   const summary = h('div', { 'class': 'ee-summary', 'data-testid': 'ee-summary', 'aria-live': 'polite' })
   const region = h('div', { 'id': 'ee-region', 'class': 'ee-region', 'hidden': true })
   const toggle = txt('button', 'eeToggle', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': 'ee-region' })
-  const more = txt('a', 'eeMore', { 'href': '#ee', 'data-testid': 'ee-more' })
+  // 0.3.2: one h2 (in the brief, with the eeSingle tag); the link 「详细计算结果和曲线见下方。」 and the second h2 are gone.
   const brief = h('div', { 'class': 'ee-brief', 'role': 'group', 'aria-labelledby': 'ee-brief-h', 'data-testid': 'ee-brief' },
     h('h2', { id: 'ee-brief-h' }, txt('span', 'eeHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
     txt('p', 'eeDisclaimer', { class: 'ee-disclaimer' }),
     summary,
-    h('p', { class: 'ee-more' }, more),
   )
-  const section = h('section', { 'id': 'ee', 'class': 'cmp3 ee', 'aria-labelledby': 'ee-h', 'data-testid': 'ee' },
-    h('h2', { id: 'ee-h' }, txt('span', 'eeDetailHeading'), ' ', txt('span', 'eeSingle', { class: 'tag' })),
+  // The chart is always visible (brief = heading, disclaimer, summary lines, then chart, caption, toggle); only assumptions, tables and notes fold.
+  // 0.3.2 (owner): the brief is the first child of section#ee, so the #ee anchor lands on the summary and the chart follows it.
+  const box = h('div', { class: 'cmp3-chart-box' })
+  const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'ee-chart', 'hidden': true }, box, h('figcaption', {}, txt('span', 'chartTableFirst')))
+  const section = h('section', { 'id': 'ee', 'class': 'cmp3 ee', 'aria-labelledby': 'ee-brief-h', 'data-testid': 'ee' },
+    brief,
+    figure,
     toggle,
     region,
   )
   let data: EarlyExit | null = null
-  let observer: ResizeObserver | undefined
+  let lastWidth = 0
   const open = () => toggle.getAttribute('aria-expanded') === 'true'
   const setOpen = (o: boolean) => {
     toggle.setAttribute('aria-expanded', String(o))
@@ -183,18 +187,12 @@ export function createEarlyExit(): EarlyExitView {
     else region.replaceChildren()
   }
   toggle.addEventListener('click', () => setOpen(!open()))
-  /** stage 5 (2): the「详细计算结果和曲线见下方。」link (and a page opened with #ee) expands the detail and puts its top at the viewport top */
+  /** a page opened with #ee expands the fold and puts the top of the section at the viewport top */
   const reveal = () => {
     if (!open())
       setOpen(true)
     section.scrollIntoView?.({ block: 'start' })
   }
-  more.addEventListener('click', (ev) => {
-    ev.preventDefault()
-    reveal()
-    if (typeof history !== 'undefined' && typeof location !== 'undefined' && location.hash !== '#ee')
-      history.pushState(null, '', '#ee')
-  })
   const fromHash = () => {
     if (typeof location !== 'undefined' && location.hash === '#ee')
       reveal()
@@ -203,8 +201,33 @@ export function createEarlyExit(): EarlyExitView {
     window.addEventListener('hashchange', fromHash)
   let first = true
 
+  const draw = (e: EarlyExit, w: number) => {
+    box.replaceChildren(chartPlaceholder(eeReservedHeight(e, w)))
+    box.replaceChildren(labelChart(drawEarlyChart(e, w), `${summaryLines(e).map(p => p.textContent).join(' ')} ${t('chartTableHint')}`))
+  }
+  const observer = new ResizeObserver(() => {
+    const w = Math.floor(box.clientWidth)
+    if (data?.points.length && w > 0 && w !== lastWidth) {
+      lastWidth = w
+      draw(data, w)
+    }
+  })
+  observer.observe(box)
+  function renderChart() {
+    if (!data?.points.length) {
+      figure.hidden = true
+      box.replaceChildren()
+      lastWidth = 0
+      return
+    }
+    figure.hidden = false
+    lastWidth = Math.floor(box.clientWidth)
+    if (lastWidth > 0)
+      draw(data, lastWidth)
+    else box.replaceChildren(chartPlaceholder(FALLBACK_CHART_HEIGHT))
+  }
+
   function render() {
-    observer?.disconnect()
     if (!open())
       return
     const fixed: HTMLElement[] = [
@@ -220,32 +243,13 @@ export function createEarlyExit(): EarlyExitView {
       region.replaceChildren(...fixed, txt('p', 'eeNoPoints'))
       return
     }
-    const e = data
-    const box = h('div', { class: 'cmp3-chart-box' })
-    let lastWidth = Math.floor(region.clientWidth)
-    if (lastWidth > 0) {
-      box.replaceChildren(chartPlaceholder(eeReservedHeight(e, lastWidth)))
-      box.replaceChildren(drawEarlyChart(e, lastWidth))
-    }
-    else {
-      box.append(chartPlaceholder(FALLBACK_CHART_HEIGHT))
-    }
-    observer = new ResizeObserver(() => {
-      const w = Math.floor(box.clientWidth)
-      if (w > 0 && w !== lastWidth) {
-        lastWidth = w
-        box.replaceChildren(chartPlaceholder(eeReservedHeight(e, w)))
-        box.replaceChildren(drawEarlyChart(e, w))
-      }
-    })
-    const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'ee-chart' }, box, h('figcaption', {}, txt('span', 'chartTableFirst')))
-    region.replaceChildren(...fixed, figure, ...regionContent(e))
-    observer.observe(box)
+    region.replaceChildren(...fixed, ...regionContent(data))
   }
 
   function update(_values: FormValues, main: { result: Result, coreInput: Record<string, unknown> } | null) {
     data = main ? earlyExit(avDepot.schema.parse(main.coreInput), main.result) : null
     summary.replaceChildren(...(data ? summaryLines(data) : [txt('p', 'eeInvalid')]))
+    renderChart()
     render()
     if (first) {
       first = false

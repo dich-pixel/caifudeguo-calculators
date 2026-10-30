@@ -32,3 +32,5 @@ export function startYear(today: Date = new Date()): number {
 }
 
 export const HEIGHT_MESSAGE_TYPE = 'caifudeguo-av-depot:height'
+/** host -> app: "send your height again" (embed.js may start after the app's first message). */
+export const HEIGHT_REQUEST_TYPE = 'caifudeguo-av-depot:resend'

@@ -3,7 +3,7 @@
  * Plugin Name:       caifudeguo AV-Depot 计算器
  * Plugin URI:        https://github.com/dich-pixel/caifudeguo-calculators
  * Description:       养老投资账户（Altersvorsorgedepot）计算器，中文界面。短代码 [caifudeguo_av_depot]。纯浏览器端计算，不建数据表、不存选项、不用 cookie。
- * Version:           0.3.1
+ * Version:           0.3.2
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Rich Dr (caifudeguo.de)
@@ -26,11 +26,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CAIFUDEGUO_AV_DEPOT_VERSION', '0.3.1');
+define('CAIFUDEGUO_AV_DEPOT_VERSION', '0.3.2');
 
 /**
- * Origins allowed to report the iframe height via postMessage.
- * Hard-coded caifudeguo.de hosts + this site's own origin; extend with the
+ * Optional EXTRA origins allowed to report the iframe height via postMessage. embed.js always accepts the origin of the
+ * calculator iframe itself (new URL of data-lazy-src or src) and, in every case, only messages whose source is that
+ * iframe's window; the page origin is not accepted implicitly. This list is only read when the iframe is served from
+ * another origin than its src suggests (e.g. a CDN redirect). Extend with the
  * `caifudeguo_av_depot_allowed_origins` filter (values like "https://example.org").
  *
  * @return string[]

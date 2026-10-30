@@ -4,7 +4,7 @@ Tags: calculator, altersvorsorgedepot, chinese
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: AGPL-3.0-only
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -51,6 +51,13 @@ Corresponding source / 对应源代码：见 SOURCE.txt（fork 的固定 commit 
 Build / 打包：必须用 Node 22.14.0（.nvmrc）：`nvm use && pnpm run wp:zip`，或 `npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs`。其他版本会报错停下（`--allow-node-mismatch` 可跳过，SOURCE.txt 会记录实际版本）。
 
 == Changelog ==
+
+= 0.3.2 =
+* 图表始终显示，表格和文字说明收进可折叠区域；图表加了读屏说明。
+* 精简页面：去掉与结论重复的图注句子、重复的标题和跳转链接；税务说明、合并报税近似提示和补贴说明收进可折叠的「详情与依据」；「逐年明细」移到「不同存钱额的比较」之前。
+* 调整间距，合并页脚说明。
+* 提前取出：摘要（标题、免责说明和两行结论）移到图表上方，用 #ee 打开时直接落在摘要上。
+* 修复：脚本被延迟加载（如 WP Rocket「延迟 JavaScript」）时 iframe 高度不更新；高度消息只接受来自该 iframe 本身、且来源与其地址一致的消息。完全避免需在 WP Rocket 中把 embed.js 排除在延迟执行之外。
 
 = 0.3.0 =
 * 阶段 5：单人报税脚注措辞修改（175 € 只在配偶资格说明里出现一次）；投入曲线里的 1 % 浅色带换成相对差异线（右轴，%；以退休时 AV 一侧余额为基数），表格加「相对差异」一列；新增「提前取出」（schädliche Verwendung）对比，按本插件另加的计算层算。原有 € 数字不变。

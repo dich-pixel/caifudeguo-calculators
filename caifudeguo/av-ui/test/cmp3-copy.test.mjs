@@ -1,13 +1,13 @@
 // Stage 3 g4: wording of the comparison block = plan text (PLAN_stage3.md a, b, b2), no style attributes.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { t } from '../src/strings.ts'
+import { STR, t } from '../src/strings.ts'
 
 const src = f => readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8')
 
 describe('g4 wording', () => {
   it('plan texts', () => {
-    expect(t('cmp3Toggle')).toBe('不同存钱额的比较（表格 + 曲线）')
+    expect(t('cmp3Toggle')).toBe('不同存钱额的比较（表格）') // 0.3.2: the chart is always visible, the fold holds the table
     expect(t('cmp3Single')).toBe('按单人报税（Grundtarif）')
     expect(t('cmp3Intro')).toBe('其他输入都按你现在填的值；只按单人报税（Grundtarif）计算，不支持合并报税（Zusammenveranlagung）。')
     expect(t('cmp3ColFoer')).toBe('国家补贴*')
@@ -90,20 +90,20 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(Object.values(STR).map(v => v.zh).join('')).not.toContain('即将推出')
   })
   it('footnotes: after both subsidy footnotes, spouseOnlyNotice right after singleOnlyFootnote', () => {
-    const main = src('main.ts')
-    const m0 = main.indexOf("txt('p', 'resultSubsidyFootnote'")
-    const m1 = main.indexOf("txt('p', 'singleOnlyFootnote'")
-    const m2 = main.indexOf("txt('p', 'spouseOnlyNotice'")
+    // 0.3.2: the result notes live in notes.ts (taxNote, jointApproxNotice, foerBonus folded, in the original order)
+    const notes = src('notes.ts')
+    const m0 = notes.indexOf("'resultSubsidyFootnote'")
+    const m1 = notes.indexOf("'singleOnlyFootnote'")
+    const m2 = notes.indexOf("'spouseOnlyNotice'")
     expect(m0).toBeGreaterThan(0)
     expect(m1).toBeGreaterThan(m0)
     expect(m2).toBeGreaterThan(m1)
-    const m3 = main.indexOf("txt('p', 'jointApproxNotice'")
-    expect(m3).toBeGreaterThan(m2)
-    expect(main.slice(m0, m3).split('\n')).toHaveLength(4)
-    expect(main.split("txt('p', 'jointApproxNotice'")).toHaveLength(2)
+    expect(notes).toContain("foldedNotes(['taxNote', 'jointApproxNotice', 'foerBonus'])")
+    expect(src('main.ts')).toContain('resultNotes(countedKids().length > 0)')
     const cmp = src('cmp3.ts')
-    expect(cmp).toMatch(/'subsidyFootnote',\n\s*'singleOnlyFootnote',\n\s*'spouseOnlyNotice',\n\s*'jointApproxNotice',/)
+    expect(cmp).toMatch(/'subsidyFootnote',\n\s*'singleOnlyFootnote',\n\s*'spouseOnlyNotice',\n\s*'cmp3DiffNote',/)
     expect(cmp.split("'jointApproxNotice'")).toHaveLength(2)
+    expect(cmp).toContain("foldedNotes(['jointApproxNotice', 'foerBonus'])")
   })
   it('no placeholder button, .placeholder css removed, .joint kept', () => {
     expect(src('main.ts')).not.toMatch(/placeholder|txt\('button', 'joint'/)
@@ -118,23 +118,24 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
     expect(src('main.ts')).toContain("h('div', { class: 'joint' }, txt('p', 'noticeSingle', { class: 'notice' }))")
     expect(src('cmp3.ts')).toContain("txt('p', 'cmp3Intro', { class: 'help' })")
   })
-  it('q6: status line keeps its space, summary has a min-height', () => {
+  it('q6 (0.3.2): the idle status line takes no space, summary has a min-height', () => {
     const cmp = src('cmp3.ts')
     expect(cmp).not.toMatch(/status\.hidden/)
     expect(cmp).toContain("status.classList.toggle('idle', !busy || !data)")
     const css = src('style.css')
-    expect(css).toMatch(/\.cmp3-status\.idle \{ visibility: hidden; \}/)
+    expect(css).toMatch(/\.cmp3-status\.idle \{ display: none; \}/)
     expect(css).toMatch(/\.cmp3-summary \{ min-height: [\d.]+em; \}/)
   })
 })
 
 describe('stage 5 follow-up: early-withdrawal brief placement', () => {
-  it('brief sits at the end of the results section (after compare = after the last footnote); details stay below', () => {
+  it('the brief is the first child of the early-exit section (above the chart); the grid holds form and results; details stay below', () => {
     const m = src('main.ts')
-    expect(m).toContain('status, monthlyBox, compare,\n    // stage 5 follow-up: early-withdrawal short summary right after the result footnotes\n    early.brief,\n  )')
-    expect(m.indexOf('foerBonus')).toBeLessThan(m.indexOf('early.brief'))
+    // 0.3.2 (owner): the brief moved into section#ee, above the chart (early-exit-view.ts); it is no longer a grid child
+    expect(m).toContain('status, monthlyBox, compare,\n  )')
+    expect(m).toContain("h('div', { class: 'grid' }, form, results)")
+    expect(m).not.toContain('early.brief')
     expect(m.indexOf('cmp3.section,')).toBeLessThan(m.indexOf('early.section,'))
-    expect(m.indexOf('early.brief')).toBeLessThan(m.indexOf('early.section,'))
-    expect(t('eeMore')).toBe('详细计算结果和曲线见下方。')
+    expect('eeMore' in STR).toBe(false) // 0.3.2: the link is deleted
   })
 })

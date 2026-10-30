@@ -18,22 +18,22 @@ html.embedded, html.embedded body { overflow: hidden; }
 body { overflow-wrap: anywhere; }
 .app { max-width: 1200px; margin: 0 auto; padding: 12px; }
 h1 { font-size: 1.4rem; margin: 0 0 4px; }
-h2 { font-size: 1.15rem; margin: 16px 0 8px; }
+h2 { font-size: 1.15rem; margin: 12px 0 4px; }
 .subtitle { margin: 0 0 8px; color: var(--muted); }
-.banner { border-left: 4px solid #dba617; background: #fcf9e8; padding: 6px 10px; margin-bottom: 12px; }
+.banner { border-left: 4px solid #dba617; background: #fcf9e8; padding: 6px 10px; margin-bottom: 8px; }
 .banner p { margin: 2px 0; }
 .banner p::before { content: '⚠ '; }
 .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 1000px) {
   .grid { grid-template-columns: minmax(320px, 5fr) 7fr; align-items: start; }
 }
-.field { margin: 0 0 12px; border: 0; padding: 0; min-width: 0; }
+.field { margin: 0 0 8px; border: 0; padding: 0; min-width: 0; }
 .field label, .field .label, .field legend { display: block; font-weight: 600; margin-bottom: 2px; padding: 0; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 input[type='text'] { width: 100%; max-width: 100%; font: inherit; padding: 6px 8px; border: 1px solid #8c8f94; border-radius: 4px; }
 input[aria-invalid='true'] { border-color: var(--err); box-shadow: 0 0 0 1px var(--err); }
 :focus-visible { outline: 3px solid #f0b849; outline-offset: 2px; }
-.help { color: var(--muted); font-size: 0.9rem; margin: 4px 0 0; }
+.help { color: var(--muted); font-size: 0.9rem; margin: 2px 0 0; }
 .hint { color: #8a4b00; font-weight: 600; margin: 4px 0 0; }
 .err { color: var(--err); font-size: 0.9rem; margin: 2px 0 0; }
 .err:empty { display: none; }
@@ -51,14 +51,14 @@ button { font: inherit; cursor: pointer; }
 .toggle::before { content: '▸ '; }
 .toggle[aria-expanded='true']::before { content: '▾ '; }
 .more { padding-top: 10px; }
-.joint { margin: 8px 0 12px; }
-.notice { margin: 6px 0; }
+.joint { margin: 4px 0 8px; }
+.notice { margin: 2px 0; }
 .joint .notice { font-size: 0.9rem; color: var(--muted); }
 .status .verdict { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .status .verdict.invalid { color: var(--err); }
-.status .sensitivity { margin: 2px 0 8px; color: var(--muted); }
+.status .sensitivity { margin: 0 0 4px; color: var(--muted); }
 .status .note { margin: 0 0 8px; font-size: 0.9rem; }
-div.monthly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+div.monthly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .mbox { border: 2px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; }
 .mbox.av { border-color: var(--av); }
 .mbox.normal { border-color: var(--normal); }
@@ -74,7 +74,7 @@ table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nu
 .cmp tr.sub.net td { font-weight: 700; }
 .cmp tr.group th { background: var(--bg-soft); }
 .chart { margin-top: 12px; padding: 24px 10px; }
-.yearly-sec { margin-top: 16px; }
+.yearly-sec { margin-top: 12px; }
 .yearly-body { padding-top: 8px; }
 .yearly th, .yearly td { padding: 3px 5px; border-bottom: 1px solid var(--line); text-align: right; font-size: 0.85rem; white-space: nowrap; }
 .yearly thead th { white-space: normal; vertical-align: bottom; font-size: 0.75rem; }
@@ -88,7 +88,7 @@ table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nu
   .yearly th[scope='row'] { font-size: 1rem; }
   .yearly th::before, .yearly td::before { content: attr(data-label); text-align: left; color: var(--muted); font-weight: 400; }
 }
-.notes { margin-top: 20px; border-top: 1px solid var(--line); font-size: 0.9rem; }
+.notes { margin-top: 12px; border-top: 1px solid var(--line); font-size: 0.9rem; }
 a { color: var(--accent); }
 
 /* ---- stage 2 review round ---- */
@@ -101,7 +101,7 @@ summary { cursor: pointer; color: var(--accent); min-height: 44px; display: flex
 details > p { margin: 4px 0 0; }
 .vbar { display: none; }
 @media (max-width: 999px) {
-  .vbar { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; background: #eaf2fb; border: 1px solid #b6cfe9; border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
+  .vbar { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; background: #eaf2fb; border: 1px solid #b6cfe9; border-radius: 6px; padding: 6px 10px; margin: 0 0 8px; }
   .bar-verdict { font-weight: 700; white-space: nowrap; }
   .bar-monthly { font-size: 0.9rem; white-space: nowrap; }
 }
@@ -130,13 +130,13 @@ input[type='text'] { min-height: 44px; }
 .notes a, .notice a { display: inline-flex; align-items: center; min-height: 44px; }
 
 /* ---- stage 3: comparison block ---- */
-.cmp3 { margin-top: 16px; }
+.cmp3 { margin-top: 12px; }
 .cmp3 h2 .tag { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
 .cmp3-summary { min-height: 5.6em; } /* stage 5 (c): room for the final summary (up to 3 lines + margins ≥ 1000 px), so #ee below does not move when the sweep finishes */
 @media (max-width: 999px) { .cmp3-summary { min-height: 7em; } }
 @media (max-width: 520px) { .cmp3-summary { min-height: 11.6em; } }
 .cmp3-summary p { margin: 2px 0; }
-.cmp3-status.idle { visibility: hidden; }
+.cmp3-status.idle { display: none; } /* 0.3.2: the idle line takes no space (it used to keep its height) */
 .cmp3-summary[aria-busy='true'], .cmp3-region.busy { color: var(--muted); }
 .cmp3-region { padding-top: 8px; }
 .cmp3 .num { white-space: nowrap; }
@@ -158,7 +158,7 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table tr.user > th, .cmp3-table tr.user > td:not(.split) { background: none; }
   .cmp3-table tr.user { border: 2px solid var(--accent); }
 }
-.cmp3-figure { margin: 0 0 12px; }
+.cmp3-figure { margin: 10px 0 10px; } /* 0.3.2: plan E10 value (summary → chart, chart → toggle); was 0 0 6px, which left 2 px between summary and chart at 288 px */
 .cmp3-chart-box { width: 100%; } /* follow-up: height held by the SVG itself (placeholder SVG with the precomputed height attribute, then the chart) */
 .cmp3-svg { display: block; }
 .cmp3-svg text { font-size: 12px; fill: var(--fg); }
@@ -174,7 +174,7 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .xl-leader { stroke: var(--fg); stroke-width: 1; opacity: 0.85; }
 /* validator follow-up: short leader from an offset annotation back to its own marker; full contrast */
 .cmp3-svg .ann-leader { stroke: var(--fg); stroke-width: 1; }
-.cmp3-figure figcaption { font-size: 0.9rem; margin-top: 4px; }
+.cmp3-figure figcaption { font-size: 0.9rem; margin-top: 10px; }
 
 /* ---- stage 3: narrow-screen error banner ---- */
 .err-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border: 2px solid var(--err); border-radius: 6px; padding: 6px 10px; margin: 0 0 12px; }
@@ -202,7 +202,7 @@ input[type='text'] { min-height: 44px; }
   .cmp3-table td::before { margin-right: auto; }
   .cmp3-table td.marginal { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
   .cmp3-table td.marginal::before, .cmp3-table td.split::before, .cmp3-table td.diff::before { flex: 1 0 100%; }
-  .cmp3-region > p.help { margin: 2px 0; font-size: 0.8rem; }
+  .cmp3-region p.help { margin: 2px 0; font-size: 0.8rem; } /* also the notes inside the folded details */
 }
 
 /* stage 5 B: relative difference (dashed, right axis) */
@@ -213,9 +213,9 @@ input[type='text'] { min-height: 44px; }
 .cmp3-svg .axis-right text, .cmp3-svg .axis-title-right { fill: #8a4b00; }
 
 /* stage 5 C: early withdrawal */
-.ee-disclaimer { border-left: 3px solid #8a4b00; padding: 4px 8px; background: var(--bg-soft); }
+.ee-disclaimer { border-left: 3px solid #8a4b00; padding: 4px 8px; background: var(--bg-soft); margin: 8px 0; }
 .ee-summary { min-height: 3em; }
-.ee-brief { margin-top: 16px; padding-top: 4px; border-top: 1px solid var(--line); }
+.ee-brief { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
 .ee-brief h2 .tag { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
 .ee-region { margin-top: 8px; }
 .ee-assumptions ol { margin: 4px 0 8px; padding-left: 1.4em; }
@@ -229,7 +229,8 @@ input[type='text'] { min-height: 44px; }
 .ee-table thead th[scope='col'] { white-space: nowrap; }
 /* stage 5 follow-up: air between the two notes and between them and the chart title, at every width */
 .ee-region > p.help { margin: 10px 0; }
-.ee-region > .cmp3-figure { margin-top: 18px; }
+.ee > .ee-brief { margin-top: 0; padding-top: 0; border-top: 0; } /* 0.3.2 (owner): the brief is the first child of section.ee (the section's own margin-top applies) */
+.ee > .cmp3-figure { margin-top: 18px; } /* 0.3.2: the chart is a child of section.ee now (it used to be in .ee-region); stage 5 follow-up: ≥ 12 px below the summary/title */
 .ee-table tr.av, .ee-table tr.normal, .ee-table tr.diff, .ee-table tr.rel { font-weight: 700; }
 .ee-table .small, .ee-details .small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; }
 .ee-cards { list-style: none; margin: 8px 0; padding: 0; display: none; }

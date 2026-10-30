@@ -234,20 +234,17 @@ describe('view (C.5)', () => {
     const o = evaluate(form(), TODAY)
     v.update(form(), o.ok ? o : null)
     const s = v.section as unknown as FakeEl
-    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(0)
-    // follow-up: heading + disclaimer + per-age lines + link down live in the brief block (below the result footnotes)
+    // 0.3.2 (owner): heading + disclaimer + per-age lines live in the brief block, the first child of the section (above the chart); no link down
+    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(1)
     const b = v.brief as unknown as FakeEl
     expect(byTestId(b, 'ee-disclaimer')).toHaveLength(1)
     expect(byTestId(b, 'ee-heading')).toHaveLength(1)
     expect(all(b, x => x.tag === 'h2')).toHaveLength(1)
     expect(byTestId(b, 'ee-summary-5')).toHaveLength(1)
     expect(byTestId(b, 'ee-summary-5')[0]!.textContent).toMatch(/^第 5 年年末（40 岁）取出：AV 一侧到手 /) // default age 35 + 5
-    const more = byTestId(b, 'ee-more')[0]!
-    expect(more.tag).toBe('a')
-    expect(more.attrs.href).toBe('#ee')
-    expect(more.textContent).toBe('详细计算结果和曲线见下方。')
+    expect(byTestId(b, 'ee-more')).toHaveLength(0) // 0.3.2: the link down is deleted (the chart is always visible)
     expect(s.attrs.id).toBe('ee')
-    expect(byTestId(s, 'ee-detail-heading')).toHaveLength(1)
+    expect(byTestId(s, 'ee-detail-heading')).toHaveLength(0) // 0.3.2: the second h2 is deleted
     const btn = all(s, x => x.tag === 'button')[0]!
     btn.click()
     const ids = all(s, x => !!x.attrs['data-testid']).map(x => x.attrs['data-testid'])

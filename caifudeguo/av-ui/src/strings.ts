@@ -171,7 +171,7 @@ export const STR = {
   // stage 3: comparison block UI (PLAN_stage3.md a, b, b2, e)
   cmp3Heading: s('cmp3-heading', '不同存钱额的比较'),
   cmp3Single: s('cmp3-single', '按单人报税（Grundtarif）', 'Grundtarif', '§32a Abs. 1 EStG'),
-  cmp3Toggle: s('cmp3-toggle', '不同存钱额的比较（表格 + 曲线）'),
+  cmp3Toggle: s('cmp3-toggle', '不同存钱额的比较（表格）'),
   cmp3Invalid: s('cmp3-status', '输入有误，暂无比较'),
   cmp3Busy: s('cmp3-summary-busy', '正在计算…'),
   cmp3Rebusy: s('cmp3-status-recalc', '正在重新计算…'),
@@ -223,14 +223,14 @@ export const STR = {
   chartCap: s('cmp3-marker-6840', '一份合同每年的上限'),
   chartKink: s('cmp3-marker', '拐点 {a} €'),
   chartTableFirst: s('cmp3-chart-caption', '具体数字以表格为准。'),
+  // 0.3.2: tail of the chart's accessible name (the SVG is role=img now; the two summary lines come first)
+  chartTableHint: s('cmp3-chart-hint', '数字见下方可展开的表格。'),
 
   // stage 5 C (PLAN_stage5.md C.2–C.5): early withdrawal (schädliche Verwendung), own calculation layer
   eeHeading: s('ee-heading', '如果提前取出（schädliche Verwendung）', 'schädliche Verwendung', '§93 Abs. 1 EStG'),
   eeSingle: s('ee-single', '按单人报税（Grundtarif）', 'Grundtarif', '§32a Abs. 1 EStG'),
-  eeDetailHeading: s('ee-detail-heading', '提前取出的详细计算结果和曲线（schädliche Verwendung）', 'schädliche Verwendung', '§93 Abs. 1 EStG'),
-  eeMore: s('ee-more', '详细计算结果和曲线见下方。'),
   eeDisclaimer: s('ee-disclaimer', '这一部分是本站按 §93 和 §22 Nr. 5 EStG 另外计算的，不是 Finanzfluss 原计算器的结果；只用于比较，不构成税务建议。', 'schädliche Verwendung', '§93 EStG; §22 Nr. 5 EStG'),
-  eeToggle: s('ee-toggle', '提前取出的比较（假设 + 曲线 + 表格）'),
+  eeToggle: s('ee-toggle', '提前取出的比较（假设 + 表格）'),
   eeInvalid: s('ee-status', '输入有误，暂无比较'),
   eeNoPoints: s('ee-no-points', '存钱时间太短，没有提前取出的数据点'),
   eeSummary: s('ee-summary', '第 {n} 年年末（{age} 岁）取出：AV 一侧到手 {av}，普通账户到手 {normal}，差额 {d}（{rel}）。'),
