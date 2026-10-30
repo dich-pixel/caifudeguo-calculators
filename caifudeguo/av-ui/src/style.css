@@ -25,11 +25,7 @@ h2 { font-size: 1.15rem; margin: 12px 0 4px; }
 .banner p::before { content: '⚠ '; }
 .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 1000px) {
-  /* 0.3.2: the early-withdrawal brief sits under the form in the left column; the result column spans both rows (same column widths as before) */
-  .grid { grid-template-columns: minmax(320px, 5fr) 7fr; grid-template-areas: "form results" "brief results"; grid-template-rows: auto 1fr; align-items: start; }
-  .inputs { grid-area: form; }
-  .results { grid-area: results; }
-  .ee-brief { grid-area: brief; }
+  .grid { grid-template-columns: minmax(320px, 5fr) 7fr; align-items: start; }
 }
 .field { margin: 0 0 8px; border: 0; padding: 0; min-width: 0; }
 .field label, .field .label, .field legend { display: block; font-weight: 600; margin-bottom: 2px; padding: 0; }
@@ -233,7 +229,8 @@ input[type='text'] { min-height: 44px; }
 .ee-table thead th[scope='col'] { white-space: nowrap; }
 /* stage 5 follow-up: air between the two notes and between them and the chart title, at every width */
 .ee-region > p.help { margin: 10px 0; }
-.ee > .cmp3-figure { margin-top: 18px; } /* 0.3.2: the chart is a child of section.ee now (it used to be in .ee-region) */
+.ee > .ee-brief { margin-top: 0; padding-top: 0; border-top: 0; } /* 0.3.2 (owner): the brief is the first child of section.ee (the section's own margin-top applies) */
+.ee > .cmp3-figure { margin-top: 18px; } /* 0.3.2: the chart is a child of section.ee now (it used to be in .ee-region); stage 5 follow-up: ≥ 12 px below the summary/title */
 .ee-table tr.av, .ee-table tr.normal, .ee-table tr.diff, .ee-table tr.rel { font-weight: 700; }
 .ee-table .small, .ee-details .small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; }
 .ee-cards { list-style: none; margin: 8px 0; padding: 0; display: none; }

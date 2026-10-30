@@ -129,13 +129,13 @@ describe('stage 4: single filing only (PLAN_stage4.md 2.2, 2.3, Q9, Q10)', () =>
 })
 
 describe('stage 5 follow-up: early-withdrawal brief placement', () => {
-  it('brief sits at the end of the results section (after compare = after the last footnote); details stay below', () => {
+  it('the brief is the first child of the early-exit section (above the chart); the grid holds form and results; details stay below', () => {
     const m = src('main.ts')
-    // 0.3.2: the brief is the third child of .grid (left column under the form from 1000 px), not inside the results section
+    // 0.3.2 (owner): the brief moved into section#ee, above the chart (early-exit-view.ts); it is no longer a grid child
     expect(m).toContain('status, monthlyBox, compare,\n  )')
-    expect(m).toContain("h('div', { class: 'grid' }, form, results, early.brief)")
+    expect(m).toContain("h('div', { class: 'grid' }, form, results)")
+    expect(m).not.toContain('early.brief')
     expect(m.indexOf('cmp3.section,')).toBeLessThan(m.indexOf('early.section,'))
-    expect(m.indexOf('early.brief')).toBeLessThan(m.indexOf('early.section,'))
     expect('eeMore' in STR).toBe(false) // 0.3.2: the link is deleted
   })
 })

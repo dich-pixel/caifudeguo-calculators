@@ -350,8 +350,7 @@ function build() {
       h('div', { 'class': 'banner', 'role': 'note' }, txt('p', 'noticeStart', { class: 'notice' }), notice('noticeLock', 'noticeLockDetails'))),
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
-    // 0.3.2: the early-withdrawal brief is the third grid child (left column under the form from 1000 px; DOM order unchanged below)
-    h('div', { class: 'grid' }, form, results, early.brief),
+    h('div', { class: 'grid' }, form, results),
     // 0.3.2 (owner): the collapsed 逐年明细 fold sits before the 不同存钱额 section (it used to be the last element)
     yearly,
     cmp3.section,

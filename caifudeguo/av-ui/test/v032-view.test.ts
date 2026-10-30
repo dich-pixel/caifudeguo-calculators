@@ -148,14 +148,14 @@ describe('early exit: one h2, chart visible, fold = assumptions + table + text',
     expect('eeMore' in STR).toBe(false)
     expect('eeDetailHeading' in STR).toBe(false)
   })
-  it('section: no h2, labelled by the brief h2; order figure, toggle, region; svg role=img with the summary lines + hint', async () => {
+  it('section: one h2 (in the brief), labelled by it; order brief, figure, toggle, region; svg role=img with the summary lines + hint', async () => {
     const view = await eeOf()
     const s = view.section as unknown as FakeEl
-    expect(all(s, x => x.tag === 'h2')).toHaveLength(0)
+    expect(all(s, x => x.tag === 'h2')).toHaveLength(1)
     expect(byTestId(s, 'ee-detail-heading')).toHaveLength(0)
     expect(s.attrs['aria-labelledby']).toBe('ee-brief-h')
-    expect(kids(s).map(cls)).toEqual(['cmp3-figure', 'toggle', 'ee-region'])
-    const fig = kids(s)[0]!
+    expect(kids(s).map(cls)).toEqual(['ee-brief', 'cmp3-figure', 'toggle', 'ee-region'])
+    const fig = kids(s)[1]!
     expect(fig.hidden).toBe(false)
     expect(kids(fig.children.find(c => typeof c !== 'string' && c.tag === 'figcaption') as FakeEl).map(x => x.textContent)).toEqual(['具体数字以表格为准。'])
     const svg = all(fig, x => x.tag === 'svg' && x.attrs.class === 'cmp3-svg ee-svg')[0]!
@@ -168,10 +168,10 @@ describe('early exit: one h2, chart visible, fold = assumptions + table + text',
   it('toggle label; the fold holds assumptions, tables and notes but no chart', async () => {
     const view = await eeOf()
     const s = view.section as unknown as FakeEl
-    const btn = kids(s)[1]!
+    const btn = kids(s)[2]!
     expect(btn.textContent).toBe('提前取出的比较（假设 + 表格）')
     btn.click()
-    const region = kids(s)[2]!
+    const region = kids(s)[3]!
     expect(all(region, x => x.tag === 'svg' || x.tag === 'figure')).toHaveLength(0)
     const ids = all(region, x => !!x.attrs['data-testid']).map(x => x.attrs['data-testid'])
     for (const id of ['ee-assume-1', 'single-only-footnote', 'spouse-only-notice', 'ee-table', 'ee-cards'])
@@ -183,7 +183,7 @@ describe('early exit: one h2, chart visible, fold = assumptions + table + text',
     const { createEarlyExit } = await import('../src/early-exit-view')
     const view = createEarlyExit()
     view.update(form({}, 'avDepot'), null)
-    expect(kids(view.section as unknown as FakeEl)[0]!.hidden).toBe(true)
+    expect(kids(view.section as unknown as FakeEl)[1]!.hidden).toBe(true)
   })
 })
 
@@ -221,12 +221,12 @@ describe('folded notes (「详情与依据」)', () => {
     expect(out[1]!.attrs['data-testid']).toBe(STR.noticeKids.id)
     expect(all(out[0]!, x => x.tag === 'details')).toHaveLength(0)
   })
-  it('main.ts uses them (no loose taxNote / jointApprox / foerBonus paragraphs, brief inside the grid)', () => {
+  it('main.ts uses them (no loose taxNote / jointApprox / foerBonus paragraphs, the grid holds form and results only)', () => {
     const main = src('main.ts')
     expect(main).toContain('resultNotes(')
     expect(main).toContain('footerNotices()')
     expect(main).not.toMatch(/txt\('p', '(taxNote|jointApproxNotice|foerBonus)'/)
-    expect(main).toMatch(/h\('div', \{ class: 'grid' \}, form, results, early\.brief\)/)
+    expect(main).toMatch(/h\('div', \{ class: 'grid' \}, form, results\)/)
   })
 })
 
@@ -322,49 +322,111 @@ describe('e10 spacing (perrule.json, 13 rules) with every other spacing kept', (
   })
 })
 
-describe('layout: idle status takes no space, brief joins the left column from 1000 px', () => {
+describe('layout: idle status takes no space; two columns from 1000 px, the brief lives inside section#ee', () => {
   it('idle status: display none (not just invisible)', () => {
     expect(last('.cmp3-status.idle', 'display')).toBe('none')
     expect(last('.cmp3-status.idle', 'visibility')).toBeUndefined()
   })
-  it('≥ 1000 px: grid areas form / brief in the left column, results spanning both rows; < 1000 px: one column in DOM order', () => {
+  it('≥ 1000 px: two columns as in 0.3.1 (no grid areas, brief no longer a grid item); < 1000 px: one column in DOM order', () => {
     const wide = '(min-width: 1000px)'
-    expect(last('.grid', 'grid-template-areas', wide)).toBe('"form results" "brief results"')
-    expect(last('.grid', 'grid-template-rows', wide)).toBe('auto 1fr')
-    expect(last('.inputs', 'grid-area', wide)).toBe('form')
-    expect(last('.results', 'grid-area', wide)).toBe('results')
-    expect(last('.ee-brief', 'grid-area', wide)).toBe('brief')
+    expect(last('.grid', 'grid-template-areas', wide)).toBeUndefined()
+    expect(last('.grid', 'grid-template-rows', wide)).toBeUndefined()
+    expect(last('.inputs', 'grid-area', wide)).toBeUndefined()
+    expect(last('.results', 'grid-area', wide)).toBeUndefined()
+    expect(last('.ee-brief', 'grid-area', wide)).toBeUndefined()
     expect(last('.grid', 'grid-template-columns', wide)).toBe('minmax(320px, 5fr) 7fr')
     expect(last('.grid', 'grid-template-columns')).toBe('1fr')
   })
 })
 
+/** document-order index of a node inside root (-1 when absent) */
+const pos = (root: FakeEl, n: FakeEl) => all(root, () => true).indexOf(n)
+
+async function eeFresh(hash: string | null) {
+  const g = globalThis as Record<string, unknown>
+  const saved = { location: g.location, window: g.window, raf: g.requestAnimationFrame }
+  g.location = { hash: hash ?? '' }
+  g.window = { addEventListener: () => {} }
+  g.requestAnimationFrame = undefined
+  try {
+    setFakeWidth(1000)
+    const { createEarlyExit } = await import('../src/early-exit-view')
+    const v = createEarlyExit()
+    const o = evaluate(form({}, 'avDepot'), TODAY)
+    v.update(form({}, 'avDepot'), o.ok ? o : null)
+    return v
+  }
+  finally { Object.assign(g, { location: saved.location, window: saved.window, requestAnimationFrame: saved.raf }) }
+}
+
+describe('0.3.2 owner decision: the early-exit summary (existing wording, moved) sits above the chart, once', () => {
+  it('the section starts with the brief (h2, disclaimer, summary lines), then figure, toggle, region', async () => {
+    const v = await eeFresh(null)
+    const s = v.section as unknown as FakeEl
+    expect(kids(s).map(cls)).toEqual(['ee-brief', 'cmp3-figure', 'toggle', 'ee-region'])
+    expect(kids(s)[0]).toBe(v.brief as unknown as FakeEl)
+    expect(all(s, x => x.tag === 'h2')).toHaveLength(1)
+  })
+  it('each existing summary line appears exactly once in the section, with the unchanged wording, before the chart', async () => {
+    const v = await eeFresh(null)
+    const s = v.section as unknown as FakeEl
+    const lines = all(s, x => /^ee-summary-\d+$/.test(x.attrs['data-testid'] ?? ''))
+    expect(lines).toHaveLength(2)
+    expect(lines[0]!.textContent).toMatch(/^第 5 年年末（40 岁）取出：AV 一侧到手 /)
+    expect(byTestId(s, 'ee-summary')).toHaveLength(1)
+    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(1)
+    const svg = all(s, x => x.tag === 'svg' && x.attrs.class === 'cmp3-svg ee-svg')[0]!
+    for (const l of lines) expect(pos(s, l)).toBeLessThan(pos(s, svg))
+    expect(pos(s, byTestId(s, 'ee-heading')[0]!)).toBeLessThan(pos(s, lines[0]!))
+    // the chart label still repeats the same lines (screen readers), that text is the svg aria-label, not a visible second copy
+    expect(all(s, x => x.tag !== 'svg' && x.textContent.includes(lines[0]!.textContent) && x.tag === 'p')).toHaveLength(1)
+  })
+  it('main.ts places the early-exit section only; the brief is no longer a separate grid child (no duplicate in the old place)', () => {
+    const main = src('main.ts')
+    expect(main).not.toContain('early.brief')
+    expect(main.match(/early\.section/g)).toHaveLength(1)
+    expect(main).toMatch(/h\('div', \{ class: 'grid' \}, form, results\)/)
+    expect(css).not.toMatch(/\.ee-brief \{ grid-area/)
+    expect(css).not.toContain('"brief results"')
+  })
+  it('spacing inside the section: no doubled top margin/border on the brief; the 18 px gap summary → chart is kept', () => {
+    expect(last('.ee > .ee-brief', 'margin-top')).toBe('0')
+    expect(last('.ee > .ee-brief', 'border-top')).toBe('0')
+    expect(last('.ee > .cmp3-figure', 'margin-top')).toBe('18px')
+  })
+})
+
 describe('#ee', () => {
-  it('a page opened with #ee expands the fold and scrolls to the section top', async () => {
-    const g = globalThis as Record<string, unknown>
-    const saved = { location: g.location, window: g.window, raf: g.requestAnimationFrame }
-    g.location = { hash: '#ee' }
-    g.window = { addEventListener: () => {} }
-    g.requestAnimationFrame = undefined
-    try {
-      setFakeWidth(1000)
-      const { createEarlyExit } = await import('../src/early-exit-view')
-      const v = createEarlyExit()
-      const o = evaluate(form({}, 'avDepot'), TODAY)
-      v.update(form({}, 'avDepot'), o.ok ? o : null)
-      const s = v.section as unknown as FakeEl
-      expect(kids(s)[1]!.attrs['aria-expanded']).toBe('true')
-      expect(kids(s)[2]!.hidden).toBe(false)
-      expect(s.scrolled).toEqual({ n: 1, opts: { block: 'start' } })
-    }
-    finally { Object.assign(g, { location: saved.location, window: saved.window, requestAnimationFrame: saved.raf }) }
+  it('the #ee target (section id=ee) begins with the heading and summary, before the chart; opening with #ee expands the fold and scrolls to it', async () => {
+    const v = await eeFresh('#ee')
+    const s = v.section as unknown as FakeEl
+    expect(s.attrs.id).toBe('ee')
+    // what the anchor lands on: the first element of the target is the summary block, the chart comes after it
+    const first = kids(s)[0]!
+    expect(byTestId(first, 'ee-heading')).toHaveLength(1)
+    expect(byTestId(first, 'ee-summary-5')).toHaveLength(1)
+    expect(all(first, x => x.tag === 'svg')).toHaveLength(0)
+    expect(pos(s, byTestId(s, 'ee-summary-5')[0]!)).toBeLessThan(pos(s, all(s, x => x.tag === 'svg' && x.attrs.class === 'cmp3-svg ee-svg')[0]!))
+    // behaviour on #ee
+    expect(byTestId(s, 'ee-table')).toHaveLength(1)
+    expect(all(s, x => x.tag === 'button')[0]!.attrs['aria-expanded']).toBe('true')
+    expect(all(s, x => cls(x) === 'ee-region')[0]!.hidden).toBe(false)
+    expect(s.scrolled).toEqual({ n: 1, opts: { block: 'start' } })
+    // the id is unique in the section, so the anchor cannot land elsewhere
+    expect(all(s, x => x.attrs.id === 'ee')).toHaveLength(1)
+  })
+  it('without #ee: stays folded and does not scroll', async () => {
+    const v = await eeFresh(null)
+    const s = v.section as unknown as FakeEl
+    expect(all(s, x => x.tag === 'button')[0]!.attrs['aria-expanded']).toBe('false')
+    expect(s.scrolled.n).toBe(0)
   })
 })
 
 describe('0.3.2 owner follow-up: the 逐年明细 fold sits before the 不同存钱额 section, still collapsed', () => {
   const main = src('main.ts')
   const app = main.slice(main.indexOf("const app = h('main'"))
-  const order = ['early.brief)', 'yearly,', 'cmp3.section,', 'early.section,', 'notes,']
+  const order = ["class: 'grid'", 'yearly,', 'cmp3.section,', 'early.section,', 'notes,']
   it('app children order: grid, yearly, cmp3.section, early.section, notes (yearly is no longer last)', () => {
     const at = order.map(k => app.indexOf(k))
     expect(at.every(i => i >= 0)).toBe(true)

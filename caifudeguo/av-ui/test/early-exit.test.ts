@@ -234,8 +234,8 @@ describe('view (C.5)', () => {
     const o = evaluate(form(), TODAY)
     v.update(form(), o.ok ? o : null)
     const s = v.section as unknown as FakeEl
-    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(0)
-    // follow-up: heading + disclaimer + per-age lines + link down live in the brief block (below the result footnotes)
+    // 0.3.2 (owner): heading + disclaimer + per-age lines live in the brief block, the first child of the section (above the chart); no link down
+    expect(byTestId(s, 'ee-disclaimer')).toHaveLength(1)
     const b = v.brief as unknown as FakeEl
     expect(byTestId(b, 'ee-disclaimer')).toHaveLength(1)
     expect(byTestId(b, 'ee-heading')).toHaveLength(1)

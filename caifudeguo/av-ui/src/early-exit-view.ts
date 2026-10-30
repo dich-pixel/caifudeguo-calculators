@@ -151,7 +151,7 @@ export function summaryLines(e: EarlyExit): HTMLElement[] {
 
 export interface EarlyExitView {
   section: HTMLElement
-  /** short summary (heading, disclaimer, one line per age); main.ts puts it into the left column of the page grid */
+  /** short summary (heading, disclaimer, one line per age); it is the first child of `section` (above the chart), exposed for tests */
   brief: HTMLElement
   update: (values: FormValues, main: { result: Result, coreInput: Record<string, unknown> } | null) => void
 }
@@ -166,10 +166,12 @@ export function createEarlyExit(): EarlyExitView {
     txt('p', 'eeDisclaimer', { class: 'ee-disclaimer' }),
     summary,
   )
-  // The chart is always visible (summary in the brief above, then chart, caption, toggle); only assumptions, tables and notes fold.
+  // The chart is always visible (brief = heading, disclaimer, summary lines, then chart, caption, toggle); only assumptions, tables and notes fold.
+  // 0.3.2 (owner): the brief is the first child of section#ee, so the #ee anchor lands on the summary and the chart follows it.
   const box = h('div', { class: 'cmp3-chart-box' })
   const figure = h('figure', { 'class': 'cmp3-figure', 'data-testid': 'ee-chart', 'hidden': true }, box, h('figcaption', {}, txt('span', 'chartTableFirst')))
   const section = h('section', { 'id': 'ee', 'class': 'cmp3 ee', 'aria-labelledby': 'ee-brief-h', 'data-testid': 'ee' },
+    brief,
     figure,
     toggle,
     region,
