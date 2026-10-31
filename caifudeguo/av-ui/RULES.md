@@ -22,13 +22,13 @@ cases (`test/ui.test.ts`, `expectMatchesCore`).
 | `age`              | 当前年龄 (Alter)                                                                 | integer, 18–67                                                              | 19    |
 | `retirementAge`    | 退休年龄 (Renteneintrittsalter)                                                  | integer, 65–70                                                              | 20    |
 | `zveSavingsPhase`  | 工作期应税收入                                                                   | ≥ 0                                                                         | 21    |
-| `zveRetirement`    | 退休期应税收入                                                                   | ≥ 0                                                                         | 22    |
+| `zveRetirement`    | 退休期应税收入                                                                   | ≥ 0; default = zveSavingsPhase × `RETIREMENT_ZVE_RATIO` (0.5), until edited | 22    |
 | `savingsRate`      | 每年存入 (Sparbetrag)                                                            | 120 – `AV_CONTRIBUTION_CAP` = 13.680 (`constants/av-depot.ts:5`, 2 × 6.840) | 23    |
 | `etfReturnRate`    | ETF 年收益率 (Rendite)                                                           | > 0, ≤ 100 (%)                                                              | 24-28 |
 | `avDepotCosts`     | AV 账户费用 (Kosten)                                                             | 0–100 (%)                                                                   | 29-33 |
 | `exemptionOrder`   | 储蓄者免税额 (Sparerpauschbetrag)                                                | 0–1.000, default 1.000                                                      | 34    |
 | `taxSavingsMode`   | 退税去向                                                                         | `avDepot` / `secondaryDepot` / `consume`                                    | 35    |
-| `baseRate`         | 基准利率 (Basiszins)                                                             | 0–100 (%), default 0                                                        | 36-41 |
+| `baseRate`         | 基准利率 (Basiszins)                                                             | 0–100 (%), default 3,2                                                      | 36-41 |
 | `oneTimePayout`    | 领取开始时一次性取出 (Teilkapitalauszahlung, §1 Abs. 1 S. 1 Nr. 4 AltZertG n.F.) | 0–30 (%)                                                                    | 42-46 |
 | `payoutReturnRate` | 领取期收益率                                                                     | > 0, ≤ 100 (%)                                                              | 47-51 |
 | `payoutUntilAge`   | 领取到几岁 (Auszahlung bis)                                                      | integer, 85–120                                                             | 52    |

@@ -212,7 +212,11 @@ async function enter(p, v) {
       e.dispatchEvent(new Event('change', { bubbles: true }))
     })
   }
-  for (const [k, val] of Object.entries(v.f ?? {})) {
+  // 0.3.3: the form defaults changed (Basiszins 3,2 %, zveRetirement auto). The pinned expectations below were measured with
+  // the earlier defaults, so pin them here: baseRate 0, and zveRetirement 20.000 unless the case sets it (typed last, because
+  // typing zveSavingsPhase overwrites it while it is still in auto mode).
+  const { zveRetirement, ...rest } = { baseRate: '0,00', ...v.f }
+  for (const [k, val] of [...Object.entries(rest), ['zveRetirement', zveRetirement ?? '20.000']]) {
     await p.locator(`[data-testid=input-${k}]`).evaluate((e, val) => {
       e.value = val
       for (const t of ['input', 'change', 'blur', 'focusout']) e.dispatchEvent(new Event(t, { bubbles: true }))

@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { earlyExitFor } from '../src/early-exit'
 import { formatEuro } from '../src/format'
-import { DEFAULTS } from '../src/model'
 import { t as tr } from '../src/strings'
 import { all, byTestId, installFakeDom } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (f = {}, mode = 'avDepot') =>

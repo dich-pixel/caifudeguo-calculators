@@ -12,7 +12,7 @@ import { h, txt } from './dom'
 import { createEarlyExit } from './early-exit-view'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { startHeightReporting } from './height'
-import { DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
+import { createRetirementAuto, DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, placeCrossField, QUICK_AMOUNTS, remapKidErrors, verdict, withTouchedKids } from './model'
 import { footerNotices, resultNotes } from './notes'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
@@ -30,6 +30,16 @@ const cmp3 = createCmp3()
 const early = createEarlyExit()
 /** Kid rows touched (typed into or blurred); untouched rows are not calculated (plan f4). */
 const kidTouched: boolean[] = []
+/** 0.3.3: zveRetirement follows zveSavingsPhase × RETIREMENT_ZVE_RATIO until the user edits it (model.ts). */
+const retirementAuto = createRetirementAuto()
+const retirementRestore = txt('button', 'retirementAutoRestore', { type: 'button', class: 'linkbtn', hidden: true })
+retirementRestore.addEventListener('click', () => {
+  retirementAuto.restore(state.fields)
+  inputs.get('zveRetirement')!.value = state.fields.zveRetirement
+  retirementRestore.hidden = true
+  lastChanged = 'zveRetirement'
+  update()
+})
 
 
 // ---------- inputs ----------
@@ -51,6 +61,13 @@ function field(name: FieldName, labelKey: StrKey, helpKey?: StrKey, extra?: Node
   input.addEventListener('input', () => {
     state.fields[name] = input.value
     lastChanged = name
+    if (name === 'zveRetirement') {
+      retirementAuto.onRetirementEdit()
+      retirementRestore.hidden = false
+    }
+    else if (name === 'zveSavingsPhase' && retirementAuto.onSavingsEdit(state.fields)) {
+      inputs.get('zveRetirement')!.value = state.fields.zveRetirement
+    }
     update()
   })
   inputs.set(name, input)
@@ -301,7 +318,7 @@ function link(href: string, text: string, testid?: string): HTMLAnchorElement {
 
 function build() {
   const more = h('div', { class: 'more' },
-    field('zveRetirement', 'zveRetirement'),
+    field('zveRetirement', 'zveRetirement', undefined, retirementRestore),
     field('etfReturnRate', 'etfReturnRate'),
     field('avDepotCosts', 'avDepotCosts'),
     field('exemptionOrder', 'exemptionOrder', 'exemptionHelp'),

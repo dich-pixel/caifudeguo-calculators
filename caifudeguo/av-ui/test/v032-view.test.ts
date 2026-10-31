@@ -5,9 +5,10 @@ import type { FakeEl } from './fake-dom'
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { clearSweepCache, maxText, sensitivityText } from '../src/compare'
-import { DEFAULTS, evaluate } from '../src/model'
+import { evaluate } from '../src/model'
 import { STR, t } from '../src/strings'
 import { all, byTestId, installFakeDom, serialize, setFakeWidth } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 type Mode = FormValues['taxSavingsMode']

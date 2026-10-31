@@ -1,7 +1,8 @@
 // Stage 3 g7: untouched kid rows are not calculated and show no error (plan f4, g2 Q-T1).
 import type { FormValues } from '../src/model'
 import { describe, expect, it } from 'vitest'
-import { DEFAULTS, evaluate, remapKidErrors, withTouchedKids } from '../src/model'
+import { evaluate, remapKidErrors, withTouchedKids } from '../src/model'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (kids: string[]): FormValues => ({ ...structuredClone(DEFAULTS), kids })
