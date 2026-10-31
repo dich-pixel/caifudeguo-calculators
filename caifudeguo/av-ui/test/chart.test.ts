@@ -5,8 +5,8 @@ import type { FakeEl } from './fake-dom'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { axes, chartHeight, drawChart, GAP, geometry, NARROW_RIGHT_TICKS, PAD } from '../src/chart'
 import { clearSweepCache, sweep } from '../src/compare'
-import { DEFAULTS } from '../src/model'
 import { all, byTestId, installFakeDom } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (f: Partial<FormValues['fields']> = {}, mode?: FormValues['taxSavingsMode']): FormValues => ({ ...structuredClone(DEFAULTS), ...(mode ? { taxSavingsMode: mode } : {}), fields: { ...DEFAULTS.fields, ...f } })

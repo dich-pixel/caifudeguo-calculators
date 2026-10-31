@@ -4,8 +4,9 @@ import type { FakeEl } from './fake-dom'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { earlyExitFor, exitYears } from '../src/early-exit'
 import { calculateZulagen, germanIncomeTax } from '../src/generated/av-depot-exposed'
-import { DEFAULTS, evaluate  } from '../src/model'
+import { evaluate } from '../src/model'
 import { all, byTestId, installFakeDom } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (f: Partial<FormValues['fields']> = {}, mode: FormValues['taxSavingsMode'] = 'avDepot', kids: string[] = []): FormValues =>

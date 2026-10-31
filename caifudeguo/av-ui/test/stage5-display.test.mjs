@@ -4,8 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { relText } from '../src/cmp3'
 import { clearSweepCache, namedAmounts, sweep } from '../src/compare'
 import { earlyExitFor } from '../src/early-exit'
-import { DEFAULTS, evaluate } from '../src/model'
+import { evaluate } from '../src/model'
 import { all, byTestId, installFakeDom } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (f = {}, mode = 'avDepot') =>

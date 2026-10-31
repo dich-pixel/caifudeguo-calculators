@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 // follow-up (after 6f2863a): stage 4 chart at ≤ 375 px — annotations never collide, stacked x labels have leader lines
 import { beforeEach, describe, expect, it } from 'vitest'
 import { earlyExitFor } from '../src/early-exit'
-import { DEFAULTS } from '../src/model'
 import { all, installFakeDom } from './fake-dom'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 const form = (f = {}, mode = 'avDepot') =>

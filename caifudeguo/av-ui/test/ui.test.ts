@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { avDepot } from '../../../src/calculators/av-depot'
 import { formatCurrencyAdaptive } from '../../../src/utils/formatters'
 import { formatEuro, formatEuro2, formatNumberDe, formatPercentDe, roundHalfUp } from '../src/format'
-import { DEFAULTS, evaluate, MONTHLY_FROM_ROUNDED_ANNUAL, ONE_CONTRACT_CAP, placeCrossField, verdict } from '../src/model'
+import { evaluate, MONTHLY_FROM_ROUNDED_ANNUAL, ONE_CONTRACT_CAP, placeCrossField, verdict } from '../src/model'
 import { PARAMS_CHECK_DATE, startYear } from '../src/params'
 import { parseAmount, parseInteger, parsePercent } from '../src/parse'
 import { t } from '../src/strings'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 

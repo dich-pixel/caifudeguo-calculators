@@ -5,7 +5,8 @@ import { avDepot } from '../../../src/calculators/av-depot'
 import { formatCurrencyAdaptive } from '../../../src/utils/formatters'
 import { amountId, amountText, clearSweepCache, flipText, maxText, sensitivityText, sweep, TIERS } from '../src/compare'
 import { roundHalfUp } from '../src/format'
-import { DEFAULTS, evaluate, verdict } from '../src/model'
+import { evaluate, verdict } from '../src/model'
+import { LEGACY_DEFAULTS as DEFAULTS } from './legacy-defaults'
 
 const TODAY = new Date(2026, 9, 17)
 function form(fields: Partial<FormValues['fields']> = {}, extra: Partial<Omit<FormValues, 'fields'>> = {}): FormValues {

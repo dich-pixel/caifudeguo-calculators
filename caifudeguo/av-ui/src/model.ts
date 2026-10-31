@@ -41,18 +41,60 @@ export interface FormValues {
   kids: string[]
 }
 
-/** Finanzfluss web defaults read 2026-10-14 (plan §2). */
+/**
+ * 0.3.3: zveRetirement (退休期应税收入) is estimated as zveSavingsPhase (工作期应税收入) × this ratio until the user
+ * edits the field by hand. Single place for the ratio; the form has no after-tax-salary input, so zveSavingsPhase is the closest.
+ */
+export const RETIREMENT_ZVE_RATIO = 0.5
+
+/** Auto estimate for zveRetirement as a form string (whole euros, German format); null when the salary is not a valid amount ≥ 0. */
+export function autoRetirementZve(zveSavingsText: string): string | null {
+  const r = parseAmount(zveSavingsText)
+  if (!r.ok || r.value < 0)
+    return null
+  return formatNumberDe(Math.round(r.value * RETIREMENT_ZVE_RATIO))
+}
+
+export interface RetirementAuto {
+  /** true once the user typed into zveRetirement (auto overwrite stopped) */
+  readonly manual: boolean
+  /** zveSavingsPhase edited: in auto mode writes the estimate into fields.zveRetirement; returns true when it changed */
+  onSavingsEdit: (fields: Record<FieldName, string>) => boolean
+  /** zveRetirement edited by the user → manual mode */
+  onRetirementEdit: () => void
+  /** back to auto mode and recompute from the current salary */
+  restore: (fields: Record<FieldName, string>) => void
+}
+
+export function createRetirementAuto(): RetirementAuto {
+  let manual = false
+  const sync = (fields: Record<FieldName, string>): boolean => {
+    const next = autoRetirementZve(fields.zveSavingsPhase)
+    if (next === null || next === fields.zveRetirement)
+      return false
+    fields.zveRetirement = next
+    return true
+  }
+  return {
+    get manual() { return manual },
+    onSavingsEdit: fields => !manual && sync(fields),
+    onRetirementEdit: () => { manual = true },
+    restore: (fields) => { manual = false; sync(fields) },
+  }
+}
+
+/** Finanzfluss web defaults read 2026-10-14 (plan §2); 0.3.3: baseRate 3,2 % and zveRetirement auto (see RETIREMENT_ZVE_RATIO). */
 export const DEFAULTS: FormValues = {
   fields: {
     age: '35',
     retirementAge: '67',
     savingsRate: '1.800',
     zveSavingsPhase: '50.000',
-    zveRetirement: '20.000',
+    zveRetirement: autoRetirementZve('50.000')!,
     etfReturnRate: '6,0',
     avDepotCosts: '0,2',
     exemptionOrder: '1.000',
-    baseRate: '0,00',
+    baseRate: '3,20',
     oneTimePayout: '0',
     payoutReturnRate: '3,0',
     payoutUntilAge: '85',
