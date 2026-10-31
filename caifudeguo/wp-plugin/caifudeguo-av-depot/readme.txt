@@ -4,7 +4,7 @@ Tags: calculator, altersvorsorgedepot, chinese
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: AGPL-3.0-only
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -51,6 +51,9 @@ Corresponding source / 对应源代码：见 SOURCE.txt（fork 的固定 commit 
 Build / 打包：必须用 Node 22.14.0（.nvmrc）：`nvm use && pnpm run wp:zip`，或 `npx -p node@22.14.0 node caifudeguo/wp-plugin/build-zip.mjs`。其他版本会报错停下（`--allow-node-mismatch` 可跳过，SOURCE.txt 会记录实际版本）。
 
 == Changelog ==
+
+= 0.3.3 =
+* Basiszins 默认值改为 3,2 %；退休期应税收入默认按工作期应税收入的 50 % 自动估算，可手动修改，「按工资自动估算」可恢复。
 
 = 0.3.2 =
 * 图表始终显示，表格和文字说明收进可折叠区域；图表加了读屏说明。
