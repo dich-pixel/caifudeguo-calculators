@@ -87,12 +87,13 @@ describe('model invariants and formulas', () => {
     expect(result.payoff_month).toBe(0)
   })
 
-  it('uses Bayern 3.5 % Grunderwerbsteuer instead of the NW fallback', () => {
+  it('uses a user-entered Grunderwerbsteuer rate instead of the NW 6.5 % default', () => {
     const nw = compute({})
-    const by = compute({ bundesland: 'BY' })
+    const by = compute({ grest_pct: 0.035 })
     expect(nw.ok && by.ok).toBe(true)
     if (!nw.ok || !by.ok)
       return
+    almost(nw.derived.grest_pct, 0.065)
     almost(by.derived.grest_pct, 0.035)
     almost(by.derived.cost, 400_000 * (1 + 0.035 + 0.02 + 0.0357) + 20_000)
     expect(by.derived.L0).toBeLessThan(nw.derived.L0)

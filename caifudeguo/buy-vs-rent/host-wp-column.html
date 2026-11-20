@@ -28,23 +28,45 @@
             return o === 'null' ? '' : o
           } catch (e) { return '' }
         }
+        const hostDefaults = () => {
+          const raw = new URLSearchParams(location.search).get('defaults')
+          if (!raw) return {}
+          try {
+            const parsed = JSON.parse(raw)
+            return parsed && typeof parsed === 'object' ? parsed : {}
+          } catch (e) { return {} }
+        }
+        const settingsMessage = () => ({
+          type: 'caifu-buy-vs-rent:settings',
+          settings: { defaults: hostDefaults(), testInterface: true },
+        })
+        const postTo = (frame, payload) => {
+          const target = originOf(frame)
+          if (target !== '' && frame.contentWindow)
+            frame.contentWindow.postMessage(payload, target)
+        }
         window.addEventListener('message', (event) => {
           const data = event.data
-          if (!data || typeof data !== 'object' || data.type !== 'caifu-buy-vs-rent:height') return
-          let height = data.height
-          if (typeof height !== 'number' || !Number.isFinite(height) || height < MIN) return
-          height = Math.min(height, MAX)
+          if (!data || typeof data !== 'object') return
           document.querySelectorAll(SELECTOR).forEach((frame) => {
             if (!event.source || frame.contentWindow !== event.source) return
             const own = originOf(frame)
             if (own === '' || event.origin !== own) return
+            if (data.type === 'caifu-buy-vs-rent:need-settings') {
+              postTo(frame, settingsMessage())
+              return
+            }
+            if (data.type !== 'caifu-buy-vs-rent:height') return
+            let height = data.height
+            if (typeof height !== 'number' || !Number.isFinite(height) || height < MIN) return
+            height = Math.min(height, MAX)
             frame.style.height = Math.ceil(height) + 'px'
           })
         })
         document.querySelectorAll(SELECTOR).forEach((frame) => {
-          const target = originOf(frame)
-          if (target !== '' && frame.contentWindow)
-            frame.contentWindow.postMessage({ type: 'caifu-buy-vs-rent:resend' }, target)
+          frame.addEventListener('load', () => postTo(frame, settingsMessage()))
+          postTo(frame, settingsMessage())
+          postTo(frame, { type: 'caifu-buy-vs-rent:resend' })
         })
       })()
     </script>

@@ -25,6 +25,8 @@ export interface Dict {
   new_tilgung: string
   yes: string
   no: string
+  kirchen_8: string
+  kirchen_9: string
   run_mc: string
   mc_running: string
   copy_link: string
@@ -97,6 +99,9 @@ const zhHelp = {
   self_use_exempt: '在德国，私人出售房产时，如果买入和卖出相隔不满 10 年，收益通常要按个人所得税率交税（§23 EStG）。但如果房子在卖出当年和之前两个日历年都由你自己居住，就可以免税。计算器默认你满足自住条件。如果你取消这个选项，并且比较期少于 10 年，卖房收益会按你填写的个人边际税率征税。',
   etf_return: 'ETF 收益按德国资本收益税计算：25 % Abgeltungsteuer 加 5,5 % 团结附加税，合计 26,375 %（不计教会税）。股票型 ETF 有 30 % 的收益免税（Teilfreistellung），所以实际税率约为收益的 18,46 %。累积型 ETF 每年还要按 Vorabpauschale 预先交一部分税，计算基准是联邦财政部每年公布的 Basiszins（当前为 3,20 %），预交的税会在卖出时抵扣。每次从 ETF 取钱时，按平均成本法计算收益并当场交税。',
   tax_note: '计算器**不考虑**每人每年 1.000 €（夫妻 2.000 €）的资本收益免税额（Sparerpauschbetrag），假设它已经被你的其他存款、基金或股票收益用完。如果你实际上还有未用完的免税额，ETF 的实际税负会略低于计算结果。',
+  tax_note_on: '已按开关计入每年 1.000 €（单身）的 Sparerpauschbetrag，以及教会税。资本收益税按公式 rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) 计算，k 为所选教会税率 8 % 或 9 %。当年未用完的免税额不结转到下一年。',
+  use_sparer_kirchen: '默认关闭：不计 Sparerpauschbetrag，也不计教会税，资本收益税为 26,375 %。打开后，每年先扣除单身 Sparerpauschbetrag 1.000 €，并按所选 8 % 或 9 % 的教会税率用上述公式计算资本收益税。未用完的免税额不结转。',
+  kirchen_rate: '巴登-符腾堡和巴伐利亚为 8 %，其余联邦州为 9 %。默认 9 %。',
   nk: '在德国买房，除了房价，还要付 Grunderwerbsteuer（按联邦州 3,5–6,5 %）、公证和土地登记费（约 2 %），以及可能的中介费（买方通常约 3,57 %）。这些费用和装修费一样，付出去就收不回来，不会增加房子的市值。',
   loan_rate: '贷款按德国常见的年金方式计算：每月还款额固定，包括利息和本金。利率锁定期（Zinsbindung）结束后，剩余贷款按你填写的续贷利率（Anschlusszins）继续计算。默认月供不变；如果新利率太高、月供连利息都不够付，计算器会把月供提高到「利息 + 1 % 还本」。',
   matrix: '房价增速和 ETF 收益是影响结论最大的两个假设。矩阵把这两个数分别调低和调高，组成 9 种组合，显示每种组合下买房比租房多（绿色）或少（红色）的金额。',
@@ -130,7 +135,7 @@ export const zh: Dict = {
     wealth: '总资产（Gesamtvermögen）',
     nk_mode: '附加费用计算方式',
     nk_total_pct: '附加费用合计（Kaufnebenkosten gesamt）',
-    bundesland: '联邦州（Bundesland）',
+    grest_pct: 'Grunderwerbsteuer 税率',
     notary_pct: '公证 + 土地登记（Notar + Grundbuch）',
     broker_buy_pct: '买方中介费（Maklerprovision, Käufer）',
     maint_pct: '维护费率（Instandhaltung）',
@@ -163,9 +168,10 @@ export const zh: Dict = {
     sell_cost_pct: '卖房成本（Verkaufskosten）',
     self_use_exempt: '满足自住免税条件（§23 EStG）',
     personal_tax_rate: '个人边际税率',
+    use_sparer_kirchen: 'Sparerpauschbetrag / 教会税',
+    kirchen_rate: 'Kirchensteuer 税率',
     mc_runs: '模拟次数',
     mc_sigma: 'ETF 年化波动率 σ',
-    mc_sigma_house: '房价年化波动率 σ_Haus',
     mc_seed: '随机种子',
   },
   help: { ...zhHelp },
@@ -179,6 +185,8 @@ export const zh: Dict = {
   new_tilgung: '按新 Tilgung 重算',
   yes: '是',
   no: '否',
+  kirchen_8: '8 %',
+  kirchen_9: '9 %',
   run_mc: '运行模拟',
   mc_running: '正在模拟…',
   copy_link: '复制链接',
@@ -316,7 +324,7 @@ export const de: Dict = {
     wealth: 'Gesamtvermögen',
     nk_mode: 'Berechnung der Kaufnebenkosten',
     nk_total_pct: 'Kaufnebenkosten gesamt',
-    bundesland: 'Bundesland',
+    grest_pct: 'Grunderwerbsteuer',
     notary_pct: 'Notar + Grundbuch',
     broker_buy_pct: 'Maklerprovision (Käufer)',
     maint_pct: 'Instandhaltung',
@@ -349,9 +357,10 @@ export const de: Dict = {
     sell_cost_pct: 'Verkaufskosten',
     self_use_exempt: 'Selbstnutzung, steuerfrei nach §23 EStG',
     personal_tax_rate: 'Persönlicher Grenzsteuersatz',
+    use_sparer_kirchen: 'Sparerpauschbetrag / Kirchensteuer',
+    kirchen_rate: 'Kirchensteuersatz',
     mc_runs: 'Anzahl der Simulationen',
     mc_sigma: 'ETF-Volatilität σ (jährlich)',
-    mc_sigma_house: 'Immobilien-Volatilität σ_Haus (jährlich)',
     mc_seed: 'Zufallsstartwert',
   },
   help: {
@@ -363,6 +372,9 @@ export const de: Dict = {
     self_use_exempt: 'Beim privaten Verkauf einer Immobilie in Deutschland ist der Gewinn in der Regel einkommensteuerpflichtig (§23 EStG), wenn zwischen Kauf und Verkauf weniger als 10 Jahre liegen. Nutzen Sie die Immobilie im Jahr der Veräußerung und in den beiden vorangegangenen Kalenderjahren selbst, bleibt der Verkauf steuerfrei. Der Rechner nimmt das standardmäßig an. Deaktivieren Sie die Option und ist der Vergleichszeitraum kürzer als 10 Jahre, wird der Veräußerungsgewinn mit Ihrem persönlichen Grenzsteuersatz besteuert.',
     etf_return: 'ETF-Erträge werden nach deutscher Kapitalertragsteuer gerechnet: 25 % Abgeltungsteuer plus 5,5 % Solidaritätszuschlag, zusammen 26,375 % (ohne Kirchensteuer). Aktien-ETFs haben eine Teilfreistellung von 30 %, sodass der effektive Satz rund 18,46 % der Erträge beträgt. Thesaurierende ETFs zahlen außerdem jährlich eine Vorabpauschale; Bemessungsgrundlage ist der vom Bundesfinanzministerium veröffentlichte Basiszins (derzeit 3,20 %). Die vorausbezahlte Steuer wird beim Verkauf angerechnet. Bei jeder Entnahme aus dem ETF wird der Gewinn nach Durchschnittsmethode ermittelt und sofort versteuert.',
     tax_note: 'Der Rechner berücksichtigt den Sparerpauschbetrag von 1.000 € je Person (2.000 € bei Zusammenveranlagung) nicht und nimmt an, dass er bereits durch andere Kapitalerträge aufgebraucht ist. Haben Sie tatsächlich noch ungenutzten Pauschbetrag, liegt die tatsächliche Steuerbelastung der ETFs etwas unter dem Rechenergebnis.',
+    tax_note_on: 'Der Schalter ist aktiv: Es werden der Sparerpauschbetrag von 1.000 € je Jahr (ledig) und die Kirchensteuer berücksichtigt. Die Kapitalertragsteuer folgt der Formel rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) mit dem gewählten Kirchensteuersatz k von 8 % oder 9 %. Ein nicht ausgeschöpfter Pauschbetrag wird nicht ins Folgejahr übertragen.',
+    use_sparer_kirchen: 'Standardmäßig aus: ohne Sparerpauschbetrag und ohne Kirchensteuer, Kapitalertragsteuer 26,375 %. Wenn eingeschaltet, wird jährlich zuerst der Sparerpauschbetrag von 1.000 € (ledig) abgezogen und die Kirchensteuer mit 8 % oder 9 % nach der genannten Formel einbezogen. Nicht ausgeschöpfter Pauschbetrag wird nicht vorgetragen.',
+    kirchen_rate: 'In Baden-Württemberg und Bayern beträgt die Kirchensteuer 8 %, in den übrigen Ländern 9 %. Vorgabe ist 9 %.',
     nk: 'Beim Immobilienkauf in Deutschland fallen neben dem Kaufpreis die Grunderwerbsteuer (je nach Bundesland 3,5–6,5 %), Notar- und Grundbuchkosten (rund 2 %) und gegebenenfalls eine Maklerprovision (Käuferseite typischerweise rund 3,57 %) an. Diese Kosten und die Renovierung sind versunken: Sie erhöhen den Marktwert der Immobilie nicht.',
     loan_rate: 'Das Darlehen wird als typische deutsche Annuität gerechnet: Die monatliche Rate ist fest und enthält Zins und Tilgung. Nach Ende der Zinsbindung wird die Restschuld mit dem von Ihnen angegebenen Anschlusszins weitergerechnet. Standardmäßig bleibt die Rate unverändert; reicht sie beim neuen Zins nicht einmal für die Zinsen, hebt der Rechner sie auf „Zins + 1 % Tilgung“ an.',
     matrix: 'Immobilienpreis-Wachstum und ETF-Rendite sind die beiden Annahmen mit dem größten Einfluss. Die Matrix senkt und hebt beide Werte und zeigt in neun Kombinationen, um wie viel die Käuferseite besser (grün) oder schlechter (rot) abschneidet als die Mietseite.',
@@ -385,6 +397,8 @@ export const de: Dict = {
   new_tilgung: 'Mit neuer Tilgung neu rechnen',
   yes: 'Ja',
   no: 'Nein',
+  kirchen_8: '8 %',
+  kirchen_9: '9 %',
   run_mc: 'Simulation starten',
   mc_running: 'Simulation läuft…',
   copy_link: 'Link kopieren',
@@ -503,22 +517,3 @@ export const de: Dict = {
 }
 
 export const dicts: Record<Lang, Dict> = { zh, de }
-
-export const BUNDESLAND_LABELS: Record<string, { zh: string, de: string }> = {
-  BW: { zh: 'Baden-Württemberg (BW)', de: 'Baden-Württemberg (BW)' },
-  BY: { zh: 'Bayern (BY)', de: 'Bayern (BY)' },
-  BE: { zh: 'Berlin (BE)', de: 'Berlin (BE)' },
-  BB: { zh: 'Brandenburg (BB)', de: 'Brandenburg (BB)' },
-  HB: { zh: 'Bremen (HB)', de: 'Bremen (HB)' },
-  HH: { zh: 'Hamburg (HH)', de: 'Hamburg (HH)' },
-  HE: { zh: 'Hessen (HE)', de: 'Hessen (HE)' },
-  MV: { zh: 'Mecklenburg-Vorpommern (MV)', de: 'Mecklenburg-Vorpommern (MV)' },
-  NI: { zh: 'Niedersachsen (NI)', de: 'Niedersachsen (NI)' },
-  NW: { zh: 'Nordrhein-Westfalen (NW)', de: 'Nordrhein-Westfalen (NW)' },
-  RP: { zh: 'Rheinland-Pfalz (RP)', de: 'Rheinland-Pfalz (RP)' },
-  SL: { zh: 'Saarland (SL)', de: 'Saarland (SL)' },
-  SN: { zh: 'Sachsen (SN)', de: 'Sachsen (SN)' },
-  ST: { zh: 'Sachsen-Anhalt (ST)', de: 'Sachsen-Anhalt (ST)' },
-  SH: { zh: 'Schleswig-Holstein (SH)', de: 'Schleswig-Holstein (SH)' },
-  TH: { zh: 'Thüringen (TH)', de: 'Thüringen (TH)' },
-}

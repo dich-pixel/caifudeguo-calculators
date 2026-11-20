@@ -12,6 +12,7 @@ import type {
   YearRow,
 } from './types'
 import { EtfAccount } from './account'
+import { churchTaxCombinedRate, SPARERPAUSCHBETRAG_SINGLE } from './constants'
 import { mergeConfig, mergeInputs, resolveInputs, validate } from './validate'
 
 function monthlyFactor(annual: number): number {
@@ -120,10 +121,11 @@ export function runModel(
   const M = 12 * resolved.horizon_years
   const fEtfDefault = monthlyFactor(resolved.etf_return)
   const borrowFactor = monthlyFactor(resolved.borrow_rate)
+  const kirchen = resolved.use_sparer_kirchen ? resolved.kirchen_rate : 0
   const acctCfg = {
-    taxRate: config.tax_rate,
+    taxRate: resolved.use_sparer_kirchen ? churchTaxCombinedRate(kirchen) : config.tax_rate,
     teilfreistellung: config.teilfreistellung,
-    sparerpauschbetrag: config.sparerpauschbetrag,
+    sparerpauschbetrag: resolved.use_sparer_kirchen ? SPARERPAUSCHBETRAG_SINGLE : config.sparerpauschbetrag,
     borrowMonthlyFactor: borrowFactor,
   }
   const buyer = new EtfAccount(acctCfg)

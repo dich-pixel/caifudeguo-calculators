@@ -2,17 +2,17 @@ import type { Issue } from '../engine/types'
 import type {Dict, Lang} from './messages';
 import { FIELD_RANGES } from '../engine/constants'
 import { formatDeNumber, formatEUR, formatPct } from '../ui/format'
-import { BUNDESLAND_LABELS, de,  dicts,  zh } from './messages'
+import { de, dicts, zh } from './messages'
 
 export type { Dict, Lang }
-export { BUNDESLAND_LABELS, de, dicts, zh }
+export { de, dicts, zh }
 
 const PCT_FIELDS = new Set([
-  'nk_total_pct', 'notary_pct', 'broker_buy_pct', 'maint_pct', 'building_share',
+  'nk_total_pct', 'grest_pct', 'notary_pct', 'broker_buy_pct', 'maint_pct', 'building_share',
   'maint_growth', 'buyer_other_growth', 'house_growth', 'loan_rate', 'init_tilgung',
   'follow_rate', 'follow_tilgung', 'sondertilgung_pct', 'rent_growth', 'renter_nk_growth',
   'cash_growth', 'etf_return', 'inflation', 'borrow_rate', 'sell_cost_pct',
-  'personal_tax_rate', 'mc_sigma', 'mc_sigma_house',
+  'personal_tax_rate', 'kirchen_rate', 'mc_sigma',
 ])
 
 export function getDict(lang: Lang): Dict {

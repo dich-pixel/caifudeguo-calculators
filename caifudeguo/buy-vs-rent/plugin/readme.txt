@@ -15,7 +15,7 @@ License URI: https://www.gnu.org/licenses/agpl-3.0.html
 * 短代码：`[caifu_buy_vs_rent]`，可选属性 `lang="zh|de"`、`preset="default"`、`height`（初始高度，像素，默认 2400）、`title`（iframe 的无障碍标题）。
 * Gutenberg 区块「买房 vs 租房」使用同一个渲染器。
 * 计算器以 iframe 显示（插件目录 `app/index.html`），完全在浏览器里计算：不上传用户输入、不用 cookie、不调用第三方服务。
-* 后台：设置 → 买房 vs 租房，可更新 Basiszins、各州 Grunderwerbsteuer、默认语言和免责声明。卸载插件时删除这些设置。
+* 后台：设置 → 买房 vs 租房，可更新 Basiszins、输入默认值（含 Grunderwerbsteuer 税率）、默认语言和免责声明。卸载插件时删除这些设置。
 * 高度自适应：计算器页面用 ResizeObserver 测高，通过 postMessage 告诉父页面。插件只接受来自该 iframe 本身、且来源与其地址一致的消息（以及本站 / 插件 origin 和 caifudeguo.de）。
 * 兼容 WP Rocket「延迟 JavaScript 执行」和「Remove Unused CSS」：计算界面在 iframe 内，样式不会被主题页扫描去掉；embed.js 在运行时读取配置并会补发高度请求，不必把脚本从延迟执行中排除。
 

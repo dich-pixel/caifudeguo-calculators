@@ -83,3 +83,26 @@ test.describe('buy-vs-rent smoke (WP-like host)', () => {
     await page.screenshot({ path: `${SHOT}/host-de-800x1000.png`, fullPage: true })
   })
 })
+
+
+test.describe('admin defaults reach the frontend', () => {
+  test('a changed admin default shows up in the form and is restored by reset', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    const defaults = encodeURIComponent(JSON.stringify({ price: 350000, rent: 1600, grest_pct: 0.035 }))
+    await page.goto(`/host-wp-column.html?defaults=${defaults}`)
+    const doc = await frame(page)
+    await expect(doc.locator('#cbr-price')).toBeVisible({ timeout: 15_000 })
+    await expect(doc.locator('#cbr-price')).toHaveValue('350.000')
+    await expect(doc.locator('#cbr-rent')).toHaveValue('1.600')
+    await expect(doc.locator('#cbr-grest_pct')).toHaveValue('3,50')
+    await expect(doc.locator('#cbr-bundesland')).toHaveCount(0)
+    await expect(doc.locator('#cbr-mc_sigma_house')).toHaveCount(0)
+    await doc.locator('#cbr-price').fill('400000')
+    await doc.locator('#cbr-price').blur()
+    await doc.locator('#cbr-reset').click()
+    await expect(doc.locator('#cbr-price')).toHaveValue('350.000')
+    await expect(doc.locator('#cbr-rent')).toHaveValue('1.600')
+    await expect(doc.locator('#cbr-grest_pct')).toHaveValue('3,50')
+  })
+})
+

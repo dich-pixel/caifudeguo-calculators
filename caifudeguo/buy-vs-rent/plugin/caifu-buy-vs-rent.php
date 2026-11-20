@@ -26,15 +26,7 @@ if (!defined('ABSPATH')) {
 define('CAIFU_BVR_VERSION', '1.0.0');
 define('CAIFU_BVR_OPTION', 'caifu_buy_vs_rent_settings');
 
-function caifu_bvr_default_grest()
-{
-    return array(
-        'BW' => 5.0, 'BY' => 3.5, 'BE' => 6.0, 'BB' => 6.5,
-        'HB' => 5.5, 'HH' => 5.5, 'HE' => 6.0, 'MV' => 6.0,
-        'NI' => 5.0, 'NW' => 6.5, 'RP' => 5.0, 'SL' => 6.5,
-        'SN' => 5.5, 'ST' => 5.0, 'SH' => 6.5, 'TH' => 5.0,
-    );
-}
+require_once __DIR__ . '/includes/input-defaults.php';
 
 function caifu_bvr_default_disclaimer_zh()
 {
@@ -52,14 +44,6 @@ function caifu_bvr_settings()
     if (!is_array($saved)) {
         $saved = array();
     }
-    $grest = caifu_bvr_default_grest();
-    if (isset($saved['grest']) && is_array($saved['grest'])) {
-        foreach ($grest as $code => $rate) {
-            if (isset($saved['grest'][$code]) && is_numeric($saved['grest'][$code])) {
-                $grest[$code] = (float) $saved['grest'][$code];
-            }
-        }
-    }
     $basis = isset($saved['basiszins']) && is_numeric($saved['basiszins']) ? (float) $saved['basiszins'] : 3.2;
     $year = isset($saved['basiszins_year']) ? absint($saved['basiszins_year']) : 2026;
     $lang = (isset($saved['default_lang']) && $saved['default_lang'] === 'de') ? 'de' : 'zh';
@@ -67,11 +51,11 @@ function caifu_bvr_settings()
         ? $saved['disclaimer_zh'] : caifu_bvr_default_disclaimer_zh();
     $disclaimer_de = isset($saved['disclaimer_de']) && is_string($saved['disclaimer_de']) && $saved['disclaimer_de'] !== ''
         ? $saved['disclaimer_de'] : caifu_bvr_default_disclaimer_de();
-    $defaults = (isset($saved['defaults']) && is_array($saved['defaults'])) ? $saved['defaults'] : array();
+    $defaults_raw = (isset($saved['defaults']) && is_array($saved['defaults'])) ? $saved['defaults'] : array();
+    $defaults = caifu_bvr_sanitize_defaults($defaults_raw);
     return array(
         'basiszins'        => $basis,
         'basiszins_year'   => $year,
-        'grest'            => $grest,
         'default_lang'     => $lang,
         'disclaimer_zh'    => $disclaimer_zh,
         'disclaimer_de'    => $disclaimer_de,
@@ -80,7 +64,7 @@ function caifu_bvr_settings()
 }
 
 /**
- * Frontend settings payload. grest / basiszins are decimals, as the engine expects.
+ * Frontend settings payload. basiszins is a decimal, as the engine expects.
  *
  * @param string $lang
  * @param bool   $test
@@ -89,23 +73,16 @@ function caifu_bvr_settings()
 function caifu_bvr_frontend_settings($lang, $test)
 {
     $s = caifu_bvr_settings();
-    $grest = array();
-    foreach ($s['grest'] as $code => $pct) {
-        $grest[$code] = ((float) $pct) / 100.0;
-    }
     $payload = array(
         'lang'            => ($lang === 'de') ? 'de' : 'zh',
         'basiszins'       => ((float) $s['basiszins']) / 100.0,
         'basiszins_year'  => (int) $s['basiszins_year'],
-        'grest'           => $grest,
         'disclaimer_zh'   => $s['disclaimer_zh'],
         'disclaimer_de'   => $s['disclaimer_de'],
         'version'         => CAIFU_BVR_VERSION,
         'testInterface'   => (bool) $test,
     );
-    if (!empty($s['defaults']) && is_array($s['defaults'])) {
-        $payload['defaults'] = $s['defaults'];
-    }
+    $payload['defaults'] = $s['defaults'];
     return $payload;
 }
 
@@ -292,18 +269,13 @@ function caifu_bvr_sanitize_settings($raw)
     if (isset($raw['disclaimer_de']) && is_string($raw['disclaimer_de'])) {
         $out['disclaimer_de'] = wp_kses_post($raw['disclaimer_de']);
     }
-    $grest = caifu_bvr_default_grest();
-    if (isset($raw['grest']) && is_array($raw['grest'])) {
-        foreach ($grest as $code => $rate) {
-            if (isset($raw['grest'][$code]) && is_numeric($raw['grest'][$code])) {
-                $v = (float) $raw['grest'][$code];
-                if ($v >= 0 && $v <= 20) {
-                    $grest[$code] = $v;
-                }
-            }
-        }
+    if (isset($raw['defaults']) && is_array($raw['defaults'])) {
+        $out['defaults'] = caifu_bvr_sanitize_defaults_from_admin($raw['defaults']);
+    } else {
+        $out['defaults'] = caifu_bvr_sanitize_defaults(
+            isset($out['defaults']) && is_array($out['defaults']) ? $out['defaults'] : array()
+        );
     }
-    $out['grest'] = $grest;
     return $out;
 }
 
@@ -320,6 +292,55 @@ function caifu_bvr_handle_admin_post()
     add_settings_error('caifu_bvr', 'saved', '设置已保存。', 'updated');
 }
 add_action('admin_init', 'caifu_bvr_handle_admin_post');
+
+function caifu_bvr_render_admin_defaults_fields($defaults)
+{
+    echo '<h2>' . esc_html__('默认值预设', 'caifu-buy-vs-rent') . '</h2>';
+    foreach (caifu_bvr_input_field_schema() as $section => $fields) {
+        echo '<h3>' . esc_html($section) . '</h3>';
+        echo '<table class="form-table" role="presentation">';
+        foreach ($fields as $key => $meta) {
+            $name = 'caifu_bvr[defaults][' . $key . ']';
+            $id = 'cbr-default-' . $key;
+            $value = array_key_exists($key, $defaults) ? $defaults[$key] : null;
+            echo '<tr><th scope="row">';
+            echo '<label for="' . esc_attr($id) . '">' . esc_html($meta['label']) . '</label>';
+            echo '</th><td>';
+            if ($meta['kind'] === 'enum' || $meta['kind'] === 'bool') {
+                $current = caifu_bvr_admin_display_value($key, $value);
+                echo '<select name="' . esc_attr($name) . '" id="' . esc_attr($id) . '">';
+                foreach ($meta['options'] as $opt => $lab) {
+                    echo '<option value="' . esc_attr((string) $opt) . '"' . selected($current, (string) $opt, false) . '>';
+                    echo esc_html($lab);
+                    echo '</option>';
+                }
+                echo '</select>';
+            } elseif ($key === 'fix_years') {
+                $is_full = ($value === null);
+                $display = $is_full ? '' : caifu_bvr_admin_display_value($key, $value);
+                echo '<input type="text" class="small-text" name="' . esc_attr($name) . '" id="' . esc_attr($id) . '" value="' . esc_attr($display) . '" inputmode="decimal" />';
+                if (!empty($meta['unit'])) {
+                    echo ' <span>' . esc_html($meta['unit']) . '</span>';
+                }
+                echo ' <label><input type="checkbox" name="caifu_bvr[defaults][fix_years_full]" value="1"' . checked($is_full, true, false) . ' /> ';
+                echo esc_html__('全期', 'caifu-buy-vs-rent') . '</label>';
+            } else {
+                $display = caifu_bvr_admin_display_value($key, $value);
+                $placeholder = isset($meta['empty']) ? $meta['empty'] : '';
+                echo '<input type="text" class="regular-text" name="' . esc_attr($name) . '" id="' . esc_attr($id) . '" value="' . esc_attr($display) . '"';
+                if ($placeholder !== '') {
+                    echo ' placeholder="' . esc_attr($placeholder) . '"';
+                }
+                echo ' inputmode="decimal" />';
+                if (!empty($meta['unit'])) {
+                    echo ' <span>' . esc_html($meta['unit']) . '</span>';
+                }
+            }
+            echo '</td></tr>';
+        }
+        echo '</table>';
+    }
+}
 
 function caifu_bvr_render_admin()
 {
@@ -339,14 +360,10 @@ function caifu_bvr_render_admin()
     echo '<tr><th scope="row">默认语言</th><td>';
     echo '<select name="caifu_bvr[default_lang]"><option value="zh"' . selected($s['default_lang'], 'zh', false) . '>中文</option>';
     echo '<option value="de"' . selected($s['default_lang'], 'de', false) . '>Deutsch</option></select></td></tr>';
-    echo '<tr><th scope="row">Grunderwerbsteuer (%)</th><td><table>';
-    foreach ($s['grest'] as $code => $rate) {
-        echo '<tr><th scope="row">' . esc_html($code) . '</th><td><input name="caifu_bvr[grest][' . esc_attr($code) . ']" type="text" class="small-text" value="' . esc_attr((string) $rate) . '" /></td></tr>';
-    }
-    echo '</table></td></tr>';
     echo '<tr><th scope="row">免责声明（中文）</th><td><textarea name="caifu_bvr[disclaimer_zh]" class="large-text" rows="6">' . esc_textarea($s['disclaimer_zh']) . '</textarea></td></tr>';
     echo '<tr><th scope="row">Haftungsausschluss (Deutsch)</th><td><textarea name="caifu_bvr[disclaimer_de]" class="large-text" rows="6">' . esc_textarea($s['disclaimer_de']) . '</textarea></td></tr>';
     echo '</table>';
+    caifu_bvr_render_admin_defaults_fields($s['defaults']);
     submit_button('保存设置');
     echo '</form></div>';
 }

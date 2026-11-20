@@ -12,7 +12,8 @@ export interface Inputs {
   wealth: number
   nk_mode: NkMode
   nk_total_pct: number
-  bundesland: string
+  /** Grunderwerbsteuer rate, default NW 6.5 % (PRD Appendix A). */
+  grest_pct: number
   notary_pct: number
   broker_buy_pct: number
   maint_pct: number
@@ -49,6 +50,10 @@ export interface Inputs {
   sell_cost_pct: number
   self_use_exempt: boolean
   personal_tax_rate: number
+  /** When true, apply Sparerpauschbetrag 1.000 € and Kirchensteuer at kirchen_rate. */
+  use_sparer_kirchen: boolean
+  /** Church tax rate 0.08 (BW, BY) or 0.09 (other Länder). Used only if use_sparer_kirchen. */
+  kirchen_rate: number
   mc_runs: number
   mc_sigma: number
   mc_sigma_house: number
@@ -58,7 +63,6 @@ export interface Inputs {
 /** Admin-configurable constants with built-in fallbacks. */
 export interface EngineConfig {
   basiszins: number
-  grest: Record<string, number>
   tax_rate: number
   teilfreistellung: number
   sparerpauschbetrag: number

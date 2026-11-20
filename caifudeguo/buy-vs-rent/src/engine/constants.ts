@@ -1,11 +1,31 @@
 import type { EngineConfig, Inputs } from './types'
 
-/** Effective Abgeltungsteuer + Soli, church tax k = 0. rate(k) = 0.25/(1+0.25*k)*(1+0.055+k). */
-export const TAX_RATE = 0.25 / (1 + 0.25 * 0) * (1 + 0.055 + 0)
+/**
+ * Combined Abgeltungsteuer + Soli + Kirchensteuer (PRD 4.7).
+ * rate(k) = 0.25/(1+0.25·k)·(1+0.055+k), k = church tax rate (0, 0.08 or 0.09).
+ */
+export function churchTaxCombinedRate(k: number): number {
+  return 0.25 / (1 + 0.25 * k) * (1 + 0.055 + k)
+}
+
+/** Effective rate with k = 0 (no church tax): 26.375 %. */
+export const TAX_RATE = churchTaxCombinedRate(0)
 
 export const TEILFREISTELLUNG = 0.3
 
+/** Off-state (Q-03 default): allowance unused. */
 export const SPARERPAUSCHBETRAG = 0
+
+/** Single-person Sparerpauschbetrag when the Q-03 switch is on. */
+export const SPARERPAUSCHBETRAG_SINGLE = 1000
+
+/** Default Kirchensteuer when the switch is on: 9 % (NW and most Länder). */
+export const KIRCHEN_RATE_DEFAULT = 0.09
+
+export const KIRCHEN_RATES = [0.08, 0.09] as const
+
+/** NW rate from PRD Appendix A (as of 2026-10). */
+export const DEFAULT_GREST_PCT = 0.065
 
 /** 2026 BMF value; overridable from the WP admin settings. */
 export const DEFAULT_BASISZINS = 0.032
@@ -14,31 +34,8 @@ export const PRNG_INITSEQ = 54
 
 export const REFI_FALLBACK_TILGUNG = 0.01
 
-/** Appendix A, as of 2026-10, fallback if the admin table is missing a state. */
-export const DEFAULT_GREST: Record<string, number> = {
-  BW: 0.05,
-  BY: 0.035,
-  BE: 0.06,
-  BB: 0.065,
-  HB: 0.055,
-  HH: 0.055,
-  HE: 0.06,
-  MV: 0.06,
-  NI: 0.05,
-  NW: 0.065,
-  RP: 0.05,
-  SL: 0.065,
-  SN: 0.055,
-  ST: 0.05,
-  SH: 0.065,
-  TH: 0.05,
-}
-
-export const BUNDESLAND_CODES = Object.keys(DEFAULT_GREST)
-
 export const DEFAULT_CONFIG: EngineConfig = {
   basiszins: DEFAULT_BASISZINS,
-  grest: { ...DEFAULT_GREST },
   tax_rate: TAX_RATE,
   teilfreistellung: TEILFREISTELLUNG,
   sparerpauschbetrag: SPARERPAUSCHBETRAG,
@@ -53,7 +50,7 @@ export const DEFAULT_INPUTS: Inputs = {
   wealth: 500_000,
   nk_mode: 'detailed',
   nk_total_pct: 0.1,
-  bundesland: 'NW',
+  grest_pct: DEFAULT_GREST_PCT,
   notary_pct: 0.02,
   broker_buy_pct: 0.0357,
   maint_pct: 0.012,
@@ -86,6 +83,8 @@ export const DEFAULT_INPUTS: Inputs = {
   sell_cost_pct: 0,
   self_use_exempt: true,
   personal_tax_rate: 0.42,
+  use_sparer_kirchen: false,
+  kirchen_rate: KIRCHEN_RATE_DEFAULT,
   mc_runs: 1000,
   mc_sigma: 0.15,
   mc_sigma_house: 0,
@@ -105,6 +104,7 @@ export const FIELD_RANGES: Record<string, FieldRange> = {
   down_payment: { min: 0, max: Number.POSITIVE_INFINITY },
   wealth: { min: 0, max: Number.POSITIVE_INFINITY },
   nk_total_pct: { min: 0, max: 0.2 },
+  grest_pct: { min: 0, max: 0.2 },
   notary_pct: { min: 0, max: 0.05 },
   broker_buy_pct: { min: 0, max: 0.0714 },
   maint_pct: { min: 0, max: 0.05 },

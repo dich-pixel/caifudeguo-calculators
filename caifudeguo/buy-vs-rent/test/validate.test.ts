@@ -61,7 +61,7 @@ describe('validation rules (PRD chapter 7)', () => {
   })
 
   it('flags I-NO-LOAN when own funds exceed total purchase cost (hand-computed)', () => {
-    // Default NW: nk = 6.5% + 2% + 3.57% = 12.07%
+    // Default GrESt (NW rate 6.5%) + 2% + 3.57% = 12.07%
     // cost = 400000 * 1.1207 + 20000 = 468280
     const { nk } = computeNk(DEFAULT_INPUTS, cfg)
     expect(nk).toBeCloseTo(0.1207, 12)
@@ -101,5 +101,11 @@ describe('validation rules (PRD chapter 7)', () => {
     expect(resolved.cash_growth).toBe(0.04)
     expect(resolved.maint_growth).toBe(0.04)
     expect(resolved.follow_rate).toBe(raw.loan_rate)
+  })
+
+  it('rejects a Grunderwerbsteuer rate outside 0–20 %', () => {
+    expect(validate(mergeInputs({ grest_pct: 0.21 }), cfg).errors.some(e => e.id === 'E-RATE' && e.field === 'grest_pct')).toBe(true)
+    expect(validate(mergeInputs({ grest_pct: -0.01 }), cfg).errors.some(e => e.id === 'E-RATE' && e.field === 'grest_pct')).toBe(true)
+    expect(validate(mergeInputs({ grest_pct: 0 }), cfg).errors).toEqual([])
   })
 })

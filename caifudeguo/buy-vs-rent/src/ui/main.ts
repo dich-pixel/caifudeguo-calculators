@@ -4,21 +4,14 @@ import type {Dict, Lang} from '../i18n';
 import type {ChartState} from './charts';
 import {
   BASISZINS_YEAR,
-  BUNDESLAND_CODES,
   compute,
-  
-  
   DEFAULT_CONFIG,
-  
-  
   mergeConfig,
   mergeInputs,
-  
   PLUGIN_VERSION,
-  
-  scenarioMatrix
+  scenarioMatrix,
 } from '../engine'
-import { BUNDESLAND_LABELS,  formatIssue, getDict  } from '../i18n'
+import { formatIssue, getDict } from '../i18n'
 import {
   
   renderCash,
@@ -41,7 +34,6 @@ interface PageSettings {
   lang?: Lang
   basiszins?: number
   basiszins_year?: number
-  grest?: Record<string, number>
   defaults?: Partial<Inputs>
   disclaimer_zh?: string
   disclaimer_de?: string
@@ -54,11 +46,11 @@ const MONEY = new Set([
   'renter_nebenkosten', 'renter_renovation', 'cash_monthly', 'rent',
 ])
 const PCT = new Set([
-  'nk_total_pct', 'notary_pct', 'broker_buy_pct', 'maint_pct', 'building_share',
+  'nk_total_pct', 'grest_pct', 'notary_pct', 'broker_buy_pct', 'maint_pct', 'building_share',
   'maint_growth', 'buyer_other_growth', 'house_growth', 'loan_rate', 'init_tilgung',
   'follow_rate', 'follow_tilgung', 'sondertilgung_pct', 'rent_growth', 'renter_nk_growth',
   'cash_growth', 'etf_return', 'inflation', 'borrow_rate', 'sell_cost_pct',
-  'personal_tax_rate', 'mc_sigma', 'mc_sigma_house',
+  'personal_tax_rate', 'kirchen_rate', 'mc_sigma',
 ])
 const POINTS = new Set(['house_err', 'etf_err'])
 const INTS = new Set(['horizon_years', 'mc_runs', 'mc_seed'])
@@ -67,7 +59,7 @@ const INHERITED = new Set([
   'renter_nk_growth', 'cash_growth',
 ])
 
-const BASIC: (keyof Inputs)[] = ['price', 'rent', 'wealth', 'down_payment', 'cash_monthly', 'bundesland', 'horizon_years']
+const BASIC: (keyof Inputs)[] = ['price', 'rent', 'wealth', 'down_payment', 'cash_monthly', 'grest_pct', 'horizon_years']
 const LOAN: (keyof Inputs)[] = ['loan_rate', 'init_tilgung', 'fix_years', 'follow_rate', 'follow_mode', 'follow_tilgung', 'sondertilgung_pct']
 const COSTS: (keyof Inputs)[] = [
   'renovation', 'nk_mode', 'nk_total_pct', 'notary_pct', 'broker_buy_pct',
@@ -75,8 +67,8 @@ const COSTS: (keyof Inputs)[] = [
   'buyer_other_costs', 'buyer_other_growth', 'renter_nebenkosten', 'renter_nk_growth', 'renter_renovation',
 ]
 const GROWTH: (keyof Inputs)[] = ['house_growth', 'rent_growth', 'etf_return', 'inflation', 'cash_growth', 'borrow_rate']
-const SELL: (keyof Inputs)[] = ['sell_cost_pct', 'self_use_exempt', 'personal_tax_rate']
-const RISK: (keyof Inputs)[] = ['house_err', 'etf_err', 'mc_runs', 'mc_sigma', 'mc_sigma_house', 'mc_seed']
+const SELL: (keyof Inputs)[] = ['sell_cost_pct', 'self_use_exempt', 'personal_tax_rate', 'use_sparer_kirchen', 'kirchen_rate']
+const RISK: (keyof Inputs)[] = ['house_err', 'etf_err', 'mc_runs', 'mc_sigma', 'mc_seed']
 
 type Tab = 'net' | 'composition' | 'loan' | 'cash' | 'tax' | 'matrix' | 'mc'
 
@@ -98,11 +90,15 @@ function $(sel: string, root: ParentNode = document): HTMLElement {
 }
 
 const settings = readSettings()
-const builtinDefaults = mergeInputs(settings.defaults ?? {})
+function withFixedProductDefaults(partial?: Partial<Inputs>): Inputs {
+  return { ...mergeInputs(partial), mc_sigma_house: 0 }
+}
+
+let builtinDefaults = withFixedProductDefaults(settings.defaults ?? {})
 let lang: Lang = (new URLSearchParams(location.search).get('lang') as Lang) || settings.lang || 'zh'
 if (lang !== 'zh' && lang !== 'de')
   lang = 'zh'
-let inputs: Inputs = mergeInputs({ ...builtinDefaults, ...queryToInputs(location.search) })
+let inputs: Inputs = withFixedProductDefaults({ ...builtinDefaults, ...queryToInputs(location.search) })
 let liquidated = true
 let real = false
 let yearMax = inputs.horizon_years
@@ -117,7 +113,6 @@ const charts: Record<string, Chart | null> = {}
 function engineConfig(): EngineConfig {
   return mergeConfig({
     basiszins: settings.basiszins ?? DEFAULT_CONFIG.basiszins,
-    grest: settings.grest ?? DEFAULT_CONFIG.grest,
   })
 }
 
@@ -170,7 +165,7 @@ function buildField(key: keyof Inputs): HTMLElement {
   const label = document.createElement('label')
   label.htmlFor = `cbr-${key}`
   label.innerHTML = `<span class="cbr-label">${d.fields[key] ?? key}</span>`
-  const help = fieldHelp(key) || (key === 'nk_mode' || key === 'nk_total_pct' || key === 'notary_pct' || key === 'bundesland' ? d.help.nk : undefined)
+  const help = fieldHelp(key) || (key === 'nk_mode' || key === 'nk_total_pct' || key === 'notary_pct' || key === 'grest_pct' || key === 'broker_buy_pct' ? d.help.nk : undefined)
     || (key === 'loan_rate' || key === 'init_tilgung' || key === 'fix_years' || key === 'follow_rate' || key === 'follow_mode' ? d.help.loan_rate : undefined)
   if (help) {
     const info = document.createElement('button')
@@ -186,20 +181,20 @@ function buildField(key: keyof Inputs): HTMLElement {
   }
   wrap.append(label)
 
-  if (key === 'bundesland') {
+  if (key === 'kirchen_rate') {
     const sel = document.createElement('select')
     sel.id = `cbr-${key}`
     sel.className = 'cbr-select'
-    for (const code of BUNDESLAND_CODES) {
+    for (const [v, lab] of [['0.08', d.kirchen_8], ['0.09', d.kirchen_9]] as const) {
       const opt = document.createElement('option')
-      opt.value = code
-      opt.textContent = BUNDESLAND_LABELS[code]?.[lang] ?? code
-      if (code === inputs.bundesland)
+      opt.value = v
+      opt.textContent = lab
+      if (String(inputs.kirchen_rate) === v)
         opt.selected = true
       sel.append(opt)
     }
     sel.addEventListener('change', () => {
-      inputs = { ...inputs, bundesland: sel.value }
+      inputs = { ...inputs, kirchen_rate: Number(sel.value) }
       schedule()
     })
     wrap.append(sel)
@@ -232,14 +227,18 @@ function buildField(key: keyof Inputs): HTMLElement {
     wrap.append(sel)
     return wrap
   }
-  if (key === 'self_use_exempt') {
+  if (key === 'self_use_exempt' || key === 'use_sparer_kirchen') {
     const sel = document.createElement('select')
     sel.id = `cbr-${key}`
     sel.className = 'cbr-select'
     sel.innerHTML = `<option value="1">${d.yes}</option><option value="0">${d.no}</option>`
-    sel.value = inputs.self_use_exempt ? '1' : '0'
+    const current = key === 'self_use_exempt' ? inputs.self_use_exempt : inputs.use_sparer_kirchen
+    sel.value = current ? '1' : '0'
     sel.addEventListener('change', () => {
-      inputs = { ...inputs, self_use_exempt: sel.value === '1' }
+      const on = sel.value === '1'
+      inputs = key === 'self_use_exempt'
+        ? { ...inputs, self_use_exempt: on }
+        : { ...inputs, use_sparer_kirchen: on }
       schedule()
       syncVisibility()
     })
@@ -410,7 +409,7 @@ function buildApp(): void {
   })
   $('#cbr-mc').addEventListener('click', runMc)
   $('#cbr-copy').addEventListener('click', () => {
-    const url = shareUrl(inputs)
+    const url = shareUrl(inputs, builtinDefaults)
     const fallback = () => {
       const box = document.createElement('input')
       box.value = url
@@ -438,7 +437,7 @@ function buildApp(): void {
       downloadCsv('buy-vs-rent-monthly.csv', monthlyCsv(result.monthly))
   })
   $('#cbr-reset').addEventListener('click', () => {
-    inputs = mergeInputs(settings.defaults ?? {})
+    inputs = withFixedProductDefaults(settings.defaults ?? {})
     mc = null
     buildApp()
     recalc(true)
@@ -454,7 +453,9 @@ function syncVisibility(): void {
   toggleField('broker_buy_pct', !total)
   toggleField('building_share', inputs.maint_base === 'building')
   toggleField('follow_tilgung', inputs.follow_mode === 'new_tilgung')
+  toggleField('grest_pct', !total)
   toggleField('personal_tax_rate', !inputs.self_use_exempt)
+  toggleField('kirchen_rate', inputs.use_sparer_kirchen)
 }
 
 function toggleField(key: string, show: boolean): void {
@@ -810,7 +811,7 @@ function renderFooter(): void {
     <details class="cbr-assumptions">
       <summary>${d.assumptions}</summary>
       <ul>${d.assume_items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
-      <p>${escapeHtml(d.help.tax_note ?? '')}</p>
+      <p>${escapeHtml((inputs.use_sparer_kirchen ? d.help.tax_note_on : d.help.tax_note) ?? '')}</p>
       <p>${escapeHtml(d.help.liq ?? '')}</p>
       <p>${escapeHtml(d.help.real ?? '')}</p>
     </details>
@@ -828,8 +829,10 @@ function applySettings(extra?: PageSettings): void {
     Object.assign(settings, extra)
     if (extra.lang === 'zh' || extra.lang === 'de')
       lang = extra.lang
-    if (extra.defaults)
-      inputs = mergeInputs({ ...mergeInputs(extra.defaults), ...queryToInputs(location.search) })
+    if (extra.defaults) {
+      builtinDefaults = withFixedProductDefaults(extra.defaults)
+      inputs = withFixedProductDefaults({ ...builtinDefaults, ...queryToInputs(location.search) })
+    }
   }
 }
 

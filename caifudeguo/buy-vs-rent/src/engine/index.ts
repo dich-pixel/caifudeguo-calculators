@@ -3,16 +3,19 @@ export type { AccountConfig } from './account'
 export { compute, runModel, scenarioMatrix } from './compute'
 export {
   BASISZINS_YEAR,
-  BUNDESLAND_CODES,
+  churchTaxCombinedRate,
   DEFAULT_BASISZINS,
   DEFAULT_CONFIG,
-  DEFAULT_GREST,
+  DEFAULT_GREST_PCT,
   DEFAULT_INPUTS,
   FIELD_RANGES,
+  KIRCHEN_RATE_DEFAULT,
+  KIRCHEN_RATES,
   PLUGIN_VERSION,
   PRNG_INITSEQ,
   REFI_FALLBACK_TILGUNG,
   SPARERPAUSCHBETRAG,
+  SPARERPAUSCHBETRAG_SINGLE,
   TAX_RATE,
   TEILFREISTELLUNG,
 } from './constants'

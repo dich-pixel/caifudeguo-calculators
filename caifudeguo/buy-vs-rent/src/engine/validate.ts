@@ -1,8 +1,9 @@
 import type { EngineConfig, FollowMode, Inputs, Issue, MaintBase, NkMode, ResolvedInputs } from './types'
-import { BUNDESLAND_CODES, DEFAULT_CONFIG, DEFAULT_INPUTS, FIELD_RANGES } from './constants'
+import { DEFAULT_CONFIG, DEFAULT_INPUTS, FIELD_RANGES, KIRCHEN_RATES } from './constants'
 
 const RATE_FIELDS = [
   'nk_total_pct',
+  'grest_pct',
   'notary_pct',
   'broker_buy_pct',
   'maint_pct',
@@ -53,19 +54,15 @@ export function isFiniteNumber(v: unknown): v is number {
 }
 
 export function mergeConfig(partial?: Partial<EngineConfig>): EngineConfig {
-  return {
-    ...DEFAULT_CONFIG,
-    ...partial,
-    grest: { ...DEFAULT_CONFIG.grest, ...(partial?.grest ?? {}) },
-  }
+  return { ...DEFAULT_CONFIG, ...partial }
 }
 
 export function mergeInputs(partial?: Partial<Inputs>): Inputs {
   return { ...DEFAULT_INPUTS, ...partial }
 }
 
-export function computeNk(input: Inputs, config: EngineConfig): { nk: number, grest_pct: number } {
-  const grest_pct = config.grest[input.bundesland] ?? 0
+export function computeNk(input: Inputs, _config?: EngineConfig): { nk: number, grest_pct: number } {
+  const grest_pct = input.grest_pct
   const nk = input.nk_mode === 'total'
     ? input.nk_total_pct
     : grest_pct + input.notary_pct + input.broker_buy_pct
@@ -88,9 +85,6 @@ export function validate(raw: Inputs, config: EngineConfig): { errors: Issue[], 
       errors.push({ level: 'error', id: 'E-FIX', field: 'fix_years' })
   }
 
-  if (!BUNDESLAND_CODES.includes(raw.bundesland) && raw.nk_mode === 'detailed')
-    errors.push({ level: 'error', id: 'E-RATE', field: 'bundesland', params: { min: 'BW', max: 'TH' } })
-
   if (raw.nk_mode !== 'detailed' && raw.nk_mode !== 'total')
     errors.push({ level: 'error', id: 'E-RATE', field: 'nk_mode', params: { min: 'detailed', max: 'total' } })
 
@@ -99,6 +93,12 @@ export function validate(raw: Inputs, config: EngineConfig): { errors: Issue[], 
 
   if (raw.follow_mode !== 'keep_payment' && raw.follow_mode !== 'new_tilgung')
     errors.push({ level: 'error', id: 'E-RATE', field: 'follow_mode', params: { min: 'keep_payment', max: 'new_tilgung' } })
+
+  if (typeof raw.use_sparer_kirchen !== 'boolean')
+    errors.push({ level: 'error', id: 'E-RATE', field: 'use_sparer_kirchen', params: { min: 0, max: 1 } })
+
+  if (raw.use_sparer_kirchen && !KIRCHEN_RATES.includes(raw.kirchen_rate as typeof KIRCHEN_RATES[number]))
+    errors.push({ level: 'error', id: 'E-RATE', field: 'kirchen_rate', params: { min: 0.08, max: 0.09 } })
 
   for (const [field, range] of Object.entries(FIELD_RANGES)) {
     const value = (raw as unknown as Record<string, unknown>)[field]

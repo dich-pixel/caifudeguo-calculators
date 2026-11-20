@@ -1,14 +1,17 @@
 import type { Inputs } from '../engine/types'
 import { DEFAULT_INPUTS } from '../engine/constants'
 
-const ENUMS = new Set(['nk_mode', 'bundesland', 'maint_base', 'follow_mode'])
-const BOOLS = new Set(['self_use_exempt'])
+const ENUMS = new Set(['nk_mode', 'maint_base', 'follow_mode'])
+const BOOLS = new Set(['self_use_exempt', 'use_sparer_kirchen'])
+const IGNORED = new Set(['bundesland', 'mc_sigma_house'])
 const INTS = new Set(['horizon_years', 'fix_years', 'mc_runs', 'mc_seed'])
 
-export function inputsToQuery(inputs: Inputs): string {
+export function inputsToQuery(inputs: Inputs, defaults: Inputs = DEFAULT_INPUTS): string {
   const p = new URLSearchParams()
   for (const [k, v] of Object.entries(inputs) as [keyof Inputs, Inputs[keyof Inputs]][]) {
-    const def = DEFAULT_INPUTS[k]
+    if (k === 'mc_sigma_house')
+      continue
+    const def = defaults[k]
     if (v === def)
       continue
     if (v === null) {
@@ -28,7 +31,7 @@ export function queryToInputs(search: string): Partial<Inputs> {
   const p = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
   const out: Partial<Inputs> = {}
   for (const [k, raw] of p.entries()) {
-    if (!(k in DEFAULT_INPUTS))
+    if (IGNORED.has(k) || !(k in DEFAULT_INPUTS))
       continue
     const key = k as keyof Inputs
     if (ENUMS.has(key)) {
@@ -53,8 +56,8 @@ export function queryToInputs(search: string): Partial<Inputs> {
   return out
 }
 
-export function shareUrl(inputs: Inputs): string {
-  const q = inputsToQuery(inputs)
+export function shareUrl(inputs: Inputs, defaults: Inputs = DEFAULT_INPUTS): string {
+  const q = inputsToQuery(inputs, defaults)
   const base = window.parent === window ? window.location.href : (document.referrer || window.location.href)
   let url: URL
   try {

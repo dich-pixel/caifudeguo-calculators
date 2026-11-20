@@ -58,7 +58,8 @@
     "bvr:test": "vitest run --config caifudeguo/buy-vs-rent/vitest.config.ts",
     "bvr:preview": "vite preview --config caifudeguo/buy-vs-rent/vite.config.mjs",
     "bvr:zip": "node caifudeguo/buy-vs-rent/scripts/build-zip.mjs",
-    "bvr:e2e": "playwright test --config caifudeguo/buy-vs-rent/playwright.config.ts"
+    "bvr:e2e": "playwright test --config caifudeguo/buy-vs-rent/playwright.config.ts",
+    "bvr:php-test": "php caifudeguo/buy-vs-rent/plugin/tests/sanitize-defaults.test.php"
   },
   "peerDependencies": {
     "@formulajs/formulajs": "^4.5.3",
