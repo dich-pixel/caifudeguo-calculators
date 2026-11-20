@@ -42,6 +42,14 @@ const stage = mkdtempSync(join(tmpdir(), 'cbr-wp-'))
 const plugin = join(stage, 'caifu-buy-vs-rent')
 cpSync(join(root, 'caifudeguo/buy-vs-rent/plugin'), plugin, { recursive: true })
 cpSync(join(root, 'caifudeguo/buy-vs-rent/dist'), join(plugin, 'app'), { recursive: true })
+// host-wp-column.html is only for local Playwright smoke tests, never ship it.
+const hostPage = join(plugin, 'app', 'host-wp-column.html')
+try {
+  rmSync(hostPage)
+}
+catch {
+  // absent in a non-preview build
+}
 cpSync(join(root, 'LICENSE'), join(plugin, 'LICENSE'))
 mkdirSync(join(plugin, 'source'))
 const srcName = `caifudeguo-calculators-${sha}.tar.gz`
