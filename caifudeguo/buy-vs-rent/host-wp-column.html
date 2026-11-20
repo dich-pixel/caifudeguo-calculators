@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- WP-like column host for local smoke tests. Not shipped in the plugin zip. -->
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>买房 vs 租房 · WP column host</title>
+    <style>
+      body { margin: 0; background: #f0f0f1; font-family: system-ui, sans-serif; }
+      .site { max-width: 1200px; margin: 0 auto; padding: 30px; background: #fff; min-height: 100vh; }
+      .site h2 { margin: 0 0 12px; font-size: 1.1rem; color: #1d2327; }
+      iframe.cbr-frame { width: 100%; border: 0; display: block; overflow: hidden; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <div class="site">
+      <h2>WordPress column host (30px padding)</h2>
+      <iframe class="cbr-frame caifu-buy-vs-rent" src="./index.html?cbr_test=1" title="买房还是租房？" style="height: 2400px" scrolling="no"></iframe>
+    </div>
+    <script>
+      (function () {
+        const MIN = 100, MAX = 200000, SELECTOR = 'iframe.caifu-buy-vs-rent'
+        const originOf = (frame) => {
+          const raw = frame.getAttribute('data-lazy-src') || frame.getAttribute('src')
+          if (!raw) return ''
+          try {
+            const o = new URL(raw, document.baseURI).origin
+            return o === 'null' ? '' : o
+          } catch (e) { return '' }
+        }
+        window.addEventListener('message', (event) => {
+          const data = event.data
+          if (!data || typeof data !== 'object' || data.type !== 'caifu-buy-vs-rent:height') return
+          let height = data.height
+          if (typeof height !== 'number' || !Number.isFinite(height) || height < MIN) return
+          height = Math.min(height, MAX)
+          document.querySelectorAll(SELECTOR).forEach((frame) => {
+            if (!event.source || frame.contentWindow !== event.source) return
+            const own = originOf(frame)
+            if (own === '' || event.origin !== own) return
+            frame.style.height = Math.ceil(height) + 'px'
+          })
+        })
+        document.querySelectorAll(SELECTOR).forEach((frame) => {
+          const target = originOf(frame)
+          if (target !== '' && frame.contentWindow)
+            frame.contentWindow.postMessage({ type: 'caifu-buy-vs-rent:resend' }, target)
+        })
+      })()
+    </script>
+  </body>
+</html>

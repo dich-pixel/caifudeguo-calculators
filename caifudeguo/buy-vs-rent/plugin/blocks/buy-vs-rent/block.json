@@ -1,0 +1,15 @@
+{
+  "apiVersion": 3,
+  "name": "caifu/buy-vs-rent",
+  "title": "买房 vs 租房",
+  "category": "widgets",
+  "icon": "chart-area",
+  "description": "买房自住与继续租房的资产对比计算器。",
+  "keywords": ["calculator", "buy", "rent", "immobilie"],
+  "textdomain": "caifu-buy-vs-rent",
+  "attributes": {
+    "lang": { "type": "string", "default": "" },
+    "height": { "type": "number", "default": 2400 }
+  },
+  "supports": { "html": false, "align": ["wide", "full"] }
+}

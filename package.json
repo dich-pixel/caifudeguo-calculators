@@ -52,7 +52,13 @@
     "check:core": "node caifudeguo/check-core.mjs",
     "av:build": "vite build --config caifudeguo/av-ui/vite.config.mjs",
     "av:dev": "vite --config caifudeguo/av-ui/vite.config.mjs",
-    "wp:zip": "node caifudeguo/wp-plugin/build-zip.mjs"
+    "wp:zip": "node caifudeguo/wp-plugin/build-zip.mjs",
+    "bvr:dev": "vite --config caifudeguo/buy-vs-rent/vite.config.mjs",
+    "bvr:build": "vite build --config caifudeguo/buy-vs-rent/vite.config.mjs",
+    "bvr:test": "vitest run --config caifudeguo/buy-vs-rent/vitest.config.ts",
+    "bvr:preview": "vite preview --config caifudeguo/buy-vs-rent/vite.config.mjs",
+    "bvr:zip": "node caifudeguo/buy-vs-rent/scripts/build-zip.mjs",
+    "bvr:e2e": "playwright test --config caifudeguo/buy-vs-rent/playwright.config.ts"
   },
   "peerDependencies": {
     "@formulajs/formulajs": "^4.5.3",
@@ -72,5 +78,8 @@
     "ufo": "^1.6.3",
     "vite": "7.3.1",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "chart.js": "^4.6.1"
   }
 }
