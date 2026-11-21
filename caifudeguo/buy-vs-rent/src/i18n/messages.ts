@@ -84,6 +84,17 @@ export interface Dict {
   p_buy: string
   hist: string
   band: string
+  mc_cloud_title: string
+  mc_cloud_renter_p50: string
+  mc_cloud_renter_p25_75: string
+  mc_cloud_renter_p5_95: string
+  mc_cloud_buyer_p50: string
+  mc_cloud_buyer_p25_75: string
+  mc_cloud_axis_year: string
+  mc_cloud_axis_y: string
+  mc_cloud_caption: string
+  mc_cloud_table: string
+  mc_cloud_aria: string
   issues: Record<string, string>
   table: Record<string, string>
   csv_year: string
@@ -91,25 +102,37 @@ export interface Dict {
 }
 
 const zhHelp = {
-  cash_monthly: '每个月你可以用于「住房 + 投资」的钱，两种选择下都一样。买房者用它付月供、维护费和其他持有成本，租房者用它付租金；剩下的钱都投入 ETF。如果某个月住房成本高于这个金额，差额会从该方的 ETF 中取出（取出时可能要交税）；ETF 用完以后计为负债，按透支利率计息。默认这笔钱每年按通胀率增长。',
-  wealth: '总资产减去投入的自有资金（首付 + 附加费用 + 装修），就是剩余资金。两种选择下，剩余资金都从第一天起投入 ETF。图表中的虚线单独显示它的增长（税前示意）。',
-  down_payment: '投入的自有资金包含附加费用和装修费。剩余资金 = 总资产 − 投入的自有资金，从第一天起投入 ETF。',
+  cash_monthly:
+    '每个月你可以用于「住房 + 投资」的钱，两种选择下都一样。买房者用它付月供、维护费和其他持有成本，租房者用它付租金；剩下的钱都投入 ETF。如果某个月住房成本高于这个金额，差额会从该方的 ETF 中取出（取出时可能要交税）；ETF 用完以后计为负债，按透支利率计息。默认这笔钱每年按通胀率增长。',
+  wealth:
+    '总资产减去投入的自有资金（首付 + 附加费用 + 装修），就是剩余资金。两种选择下，剩余资金都从第一天起投入 ETF。图表中的虚线单独显示它的增长（税前示意）。',
+  down_payment:
+    '投入的自有资金包含附加费用和装修费。剩余资金 = 总资产 − 投入的自有资金，从第一天起投入 ETF。',
   liq: '「变现」假设比较期结束时卖掉房子、卖掉全部 ETF 并交税，得到的是真正能拿到手的钱，我们的主要结论用这个口径。「不变现」把房子按市价、ETF 按市值计算，没有扣除卖出时才会产生的税和费用；这些潜在的税和费用单独列出。',
-  sell_cost_pct: '默认卖房成本为 0，假设你自己私下出售房子、不请中介。如果请中介，卖方通常要付约 3,57 % 的中介费（含增值税），你可以在「卖房成本」中填入。',
-  self_use_exempt: '在德国，私人出售房产时，如果买入和卖出相隔不满 10 年，收益通常要按个人所得税率交税（§23 EStG）。但如果房子在卖出当年和之前两个日历年都由你自己居住，就可以免税。计算器默认你满足自住条件。如果你取消这个选项，并且比较期少于 10 年，卖房收益会按你填写的个人边际税率征税。',
-  etf_return: 'ETF 收益按德国资本收益税计算：25 % Abgeltungsteuer 加 5,5 % 团结附加税，合计 26,375 %（不计教会税）。股票型 ETF 有 30 % 的收益免税（Teilfreistellung），所以实际税率约为收益的 18,46 %。累积型 ETF 每年还要按 Vorabpauschale 预先交一部分税，计算基准是联邦财政部每年公布的 Basiszins（当前为 3,20 %），预交的税会在卖出时抵扣。每次从 ETF 取钱时，按平均成本法计算收益并当场交税。',
-  tax_note: '计算器**不考虑**每人每年 1.000 €（夫妻 2.000 €）的资本收益免税额（Sparerpauschbetrag），假设它已经被你的其他存款、基金或股票收益用完。如果你实际上还有未用完的免税额，ETF 的实际税负会略低于计算结果。',
-  tax_note_on: '已按开关计入每年 1.000 €（单身）的 Sparerpauschbetrag，以及教会税。资本收益税按公式 rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) 计算，k 为所选教会税率 8 % 或 9 %。当年未用完的免税额不结转到下一年。',
-  use_sparer_kirchen: '默认关闭：不计 Sparerpauschbetrag，也不计教会税，资本收益税为 26,375 %。打开后，每年先扣除单身 Sparerpauschbetrag 1.000 €，并按所选 8 % 或 9 % 的教会税率用上述公式计算资本收益税。未用完的免税额不结转。',
+  sell_cost_pct:
+    '默认卖房成本为 0，假设你自己私下出售房子、不请中介。如果请中介，卖方通常要付约 3,57 % 的中介费（含增值税），你可以在「卖房成本」中填入。',
+  self_use_exempt:
+    '在德国，私人出售房产时，如果买入和卖出相隔不满 10 年，收益通常要按个人所得税率交税（§23 EStG）。但如果房子在卖出当年和之前两个日历年都由你自己居住，就可以免税。计算器默认你满足自住条件。如果你取消这个选项，并且比较期少于 10 年，卖房收益会按你填写的个人边际税率征税。',
+  etf_return:
+    'ETF 收益按德国资本收益税计算：25 % Abgeltungsteuer 加 5,5 % 团结附加税，合计 26,375 %（不计教会税）。股票型 ETF 有 30 % 的收益免税（Teilfreistellung），所以实际税率约为收益的 18,46 %。累积型 ETF 每年还要按 Vorabpauschale 预先交一部分税，计算基准是联邦财政部每年公布的 Basiszins（当前为 3,20 %），预交的税会在卖出时抵扣。每次从 ETF 取钱时，按平均成本法计算收益并当场交税。',
+  tax_note:
+    '计算器**不考虑**每人每年 1.000 €（夫妻 2.000 €）的资本收益免税额（Sparerpauschbetrag），假设它已经被你的其他存款、基金或股票收益用完。如果你实际上还有未用完的免税额，ETF 的实际税负会略低于计算结果。',
+  tax_note_on:
+    '已按开关计入每年 1.000 €（单身）的 Sparerpauschbetrag，以及教会税。资本收益税按公式 rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) 计算，k 为所选教会税率 8 % 或 9 %。当年未用完的免税额不结转到下一年。',
+  use_sparer_kirchen:
+    '默认关闭：不计 Sparerpauschbetrag，也不计教会税，资本收益税为 26,375 %。打开后，每年先扣除单身 Sparerpauschbetrag 1.000 €，并按所选 8 % 或 9 % 的教会税率用上述公式计算资本收益税。未用完的免税额不结转。',
   kirchen_rate: '巴登-符腾堡和巴伐利亚为 8 %，其余联邦州为 9 %。默认 9 %。',
   nk: '在德国买房，除了房价，还要付 Grunderwerbsteuer（按联邦州 3,5–6,5 %）、公证和土地登记费（约 2 %），以及可能的中介费（买方通常约 3,57 %）。这些费用和装修费一样，付出去就收不回来，不会增加房子的市值。',
-  loan_rate: '贷款按德国常见的年金方式计算：每月还款额固定，包括利息和本金。利率锁定期（Zinsbindung）结束后，剩余贷款按你填写的续贷利率（Anschlusszins）继续计算。默认月供不变；如果新利率太高、月供连利息都不够付，计算器会把月供提高到「利息 + 1 % 还本」。',
-  matrix: '房价增速和 ETF 收益是影响结论最大的两个假设。矩阵把这两个数分别调低和调高，组成 9 种组合，显示每种组合下买房比租房多（绿色）或少（红色）的金额。',
+  loan_rate:
+    '贷款按德国常见的年金方式计算：每月还款额固定，包括利息和本金。利率锁定期（Zinsbindung）结束后，剩余贷款按你填写的续贷利率（Anschlusszins）继续计算。默认月供不变；如果新利率太高、月供连利息都不够付，计算器会把月供提高到「利息 + 1 % 还本」。',
+  matrix:
+    '房价增速和 ETF 收益是影响结论最大的两个假设。矩阵把这两个数分别调低和调高，组成 9 种组合，显示每种组合下买房比租房多（绿色）或少（红色）的金额。',
   mc: '现实中 ETF 收益每年都在波动。模拟用随机生成的月收益重复计算上千次（默认年化波动 15 %），显示结果的分布：P10 表示 10 % 的情况比它更差，P50 是中位数，P90 表示只有 10 % 的情况比它更好。尤其当某一方需要从 ETF 中取钱时，收益出现的先后顺序会影响结果。模拟使用固定种子，同样的输入每次得到同样的结果。',
   real: '「实际值」按你填写的通胀率折算成今天的购买力。30 年、2 % 通胀时，1 € 只相当于今天的约 0,55 €。',
   renovation: '购房时一次性支出，按沉没成本处理，不增加房屋市值。',
   renter_nebenkosten: '只填租房者独有、买房者没有的费用。',
-  buyer_other_costs: '如 Grundsteuer、Gebäudeversicherung、nicht umlagefähiges Hausgeld。两边都要付的生活费用不要填。',
+  buyer_other_costs:
+    '如 Grundsteuer、Gebäudeversicherung、nicht umlagefähiges Hausgeld。两边都要付的生活费用不要填。',
   house_growth: '理解为扣除建筑老化后的净增速。',
   rent: '同等房屋的市场租金。',
   broker_buy_pct: '没有中介填 0。',
@@ -117,7 +140,8 @@ const zhHelp = {
 
 export const zh: Dict = {
   title: '买房还是租房？',
-  intro: '这个计算器比较两条路径：买房自住，或者继续租房并把钱投资到 ETF。两边起始资产相同，每个月可以花的钱也相同。我们模拟每个月的现金流、贷款、房价、租金、ETF 收益和德国的资本收益税，算出 N 年后两边各有多少净资产。结果取决于你的假设，不是对未来的预测。',
+  intro:
+    '这个计算器比较两条路径：买房自住，或者继续租房并把钱投资到 ETF。两边起始资产相同，每个月可以花的钱也相同。我们模拟每个月的现金流、贷款、房价、租金、ETF 收益和德国的资本收益税，算出 N 年后两边各有多少净资产。结果取决于你的假设，不是对未来的预测。',
   lang_zh: '中文',
   lang_de: 'Deutsch',
   groups: {
@@ -248,7 +272,8 @@ export const zh: Dict = {
     'Vorabpauschale 在当年年末处理；模型年按日历年计算。',
     '负债按透支利率复利。',
   ],
-  disclaimer: '本计算器仅用于教育和信息目的，基于简化模型和你输入的假设，不构成投资、税务、法律或融资建议。税法规定（例如 Basiszins、税率）可能变化；实际结果会因市场变化和个人情况而不同。重大决定前请咨询 Steuerberater、Finanzberater 或银行。所有计算都在你的浏览器中完成，不会上传任何输入数据。',
+  disclaimer:
+    '本计算器仅用于教育和信息目的，基于简化模型和你输入的假设，不构成投资、税务、法律或融资建议。税法规定（例如 Basiszins、税率）可能变化；实际结果会因市场变化和个人情况而不同。重大决定前请咨询 Steuerberater、Finanzberater 或银行。所有计算都在你的浏览器中完成，不会上传任何输入数据。',
   version: 'v{v} · Basiszins {y}',
   loading: '计算中…',
   errors_heading: '请先修正以下输入',
@@ -258,20 +283,36 @@ export const zh: Dict = {
   p_buy: '买房占优的概率',
   hist: '差额（变现）分布',
   band: '净资产（变现）P10–P90',
+  mc_cloud_title: '净资产随时间的概率云（蒙特卡洛）',
+  mc_cloud_renter_p50: '租房者 中位数 (P50)',
+  mc_cloud_renter_p25_75: '租房者 50 % 区间 (P25–P75)',
+  mc_cloud_renter_p5_95: '租房者 90 % 区间 (P5–P95)',
+  mc_cloud_buyer_p50: '买房者 中位数 (P50)',
+  mc_cloud_buyer_p25_75: '买房者 50 % 区间 (P25–P75)',
+  mc_cloud_axis_year: '年',
+  mc_cloud_axis_y: '流动净资产 (€)',
+  mc_cloud_caption:
+    '彩色区域表示在 {runs} 次随机模拟中，每年净资产落在该范围内的比例：深色带含一半的模拟结果，浅色带含 90 %。中位线表示一半模拟高于、一半低于这条线。房价按固定增长率计算，不参与波动；波动只来自 ETF 收益。这不是预测，也不代表最好或最坏的情况。',
+  mc_cloud_table: '各年分位数（表格）',
+  mc_cloud_aria: '净资产随时间的概率云图，数字见下方可展开的表格。',
   issues: {
     'E-HORIZON': '比较期限必须是 1 到 100 之间的整数年。',
     'E-RATE': '「{字段}」超出允许范围（{min} … {max}）。',
     'E-PRICE': '房价和冷租必须大于 0。',
     'E-NEG': '「{字段}」不能为负数。',
     'E-DOWN-GT-WEALTH': '投入的自有资金不能超过总资产。',
-    'I-NO-LOAN': '自有资金已经超过买房总支出，不需要贷款；多出的 {x} € 计入买房者的投资账户。',
+    'I-NO-LOAN':
+      '自有资金已经超过买房总支出，不需要贷款；多出的 {x} € 计入买房者的投资账户。',
     'E-NO-AMORT': '贷款利率和 Tilgung 不能同时为 0。',
     'W-NOTILG': 'Tilgung 为 0，贷款永远还不清，期末会扣除全部剩余贷款。',
     'E-FIX': '利率锁定期必须是 1 到 40 年的整数，或选择「全期」。',
     'E-REFI-INPUT': '请填写续贷后的 Tilgung。',
-    'W-REFI': '锁定期结束后，原月供不够支付利息，已按「续贷利率 + 1 % Tilgung」重新计算月供。',
-    'W-DEBT': '{who}的投资账户在第 {k} 个月（第 {y} 年）用完，之后的缺口按 {rate} 计为负债。',
-    'W-23': '持有不满 10 年且不满足自住条件，卖房收益按个人税率征税（§23 EStG）。',
+    'W-REFI':
+      '锁定期结束后，原月供不够支付利息，已按「续贷利率 + 1 % Tilgung」重新计算月供。',
+    'W-DEBT':
+      '{who}的投资账户在第 {k} 个月（第 {y} 年）用完，之后的缺口按 {rate} 计为负债。',
+    'W-23':
+      '持有不满 10 年且不满足自住条件，卖房收益按个人税率征税（§23 EStG）。',
     'I-CASH': '{who}每月住房成本超过可支配现金，差额从该方的投资账户中支取。',
     'W-RANGE': '「{字段}」高于常见水平，请确认。',
     'I-MC-SLOW': '次数较多，计算可能需要几秒钟。',
@@ -306,7 +347,8 @@ export const zh: Dict = {
 
 export const de: Dict = {
   title: 'Kaufen oder mieten?',
-  intro: 'Dieser Rechner vergleicht zwei Wege: eine selbst genutzte Immobilie zu kaufen oder weiter zu mieten und das Geld in ETFs anzulegen. Beide Seiten starten mit dem gleichen Vermögen und haben jeden Monat denselben verfügbaren Betrag. Wir simulieren monatlich Cashflows, das Darlehen, Immobilienpreis, Miete, ETF-Rendite und die deutsche Kapitalertragsteuer und berechnen, wie hoch das Nettovermögen beider Seiten nach N Jahren ist. Das Ergebnis hängt von Ihren Annahmen ab und ist keine Prognose.',
+  intro:
+    'Dieser Rechner vergleicht zwei Wege: eine selbst genutzte Immobilie zu kaufen oder weiter zu mieten und das Geld in ETFs anzulegen. Beide Seiten starten mit dem gleichen Vermögen und haben jeden Monat denselben verfügbaren Betrag. Wir simulieren monatlich Cashflows, das Darlehen, Immobilienpreis, Miete, ETF-Rendite und die deutsche Kapitalertragsteuer und berechnen, wie hoch das Nettovermögen beider Seiten nach N Jahren ist. Das Ergebnis hängt von Ihren Annahmen ab und ist keine Prognose.',
   lang_zh: '中文',
   lang_de: 'Deutsch',
   groups: {
@@ -364,26 +406,42 @@ export const de: Dict = {
     mc_seed: 'Zufallsstartwert',
   },
   help: {
-    cash_monthly: 'Der Betrag, den Sie monatlich für Wohnen und Geldanlage verwenden können — in beiden Varianten gleich. Die Käuferseite zahlt damit Rate, Instandhaltung und sonstige Eigentümerkosten, die Mietseite die Miete; der Rest fließt in ETFs. Liegen die Wohnkosten in einem Monat darüber, wird die Differenz aus dem jeweiligen ETF entnommen (dabei kann Steuer anfallen); ist der ETF aufgebraucht, wird der Fehlbetrag als Verbindlichkeit zum Überziehungszins verzinst. Standardmäßig wächst dieser Betrag jährlich mit der Inflation.',
-    wealth: 'Gesamtvermögen minus eingesetztes Eigenkapital (Anzahlungsanteil + Kaufnebenkosten + Renovierung) ist das Restkapital. In beiden Varianten wird es vom ersten Tag an in ETFs angelegt. Die gestrichelte Linie im Diagramm zeigt sein Wachstum (vor Steuern, zur Orientierung).',
-    down_payment: 'Der Eigenkapitaleinsatz umfasst Kaufnebenkosten und Renovierung. Restkapital = Gesamtvermögen − Eigenkapitaleinsatz, ab dem ersten Tag in ETFs angelegt.',
+    cash_monthly:
+      'Der Betrag, den Sie monatlich für Wohnen und Geldanlage verwenden können — in beiden Varianten gleich. Die Käuferseite zahlt damit Rate, Instandhaltung und sonstige Eigentümerkosten, die Mietseite die Miete; der Rest fließt in ETFs. Liegen die Wohnkosten in einem Monat darüber, wird die Differenz aus dem jeweiligen ETF entnommen (dabei kann Steuer anfallen); ist der ETF aufgebraucht, wird der Fehlbetrag als Verbindlichkeit zum Überziehungszins verzinst. Standardmäßig wächst dieser Betrag jährlich mit der Inflation.',
+    wealth:
+      'Gesamtvermögen minus eingesetztes Eigenkapital (Anzahlungsanteil + Kaufnebenkosten + Renovierung) ist das Restkapital. In beiden Varianten wird es vom ersten Tag an in ETFs angelegt. Die gestrichelte Linie im Diagramm zeigt sein Wachstum (vor Steuern, zur Orientierung).',
+    down_payment:
+      'Der Eigenkapitaleinsatz umfasst Kaufnebenkosten und Renovierung. Restkapital = Gesamtvermögen − Eigenkapitaleinsatz, ab dem ersten Tag in ETFs angelegt.',
     liq: '„Liquidiert“ nimmt an, dass Immobilie und sämtliche ETF-Anteile am Ende des Vergleichszeitraums verkauft und versteuert werden — das ist das Geld, das tatsächlich zur Verfügung stünde, und die Grundlage unserer Hauptaussage. „Nicht liquidiert“ setzt die Immobilie zum Marktwert und die ETFs zum Kurswert an, ohne Steuern und Kosten, die erst beim Verkauf entstehen; diese latenten Beträge werden gesondert ausgewiesen.',
-    sell_cost_pct: 'Die Verkaufskosten stehen standardmäßig auf 0, unter der Annahme eines privaten Verkaufs ohne Makler. Bei einem Makler zahlt die Verkäuferseite üblicherweise rund 3,57 % Provision (inkl. Umsatzsteuer); diesen Satz können Sie unter „Verkaufskosten“ eintragen.',
-    self_use_exempt: 'Beim privaten Verkauf einer Immobilie in Deutschland ist der Gewinn in der Regel einkommensteuerpflichtig (§23 EStG), wenn zwischen Kauf und Verkauf weniger als 10 Jahre liegen. Nutzen Sie die Immobilie im Jahr der Veräußerung und in den beiden vorangegangenen Kalenderjahren selbst, bleibt der Verkauf steuerfrei. Der Rechner nimmt das standardmäßig an. Deaktivieren Sie die Option und ist der Vergleichszeitraum kürzer als 10 Jahre, wird der Veräußerungsgewinn mit Ihrem persönlichen Grenzsteuersatz besteuert.',
-    etf_return: 'ETF-Erträge werden nach deutscher Kapitalertragsteuer gerechnet: 25 % Abgeltungsteuer plus 5,5 % Solidaritätszuschlag, zusammen 26,375 % (ohne Kirchensteuer). Aktien-ETFs haben eine Teilfreistellung von 30 %, sodass der effektive Satz rund 18,46 % der Erträge beträgt. Thesaurierende ETFs zahlen außerdem jährlich eine Vorabpauschale; Bemessungsgrundlage ist der vom Bundesfinanzministerium veröffentlichte Basiszins (derzeit 3,20 %). Die vorausbezahlte Steuer wird beim Verkauf angerechnet. Bei jeder Entnahme aus dem ETF wird der Gewinn nach Durchschnittsmethode ermittelt und sofort versteuert.',
-    tax_note: 'Der Rechner berücksichtigt den Sparerpauschbetrag von 1.000 € je Person (2.000 € bei Zusammenveranlagung) nicht und nimmt an, dass er bereits durch andere Kapitalerträge aufgebraucht ist. Haben Sie tatsächlich noch ungenutzten Pauschbetrag, liegt die tatsächliche Steuerbelastung der ETFs etwas unter dem Rechenergebnis.',
-    tax_note_on: 'Der Schalter ist aktiv: Es werden der Sparerpauschbetrag von 1.000 € je Jahr (ledig) und die Kirchensteuer berücksichtigt. Die Kapitalertragsteuer folgt der Formel rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) mit dem gewählten Kirchensteuersatz k von 8 % oder 9 %. Ein nicht ausgeschöpfter Pauschbetrag wird nicht ins Folgejahr übertragen.',
-    use_sparer_kirchen: 'Standardmäßig aus: ohne Sparerpauschbetrag und ohne Kirchensteuer, Kapitalertragsteuer 26,375 %. Wenn eingeschaltet, wird jährlich zuerst der Sparerpauschbetrag von 1.000 € (ledig) abgezogen und die Kirchensteuer mit 8 % oder 9 % nach der genannten Formel einbezogen. Nicht ausgeschöpfter Pauschbetrag wird nicht vorgetragen.',
-    kirchen_rate: 'In Baden-Württemberg und Bayern beträgt die Kirchensteuer 8 %, in den übrigen Ländern 9 %. Vorgabe ist 9 %.',
+    sell_cost_pct:
+      'Die Verkaufskosten stehen standardmäßig auf 0, unter der Annahme eines privaten Verkaufs ohne Makler. Bei einem Makler zahlt die Verkäuferseite üblicherweise rund 3,57 % Provision (inkl. Umsatzsteuer); diesen Satz können Sie unter „Verkaufskosten“ eintragen.',
+    self_use_exempt:
+      'Beim privaten Verkauf einer Immobilie in Deutschland ist der Gewinn in der Regel einkommensteuerpflichtig (§23 EStG), wenn zwischen Kauf und Verkauf weniger als 10 Jahre liegen. Nutzen Sie die Immobilie im Jahr der Veräußerung und in den beiden vorangegangenen Kalenderjahren selbst, bleibt der Verkauf steuerfrei. Der Rechner nimmt das standardmäßig an. Deaktivieren Sie die Option und ist der Vergleichszeitraum kürzer als 10 Jahre, wird der Veräußerungsgewinn mit Ihrem persönlichen Grenzsteuersatz besteuert.',
+    etf_return:
+      'ETF-Erträge werden nach deutscher Kapitalertragsteuer gerechnet: 25 % Abgeltungsteuer plus 5,5 % Solidaritätszuschlag, zusammen 26,375 % (ohne Kirchensteuer). Aktien-ETFs haben eine Teilfreistellung von 30 %, sodass der effektive Satz rund 18,46 % der Erträge beträgt. Thesaurierende ETFs zahlen außerdem jährlich eine Vorabpauschale; Bemessungsgrundlage ist der vom Bundesfinanzministerium veröffentlichte Basiszins (derzeit 3,20 %). Die vorausbezahlte Steuer wird beim Verkauf angerechnet. Bei jeder Entnahme aus dem ETF wird der Gewinn nach Durchschnittsmethode ermittelt und sofort versteuert.',
+    tax_note:
+      'Der Rechner berücksichtigt den Sparerpauschbetrag von 1.000 € je Person (2.000 € bei Zusammenveranlagung) nicht und nimmt an, dass er bereits durch andere Kapitalerträge aufgebraucht ist. Haben Sie tatsächlich noch ungenutzten Pauschbetrag, liegt die tatsächliche Steuerbelastung der ETFs etwas unter dem Rechenergebnis.',
+    tax_note_on:
+      'Der Schalter ist aktiv: Es werden der Sparerpauschbetrag von 1.000 € je Jahr (ledig) und die Kirchensteuer berücksichtigt. Die Kapitalertragsteuer folgt der Formel rate(k) = 0,25/(1+0,25·k)·(1+0,055+k) mit dem gewählten Kirchensteuersatz k von 8 % oder 9 %. Ein nicht ausgeschöpfter Pauschbetrag wird nicht ins Folgejahr übertragen.',
+    use_sparer_kirchen:
+      'Standardmäßig aus: ohne Sparerpauschbetrag und ohne Kirchensteuer, Kapitalertragsteuer 26,375 %. Wenn eingeschaltet, wird jährlich zuerst der Sparerpauschbetrag von 1.000 € (ledig) abgezogen und die Kirchensteuer mit 8 % oder 9 % nach der genannten Formel einbezogen. Nicht ausgeschöpfter Pauschbetrag wird nicht vorgetragen.',
+    kirchen_rate:
+      'In Baden-Württemberg und Bayern beträgt die Kirchensteuer 8 %, in den übrigen Ländern 9 %. Vorgabe ist 9 %.',
     nk: 'Beim Immobilienkauf in Deutschland fallen neben dem Kaufpreis die Grunderwerbsteuer (je nach Bundesland 3,5–6,5 %), Notar- und Grundbuchkosten (rund 2 %) und gegebenenfalls eine Maklerprovision (Käuferseite typischerweise rund 3,57 %) an. Diese Kosten und die Renovierung sind versunken: Sie erhöhen den Marktwert der Immobilie nicht.',
-    loan_rate: 'Das Darlehen wird als typische deutsche Annuität gerechnet: Die monatliche Rate ist fest und enthält Zins und Tilgung. Nach Ende der Zinsbindung wird die Restschuld mit dem von Ihnen angegebenen Anschlusszins weitergerechnet. Standardmäßig bleibt die Rate unverändert; reicht sie beim neuen Zins nicht einmal für die Zinsen, hebt der Rechner sie auf „Zins + 1 % Tilgung“ an.',
-    matrix: 'Immobilienpreis-Wachstum und ETF-Rendite sind die beiden Annahmen mit dem größten Einfluss. Die Matrix senkt und hebt beide Werte und zeigt in neun Kombinationen, um wie viel die Käuferseite besser (grün) oder schlechter (rot) abschneidet als die Mietseite.',
+    loan_rate:
+      'Das Darlehen wird als typische deutsche Annuität gerechnet: Die monatliche Rate ist fest und enthält Zins und Tilgung. Nach Ende der Zinsbindung wird die Restschuld mit dem von Ihnen angegebenen Anschlusszins weitergerechnet. Standardmäßig bleibt die Rate unverändert; reicht sie beim neuen Zins nicht einmal für die Zinsen, hebt der Rechner sie auf „Zins + 1 % Tilgung“ an.',
+    matrix:
+      'Immobilienpreis-Wachstum und ETF-Rendite sind die beiden Annahmen mit dem größten Einfluss. Die Matrix senkt und hebt beide Werte und zeigt in neun Kombinationen, um wie viel die Käuferseite besser (grün) oder schlechter (rot) abschneidet als die Mietseite.',
     mc: 'ETF-Renditen schwanken von Jahr zu Jahr. Die Simulation wiederholt die Rechnung mit zufälligen Monatsrenditen viele Male (Standard: 15 % jährliche Volatilität) und zeigt die Verteilung: P10 bedeutet, dass 10 % der Fälle schlechter sind, P50 ist der Median, P90 heißt, dass nur 10 % der Fälle besser sind. Besonders wenn eine Seite aus dem ETF entnehmen muss, beeinflusst die Reihenfolge der Renditen das Ergebnis. Die Simulation verwendet einen festen Startwert; gleiche Eingaben liefern immer dasselbe Ergebnis.',
     real: '„Reale Werte“ werden mit der von Ihnen angegebenen Inflationsrate in heutige Kaufkraft umgerechnet. Bei 30 Jahren und 2 % Inflation entspricht 1 € nur noch rund 0,55 € von heute.',
-    renovation: 'Einmalige Ausgabe beim Kauf, als versunkene Kosten behandelt; sie erhöht den Marktwert der Immobilie nicht.',
-    renter_nebenkosten: 'Nur Kosten eintragen, die allein die Mietseite trägt und die Käuferseite nicht.',
-    buyer_other_costs: 'Zum Beispiel Grundsteuer, Gebäudeversicherung, nicht umlagefähiges Hausgeld. Lebenshaltungskosten, die beide Seiten zahlen, nicht eintragen.',
-    house_growth: 'Zu verstehen als Nettowachstum nach Abnutzung der Bausubstanz.',
+    renovation:
+      'Einmalige Ausgabe beim Kauf, als versunkene Kosten behandelt; sie erhöht den Marktwert der Immobilie nicht.',
+    renter_nebenkosten:
+      'Nur Kosten eintragen, die allein die Mietseite trägt und die Käuferseite nicht.',
+    buyer_other_costs:
+      'Zum Beispiel Grundsteuer, Gebäudeversicherung, nicht umlagefähiges Hausgeld. Lebenshaltungskosten, die beide Seiten zahlen, nicht eintragen.',
+    house_growth:
+      'Zu verstehen als Nettowachstum nach Abnutzung der Bausubstanz.',
     rent: 'Marktmiete einer vergleichbaren Wohnung.',
     broker_buy_pct: 'Ohne Makler 0 eintragen.',
   },
@@ -416,9 +474,12 @@ export const de: Dict = {
   better_buy: 'Kaufen ist vorteilhafter',
   better_rent: 'Mieten ist vorteilhafter',
   better_tie: 'Beide gleich',
-  banner_more: 'Nach liquidierter Betrachtung liegt Kaufen nach {n} Jahren um {x} über Mieten (heutige Kaufkraft {y}).',
-  banner_less: 'Nach liquidierter Betrachtung liegt Kaufen nach {n} Jahren um {x} unter Mieten (heutige Kaufkraft {y}).',
-  banner_tie: 'Nach liquidierter Betrachtung sind die Nettovermögen nach {n} Jahren gleich (heutige Kaufkraft {y}).',
+  banner_more:
+    'Nach liquidierter Betrachtung liegt Kaufen nach {n} Jahren um {x} über Mieten (heutige Kaufkraft {y}).',
+  banner_less:
+    'Nach liquidierter Betrachtung liegt Kaufen nach {n} Jahren um {x} unter Mieten (heutige Kaufkraft {y}).',
+  banner_tie:
+    'Nach liquidierter Betrachtung sind die Nettovermögen nach {n} Jahren gleich (heutige Kaufkraft {y}).',
   breakeven: 'Break-even-Jahr (liquidiert)',
   breakeven_none: 'Im Vergleichszeitraum ist Kaufen nicht im Vorteil',
   persistent: 'dauerhaft',
@@ -460,7 +521,8 @@ export const de: Dict = {
     'Die Vorabpauschale wird am Ende des Modelljahres gebucht; Modelljahre entsprechen Kalenderjahren.',
     'Verbindlichkeiten werden mit dem Überziehungszins verzinst.',
   ],
-  disclaimer: 'Dieser Rechner dient ausschließlich der Information und Bildung. Er beruht auf einem vereinfachten Modell und Ihren Eingaben und stellt keine Anlage-, Steuer-, Rechts- oder Finanzierungsberatung dar. Steuerliche Regeln (etwa Basiszins und Steuersätze) können sich ändern; tatsächliche Ergebnisse weichen durch Markt und persönliche Umstände ab. Bitte ziehen Sie vor wichtigen Entscheidungen eine Steuerberatung, Finanzberatung oder Ihre Bank hinzu. Alle Berechnungen laufen in Ihrem Browser; es werden keine Eingaben übertragen.',
+  disclaimer:
+    'Dieser Rechner dient ausschließlich der Information und Bildung. Er beruht auf einem vereinfachten Modell und Ihren Eingaben und stellt keine Anlage-, Steuer-, Rechts- oder Finanzierungsberatung dar. Steuerliche Regeln (etwa Basiszins und Steuersätze) können sich ändern; tatsächliche Ergebnisse weichen durch Markt und persönliche Umstände ab. Bitte ziehen Sie vor wichtigen Entscheidungen eine Steuerberatung, Finanzberatung oder Ihre Bank hinzu. Alle Berechnungen laufen in Ihrem Browser; es werden keine Eingaben übertragen.',
   version: 'v{v} · Basiszins {y}',
   loading: 'Berechnung…',
   errors_heading: 'Bitte zuerst diese Eingaben korrigieren',
@@ -470,23 +532,50 @@ export const de: Dict = {
   p_buy: 'Wahrscheinlichkeit, dass Kaufen vorteilhafter ist',
   hist: 'Verteilung der Differenz (liquidiert)',
   band: 'Nettovermögen (liquidiert) P10–P90',
+  mc_cloud_title:
+    'Vermögensentwicklung im Zeitverlauf – Wahrscheinlichkeitsband (Monte-Carlo)',
+  mc_cloud_renter_p50: 'Mieter – Median (P50)',
+  mc_cloud_renter_p25_75: 'Mieter – 50-%-Band (P25–P75)',
+  mc_cloud_renter_p5_95: 'Mieter – 90-%-Band (P5–P95)',
+  mc_cloud_buyer_p50: 'Käufer – Median (P50)',
+  mc_cloud_buyer_p25_75: 'Käufer – 50-%-Band (P25–P75)',
+  mc_cloud_axis_year: 'Jahr',
+  mc_cloud_axis_y: 'Liquides Nettovermögen (€)',
+  mc_cloud_caption:
+    'Die farbigen Bänder zeigen, in welchem Bereich das Nettovermögen in jedem Jahr bei {runs} Zufallssimulationen liegt: Das dunkle Band enthält die Hälfte der Simulationen, das helle 90 %. Die Medianlinie teilt die Simulationen in eine obere und eine untere Hälfte. Der Immobilienwert wächst mit fester Rate; Schwankungen entstehen nur durch die ETF-Rendite. Keine Prognose und kein Best- oder Worst-Case.',
+  mc_cloud_table: 'Perzentile je Jahr (Tabelle)',
+  mc_cloud_aria:
+    'Diagramm zur Vermögensentwicklung mit Wahrscheinlichkeitsbändern; Zahlen in der aufklappbaren Tabelle darunter.',
   issues: {
-    'E-HORIZON': 'Der Vergleichszeitraum muss eine ganze Zahl zwischen 1 und 100 Jahren sein.',
-    'E-RATE': '„{字段}“ liegt außerhalb des zulässigen Bereichs ({min} … {max}).',
+    'E-HORIZON':
+      'Der Vergleichszeitraum muss eine ganze Zahl zwischen 1 und 100 Jahren sein.',
+    'E-RATE':
+      '„{字段}“ liegt außerhalb des zulässigen Bereichs ({min} … {max}).',
     'E-PRICE': 'Kaufpreis und Kaltmiete müssen größer als 0 sein.',
     'E-NEG': '„{字段}“ darf nicht negativ sein.',
-    'E-DOWN-GT-WEALTH': 'Der Eigenkapitaleinsatz darf das Gesamtvermögen nicht übersteigen.',
-    'I-NO-LOAN': 'Das Eigenkapital übersteigt den Gesamtaufwand; ein Darlehen ist nicht nötig. Die Differenz von {x} € wird dem Depot der Käuferseite gutgeschrieben.',
+    'E-DOWN-GT-WEALTH':
+      'Der Eigenkapitaleinsatz darf das Gesamtvermögen nicht übersteigen.',
+    'I-NO-LOAN':
+      'Das Eigenkapital übersteigt den Gesamtaufwand; ein Darlehen ist nicht nötig. Die Differenz von {x} € wird dem Depot der Käuferseite gutgeschrieben.',
     'E-NO-AMORT': 'Sollzins und Tilgung dürfen nicht gleichzeitig 0 sein.',
-    'W-NOTILG': 'Die Tilgung ist 0; das Darlehen wird nicht zurückgeführt. Am Ende wird die volle Restschuld abgezogen.',
-    'E-FIX': 'Die Zinsbindung muss eine ganze Zahl zwischen 1 und 40 Jahren sein, oder wählen Sie „gesamte Laufzeit“.',
-    'E-REFI-INPUT': 'Bitte geben Sie die Tilgung nach der Anschlussfinanzierung an.',
-    'W-REFI': 'Nach Ende der Zinsbindung reicht die bisherige Rate nicht für die Zinsen. Die Rate wurde auf „Anschlusszins + 1 % Tilgung“ neu gerechnet.',
-    'W-DEBT': 'Das Depot der {who} ist im {k}. Monat (Jahr {y}) aufgebraucht. Weitere Fehlbeträge werden mit {rate} als Verbindlichkeit verzinst.',
-    'W-23': 'Die Haltedauer beträgt weniger als 10 Jahre und die Selbstnutzung ist nicht erfüllt. Der Veräußerungsgewinn wird mit dem persönlichen Steuersatz versteuert (§23 EStG).',
-    'I-CASH': 'Die monatlichen Wohnkosten der {who} übersteigen das verfügbare Geld; die Differenz wird aus deren Depot entnommen.',
-    'W-RANGE': '„{字段}“ liegt über dem üblichen Niveau. Bitte prüfen Sie die Angabe.',
-    'I-MC-SLOW': 'Bei einer hohen Anzahl von Simulationen kann die Berechnung einige Sekunden dauern.',
+    'W-NOTILG':
+      'Die Tilgung ist 0; das Darlehen wird nicht zurückgeführt. Am Ende wird die volle Restschuld abgezogen.',
+    'E-FIX':
+      'Die Zinsbindung muss eine ganze Zahl zwischen 1 und 40 Jahren sein, oder wählen Sie „gesamte Laufzeit“.',
+    'E-REFI-INPUT':
+      'Bitte geben Sie die Tilgung nach der Anschlussfinanzierung an.',
+    'W-REFI':
+      'Nach Ende der Zinsbindung reicht die bisherige Rate nicht für die Zinsen. Die Rate wurde auf „Anschlusszins + 1 % Tilgung“ neu gerechnet.',
+    'W-DEBT':
+      'Das Depot der {who} ist im {k}. Monat (Jahr {y}) aufgebraucht. Weitere Fehlbeträge werden mit {rate} als Verbindlichkeit verzinst.',
+    'W-23':
+      'Die Haltedauer beträgt weniger als 10 Jahre und die Selbstnutzung ist nicht erfüllt. Der Veräußerungsgewinn wird mit dem persönlichen Steuersatz versteuert (§23 EStG).',
+    'I-CASH':
+      'Die monatlichen Wohnkosten der {who} übersteigen das verfügbare Geld; die Differenz wird aus deren Depot entnommen.',
+    'W-RANGE':
+      '„{字段}“ liegt über dem üblichen Niveau. Bitte prüfen Sie die Angabe.',
+    'I-MC-SLOW':
+      'Bei einer hohen Anzahl von Simulationen kann die Berechnung einige Sekunden dauern.',
   },
   table: {
     year: 'Jahr',

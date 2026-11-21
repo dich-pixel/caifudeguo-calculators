@@ -191,7 +191,7 @@ export interface ComputeSuccess {
   end: YearRow
   breakeven_liq: Breakeven
   breakeven_nonliq: Breakeven
-  first_debt_month: { buyer: number | null, renter: number | null }
+  first_debt_month: { buyer: number | null; renter: number | null }
   payoff_month: number | null
   warnings: Issue[]
   infos: Issue[]
@@ -228,6 +228,20 @@ export interface MonteCarloStats {
   mean: number
 }
 
+export interface YearlyPercentiles {
+  p5: number
+  p25: number
+  p50: number
+  p75: number
+  p95: number
+}
+
+export interface MonteCarloYearly {
+  years: number[]
+  buyer_liq: YearlyPercentiles[]
+  renter_liq: YearlyPercentiles[]
+}
+
 export interface MonteCarloResult {
   runs: number
   seed: number
@@ -244,11 +258,14 @@ export interface MonteCarloResult {
     diff_liq: number
     diff_nonliq: number
   }>
+  /** Per-year liquid net-worth percentiles (year 0 = start). Existing end stats are unchanged. */
+  yearly: MonteCarloYearly
 }
 
 export interface ComputeOptions {
   /** When 'end', skip monthly rows and only keep yearly + end (used for the scenario matrix). */
-  detail?: 'full' | 'end'
+  /** When 'yearly_liq', same arithmetic as 'end' (used by Monte Carlo path snapshots). */
+  detail?: 'full' | 'end' | 'yearly_liq'
   /** Override the monthly ETF factor path (length M). */
   etf_factors?: number[]
   /** Override the month-end house-price path (length M). */

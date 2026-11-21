@@ -1,7 +1,14 @@
 import type { Chart } from 'chart.js'
-import type {ComputeResult, ComputeSuccess, EngineConfig, Inputs, MonteCarloResult, ScenarioCell} from '../engine';
-import type {Dict, Lang} from '../i18n';
-import type {ChartState} from './charts';
+import type {
+  ComputeResult,
+  ComputeSuccess,
+  EngineConfig,
+  Inputs,
+  MonteCarloResult,
+  ScenarioCell,
+} from '../engine'
+import type { Dict, Lang } from '../i18n'
+import type { ChartState } from './charts'
 import {
   BASISZINS_YEAR,
   compute,
@@ -13,18 +20,24 @@ import {
 } from '../engine'
 import { formatIssue, getDict } from '../i18n'
 import {
-  
   renderCash,
   renderComposition,
   renderLoan,
   renderMatrix,
   renderMc,
   renderMcBands,
+  renderMcCloud,
   renderNetChart,
-  renderTax
+  renderTax,
 } from './charts'
 import { downloadCsv, monthlyCsv, yearlyCsv } from './csv'
-import { formatDeNumber, formatEUR, formatPct, parseDeNumber, parsePercentInput } from './format'
+import {
+  formatDeNumber,
+  formatEUR,
+  formatPct,
+  parseDeNumber,
+  parsePercentInput,
+} from './format'
 import { startHeightReporting } from './height'
 import { attachTestApi, shouldEnableTestApi } from './test-api'
 import { queryToInputs, shareUrl } from './url'
@@ -42,33 +55,109 @@ interface PageSettings {
 }
 
 const MONEY = new Set([
-  'price', 'renovation', 'down_payment', 'wealth', 'buyer_other_costs',
-  'renter_nebenkosten', 'renter_renovation', 'cash_monthly', 'rent',
+  'price',
+  'renovation',
+  'down_payment',
+  'wealth',
+  'buyer_other_costs',
+  'renter_nebenkosten',
+  'renter_renovation',
+  'cash_monthly',
+  'rent',
 ])
 const PCT = new Set([
-  'nk_total_pct', 'grest_pct', 'notary_pct', 'broker_buy_pct', 'maint_pct', 'building_share',
-  'maint_growth', 'buyer_other_growth', 'house_growth', 'loan_rate', 'init_tilgung',
-  'follow_rate', 'follow_tilgung', 'sondertilgung_pct', 'rent_growth', 'renter_nk_growth',
-  'cash_growth', 'etf_return', 'inflation', 'borrow_rate', 'sell_cost_pct',
-  'personal_tax_rate', 'kirchen_rate', 'mc_sigma',
+  'nk_total_pct',
+  'grest_pct',
+  'notary_pct',
+  'broker_buy_pct',
+  'maint_pct',
+  'building_share',
+  'maint_growth',
+  'buyer_other_growth',
+  'house_growth',
+  'loan_rate',
+  'init_tilgung',
+  'follow_rate',
+  'follow_tilgung',
+  'sondertilgung_pct',
+  'rent_growth',
+  'renter_nk_growth',
+  'cash_growth',
+  'etf_return',
+  'inflation',
+  'borrow_rate',
+  'sell_cost_pct',
+  'personal_tax_rate',
+  'kirchen_rate',
+  'mc_sigma',
 ])
 const POINTS = new Set(['house_err', 'etf_err'])
 const INTS = new Set(['horizon_years', 'mc_runs', 'mc_seed'])
 const INHERITED = new Set([
-  'maint_growth', 'buyer_other_growth', 'follow_rate', 'rent_growth',
-  'renter_nk_growth', 'cash_growth',
+  'maint_growth',
+  'buyer_other_growth',
+  'follow_rate',
+  'rent_growth',
+  'renter_nk_growth',
+  'cash_growth',
 ])
 
-const BASIC: (keyof Inputs)[] = ['price', 'rent', 'wealth', 'down_payment', 'cash_monthly', 'grest_pct', 'horizon_years']
-const LOAN: (keyof Inputs)[] = ['loan_rate', 'init_tilgung', 'fix_years', 'follow_rate', 'follow_mode', 'follow_tilgung', 'sondertilgung_pct']
-const COSTS: (keyof Inputs)[] = [
-  'renovation', 'nk_mode', 'nk_total_pct', 'notary_pct', 'broker_buy_pct',
-  'maint_pct', 'maint_base', 'building_share', 'maint_growth',
-  'buyer_other_costs', 'buyer_other_growth', 'renter_nebenkosten', 'renter_nk_growth', 'renter_renovation',
+const BASIC: (keyof Inputs)[] = [
+  'price',
+  'rent',
+  'wealth',
+  'down_payment',
+  'cash_monthly',
+  'grest_pct',
+  'horizon_years',
 ]
-const GROWTH: (keyof Inputs)[] = ['house_growth', 'rent_growth', 'etf_return', 'inflation', 'cash_growth', 'borrow_rate']
-const SELL: (keyof Inputs)[] = ['sell_cost_pct', 'self_use_exempt', 'personal_tax_rate', 'use_sparer_kirchen', 'kirchen_rate']
-const RISK: (keyof Inputs)[] = ['house_err', 'etf_err', 'mc_runs', 'mc_sigma', 'mc_seed']
+const LOAN: (keyof Inputs)[] = [
+  'loan_rate',
+  'init_tilgung',
+  'fix_years',
+  'follow_rate',
+  'follow_mode',
+  'follow_tilgung',
+  'sondertilgung_pct',
+]
+const COSTS: (keyof Inputs)[] = [
+  'renovation',
+  'nk_mode',
+  'nk_total_pct',
+  'notary_pct',
+  'broker_buy_pct',
+  'maint_pct',
+  'maint_base',
+  'building_share',
+  'maint_growth',
+  'buyer_other_costs',
+  'buyer_other_growth',
+  'renter_nebenkosten',
+  'renter_nk_growth',
+  'renter_renovation',
+]
+const GROWTH: (keyof Inputs)[] = [
+  'house_growth',
+  'rent_growth',
+  'etf_return',
+  'inflation',
+  'cash_growth',
+  'borrow_rate',
+]
+const SELL: (keyof Inputs)[] = [
+  'sell_cost_pct',
+  'self_use_exempt',
+  'personal_tax_rate',
+  'use_sparer_kirchen',
+  'kirchen_rate',
+]
+const RISK: (keyof Inputs)[] = [
+  'house_err',
+  'etf_err',
+  'mc_runs',
+  'mc_sigma',
+  'mc_seed',
+]
 
 type Tab = 'net' | 'composition' | 'loan' | 'cash' | 'tax' | 'matrix' | 'mc'
 
@@ -79,8 +168,9 @@ function readSettings(): PageSettings {
   if (el?.textContent) {
     try {
       return JSON.parse(el.textContent) as PageSettings
+    } catch {
+      /* ignore */
     }
-    catch { /* ignore */ }
   }
   return window.__CBR_SETTINGS__ ?? {}
 }
@@ -95,10 +185,15 @@ function withFixedProductDefaults(partial?: Partial<Inputs>): Inputs {
 }
 
 let builtinDefaults = withFixedProductDefaults(settings.defaults ?? {})
-let lang: Lang = (new URLSearchParams(location.search).get('lang') as Lang) || settings.lang || 'zh'
-if (lang !== 'zh' && lang !== 'de')
-  lang = 'zh'
-let inputs: Inputs = withFixedProductDefaults({ ...builtinDefaults, ...queryToInputs(location.search) })
+let lang: Lang =
+  (new URLSearchParams(location.search).get('lang') as Lang) ||
+  settings.lang ||
+  'zh'
+if (lang !== 'zh' && lang !== 'de') lang = 'zh'
+let inputs: Inputs = withFixedProductDefaults({
+  ...builtinDefaults,
+  ...queryToInputs(location.search),
+})
 let liquidated = true
 let real = false
 let yearMax = inputs.horizon_years
@@ -121,31 +216,31 @@ function dict(): Dict {
 }
 
 function displayValue(key: keyof Inputs, value: Inputs[keyof Inputs]): string {
-  if (value === null || value === undefined)
-    return ''
-  if (typeof value === 'boolean')
-    return value ? '1' : '0'
-  if (typeof value === 'string')
-    return value
-  if (PCT.has(key))
-    return formatDeNumber(value * 100, 2)
-  if (POINTS.has(key))
-    return formatDeNumber(value, 1)
-  if (INTS.has(key) || key === 'fix_years')
-    return formatDeNumber(value, 0)
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'boolean') return value ? '1' : '0'
+  if (typeof value === 'string') return value
+  if (PCT.has(key)) return formatDeNumber(value * 100, 2)
+  if (POINTS.has(key)) return formatDeNumber(value, 1)
+  if (INTS.has(key) || key === 'fix_years') return formatDeNumber(value, 0)
   if (MONEY.has(key))
     return formatDeNumber(value, Number.isInteger(value) ? 0 : 2)
   return String(value)
 }
 
-function parseField(key: keyof Inputs, raw: string): Inputs[keyof Inputs] | typeof Number.NaN {
-  if (INHERITED.has(key) && raw.trim() === '')
-    return null
-  if (key === 'fix_years' && raw.trim() === '')
-    return null
-  if (PCT.has(key))
-    return parsePercentInput(raw) ?? Number.NaN
-  if (MONEY.has(key) || POINTS.has(key) || INTS.has(key) || key === 'fix_years' || key === 'follow_tilgung') {
+function parseField(
+  key: keyof Inputs,
+  raw: string,
+): Inputs[keyof Inputs] | typeof Number.NaN {
+  if (INHERITED.has(key) && raw.trim() === '') return null
+  if (key === 'fix_years' && raw.trim() === '') return null
+  if (PCT.has(key)) return parsePercentInput(raw) ?? Number.NaN
+  if (
+    MONEY.has(key) ||
+    POINTS.has(key) ||
+    INTS.has(key) ||
+    key === 'fix_years' ||
+    key === 'follow_tilgung'
+  ) {
     const n = parseDeNumber(raw)
     return n === null ? Number.NaN : n
   }
@@ -165,8 +260,22 @@ function buildField(key: keyof Inputs): HTMLElement {
   const label = document.createElement('label')
   label.htmlFor = `cbr-${key}`
   label.innerHTML = `<span class="cbr-label">${d.fields[key] ?? key}</span>`
-  const help = fieldHelp(key) || (key === 'nk_mode' || key === 'nk_total_pct' || key === 'notary_pct' || key === 'grest_pct' || key === 'broker_buy_pct' ? d.help.nk : undefined)
-    || (key === 'loan_rate' || key === 'init_tilgung' || key === 'fix_years' || key === 'follow_rate' || key === 'follow_mode' ? d.help.loan_rate : undefined)
+  const help =
+    fieldHelp(key) ||
+    (key === 'nk_mode' ||
+    key === 'nk_total_pct' ||
+    key === 'notary_pct' ||
+    key === 'grest_pct' ||
+    key === 'broker_buy_pct'
+      ? d.help.nk
+      : undefined) ||
+    (key === 'loan_rate' ||
+    key === 'init_tilgung' ||
+    key === 'fix_years' ||
+    key === 'follow_rate' ||
+    key === 'follow_mode'
+      ? d.help.loan_rate
+      : undefined)
   if (help) {
     const info = document.createElement('button')
     info.type = 'button'
@@ -185,12 +294,14 @@ function buildField(key: keyof Inputs): HTMLElement {
     const sel = document.createElement('select')
     sel.id = `cbr-${key}`
     sel.className = 'cbr-select'
-    for (const [v, lab] of [['0.08', d.kirchen_8], ['0.09', d.kirchen_9]] as const) {
+    for (const [v, lab] of [
+      ['0.08', d.kirchen_8],
+      ['0.09', d.kirchen_9],
+    ] as const) {
       const opt = document.createElement('option')
       opt.value = v
       opt.textContent = lab
-      if (String(inputs.kirchen_rate) === v)
-        opt.selected = true
+      if (String(inputs.kirchen_rate) === v) opt.selected = true
       sel.append(opt)
     }
     sel.addEventListener('change', () => {
@@ -204,23 +315,32 @@ function buildField(key: keyof Inputs): HTMLElement {
     const sel = document.createElement('select')
     sel.id = `cbr-${key}`
     sel.className = 'cbr-select'
-    const opts = key === 'nk_mode'
-      ? [['detailed', d.nk_detailed], ['total', d.nk_total]]
-      : key === 'maint_base'
-        ? [['total', d.maint_total], ['building', d.maint_building]]
-        : [['keep_payment', d.keep_payment], ['new_tilgung', d.new_tilgung]]
+    const opts =
+      key === 'nk_mode'
+        ? [
+            ['detailed', d.nk_detailed],
+            ['total', d.nk_total],
+          ]
+        : key === 'maint_base'
+          ? [
+              ['total', d.maint_total],
+              ['building', d.maint_building],
+            ]
+          : [
+              ['keep_payment', d.keep_payment],
+              ['new_tilgung', d.new_tilgung],
+            ]
     for (const pair of opts) {
       const v = pair[0] ?? ''
       const lab = pair[1] ?? ''
       const opt = document.createElement('option')
       opt.value = v
       opt.textContent = lab
-      if (inputs[key] === v)
-        opt.selected = true
+      if (inputs[key] === v) opt.selected = true
       sel.append(opt)
     }
     sel.addEventListener('change', () => {
-      (inputs as unknown as Record<string, string>)[key] = sel.value
+      ;(inputs as unknown as Record<string, string>)[key] = sel.value
       schedule()
       syncVisibility()
     })
@@ -232,13 +352,17 @@ function buildField(key: keyof Inputs): HTMLElement {
     sel.id = `cbr-${key}`
     sel.className = 'cbr-select'
     sel.innerHTML = `<option value="1">${d.yes}</option><option value="0">${d.no}</option>`
-    const current = key === 'self_use_exempt' ? inputs.self_use_exempt : inputs.use_sparer_kirchen
+    const current =
+      key === 'self_use_exempt'
+        ? inputs.self_use_exempt
+        : inputs.use_sparer_kirchen
     sel.value = current ? '1' : '0'
     sel.addEventListener('change', () => {
       const on = sel.value === '1'
-      inputs = key === 'self_use_exempt'
-        ? { ...inputs, self_use_exempt: on }
-        : { ...inputs, use_sparer_kirchen: on }
+      inputs =
+        key === 'self_use_exempt'
+          ? { ...inputs, self_use_exempt: on }
+          : { ...inputs, use_sparer_kirchen: on }
       schedule()
       syncVisibility()
     })
@@ -254,7 +378,10 @@ function buildField(key: keyof Inputs): HTMLElement {
     input.id = `cbr-${key}`
     input.className = 'cbr-input'
     input.inputMode = 'numeric'
-    input.value = inputs.fix_years === null ? '' : displayValue('fix_years', inputs.fix_years)
+    input.value =
+      inputs.fix_years === null
+        ? ''
+        : displayValue('fix_years', inputs.fix_years)
     const box = document.createElement('label')
     box.style.fontWeight = '400'
     const cb = document.createElement('input')
@@ -266,11 +393,13 @@ function buildField(key: keyof Inputs): HTMLElement {
         inputs = { ...inputs, fix_years: null }
         input.disabled = true
         input.value = ''
-      }
-      else {
+      } else {
         input.disabled = false
         const n = parseDeNumber(input.value)
-        inputs = { ...inputs, fix_years: n !== null && Number.isInteger(n) ? n : 10 }
+        inputs = {
+          ...inputs,
+          fix_years: n !== null && Number.isInteger(n) ? n : 10,
+        }
       }
       schedule()
     }
@@ -294,18 +423,16 @@ function buildField(key: keyof Inputs): HTMLElement {
   if (INHERITED.has(key)) {
     const ph = d.ph_inherit.replace('{v}', formatPct(inputs.inflation))
     input.placeholder = ph
-    if (inputs[key] === null)
-      input.classList.add('cbr-placeholder')
+    if (inputs[key] === null) input.classList.add('cbr-placeholder')
   }
   input.addEventListener('input', () => {
     const parsed = parseField(key, input.value)
     if (parsed === null) {
-      (inputs as unknown as Record<string, null>)[key] = null
+      ;(inputs as unknown as Record<string, null>)[key] = null
       schedule()
       return
     }
-    if (typeof parsed === 'number' && Number.isNaN(parsed))
-      return
+    if (typeof parsed === 'number' && Number.isNaN(parsed)) return
     ;(inputs as unknown as Record<string, typeof parsed>)[key] = parsed
     schedule()
   })
@@ -318,7 +445,7 @@ function buildField(key: keyof Inputs): HTMLElement {
 }
 
 function showTip(anchor: HTMLElement, text: string): void {
-  document.querySelectorAll('.cbr-tip').forEach(n => n.remove())
+  document.querySelectorAll('.cbr-tip').forEach((n) => n.remove())
   const tip = document.createElement('div')
   tip.className = 'cbr-tip'
   tip.setAttribute('role', 'tooltip')
@@ -328,15 +455,18 @@ function showTip(anchor: HTMLElement, text: string): void {
   tip.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - tip.offsetWidth - 8))}px`
   tip.style.top = `${r.bottom + window.scrollY + 4}px`
   const close = (ev: Event) => {
-    if (ev.target === anchor)
-      return
+    if (ev.target === anchor) return
     tip.remove()
     document.removeEventListener('click', close, true)
   }
   setTimeout(() => document.addEventListener('click', close, true), 0)
 }
 
-function group(title: string, keys: (keyof Inputs)[], open: boolean): HTMLElement {
+function group(
+  title: string,
+  keys: (keyof Inputs)[],
+  open: boolean,
+): HTMLElement {
   const sec = document.createElement('div')
   sec.className = 'cbr-group'
   const btn = document.createElement('button')
@@ -347,8 +477,7 @@ function group(title: string, keys: (keyof Inputs)[], open: boolean): HTMLElemen
   const body = document.createElement('div')
   body.className = 'cbr-group-body'
   body.hidden = !open
-  for (const k of keys)
-    body.append(buildField(k))
+  for (const k of keys) body.append(buildField(k))
   btn.addEventListener('click', () => {
     const next = btn.getAttribute('aria-expanded') !== 'true'
     btn.setAttribute('aria-expanded', String(next))
@@ -400,8 +529,7 @@ function buildApp(): void {
   $('.cbr-lang', app).addEventListener('click', (ev) => {
     const t = ev.target as HTMLElement
     const next = t.dataset.lang as Lang | undefined
-    if (!next || next === lang)
-      return
+    if (!next || next === lang) return
     lang = next
     document.documentElement.lang = next === 'zh' ? 'zh-Hans' : 'de'
     buildApp()
@@ -419,18 +547,22 @@ function buildApp(): void {
       box.select()
     }
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(url).then(() => {
-        $('#cbr-copy').textContent = d.link_copied
-        setTimeout(() => { $('#cbr-copy').textContent = d.copy_link }, 1500)
-      }).catch(fallback)
-    }
-    else {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => {
+          $('#cbr-copy').textContent = d.link_copied
+          setTimeout(() => {
+            $('#cbr-copy').textContent = d.copy_link
+          }, 1500)
+        })
+        .catch(fallback)
+    } else {
       fallback()
     }
   })
   $('#cbr-csv-y').addEventListener('click', () => {
     if (result.ok)
-      downloadCsv('buy-vs-rent-yearly.csv', yearlyCsv(result.yearly))
+      downloadCsv('buy-vs-rent-yearly.csv', yearlyCsv(result.yearly, mc))
   })
   $('#cbr-csv-m').addEventListener('click', () => {
     if (result.ok)
@@ -459,9 +591,10 @@ function syncVisibility(): void {
 }
 
 function toggleField(key: string, show: boolean): void {
-  const el = document.querySelector(`[data-field="${key}"]`) as HTMLElement | null
-  if (el)
-    el.hidden = !show
+  const el = document.querySelector(
+    `[data-field="${key}"]`,
+  ) as HTMLElement | null
+  if (el) el.hidden = !show
 }
 
 function schedule(): void {
@@ -474,8 +607,7 @@ function recalc(immediate: boolean): void {
   const mat = scenarioMatrix(inputs, engineConfig())
   matrix = Array.isArray(mat) ? mat : null
   yearMax = Math.min(yearMax, inputs.horizon_years)
-  if (yearMax < 1)
-    yearMax = inputs.horizon_years
+  if (yearMax < 1) yearMax = inputs.horizon_years
   mc = null
   paintResult()
   void immediate
@@ -484,8 +616,7 @@ function recalc(immediate: boolean): void {
 function paintResult(): void {
   const d = dict()
   const root = document.querySelector('.cbr-results') as HTMLElement
-  if (!root)
-    return
+  if (!root) return
   clearFieldErrors()
   if (!result.ok) {
     root.replaceChildren()
@@ -502,8 +633,7 @@ function paintResult(): void {
         const input = document.getElementById(`cbr-${err.field}`)
         input?.setAttribute('aria-invalid', 'true')
         const slot = document.getElementById(`cbr-err-${err.field}`)
-        if (slot)
-          slot.textContent = formatIssue(d, err)
+        if (slot) slot.textContent = formatIssue(d, err)
       }
     }
     root.append(box)
@@ -513,8 +643,10 @@ function paintResult(): void {
 }
 
 function clearFieldErrors(): void {
-  document.querySelectorAll('[aria-invalid]').forEach(n => n.removeAttribute('aria-invalid'))
-  document.querySelectorAll('.cbr-err').forEach(n => n.textContent = '')
+  document
+    .querySelectorAll('[aria-invalid]')
+    .forEach((n) => n.removeAttribute('aria-invalid'))
+  document.querySelectorAll('.cbr-err').forEach((n) => (n.textContent = ''))
 }
 
 function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
@@ -525,30 +657,49 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
   let bannerText: string
   let bannerClass = 'cbr-banner'
   if (Math.abs(diff) < 0.005) {
-    bannerText = d.banner_tie.replace('{n}', String(n)).replace('{y}', formatEUR(diffReal))
-  }
-  else if (diff > 0) {
-    bannerText = d.banner_more.replace('{n}', String(n)).replace('{x}', formatEUR(diff)).replace('{y}', formatEUR(diffReal))
-  }
-  else {
-    bannerText = d.banner_less.replace('{n}', String(n)).replace('{x}', formatEUR(-diff)).replace('{y}', formatEUR(-diffReal))
+    bannerText = d.banner_tie
+      .replace('{n}', String(n))
+      .replace('{y}', formatEUR(diffReal))
+  } else if (diff > 0) {
+    bannerText = d.banner_more
+      .replace('{n}', String(n))
+      .replace('{x}', formatEUR(diff))
+      .replace('{y}', formatEUR(diffReal))
+  } else {
+    bannerText = d.banner_less
+      .replace('{n}', String(n))
+      .replace('{x}', formatEUR(-diff))
+      .replace('{y}', formatEUR(-diffReal))
     bannerClass += ' less'
   }
 
   const issues = [...r.warnings, ...r.infos]
   const warnHtml = issues.length
-    ? `<div class="cbr-warns"><p>${d.warnings_heading}</p>${issues.map(i => `<p>${escapeHtml(formatIssue(d, i))}</p>`).join('')}</div>`
+    ? `<div class="cbr-warns"><p>${d.warnings_heading}</p>${issues.map((i) => `<p>${escapeHtml(formatIssue(d, i))}</p>`).join('')}</div>`
     : ''
 
-  const buyerVal = liquidated ? (real ? end.buyer_liq_real : end.buyer_liq) : (real ? end.buyer_nonliq_real : end.buyer_nonliq)
-  const renterVal = liquidated ? (real ? end.renter_liq_real : end.renter_liq) : (real ? end.renter_nonliq_real : end.renter_nonliq)
+  const buyerVal = liquidated
+    ? real
+      ? end.buyer_liq_real
+      : end.buyer_liq
+    : real
+      ? end.buyer_nonliq_real
+      : end.buyer_nonliq
+  const renterVal = liquidated
+    ? real
+      ? end.renter_liq_real
+      : end.renter_liq
+    : real
+      ? end.renter_nonliq_real
+      : end.renter_nonliq
   const buyerBetter = (liquidated ? end.diff_liq : end.diff_nonliq) > 0.005
   const renterBetter = (liquidated ? end.diff_liq : end.diff_nonliq) < -0.005
 
   const be = r.breakeven_liq
-  const beText = be.year === null
-    ? d.breakeven_none
-    : `${be.year} ${d.years} · ${be.persistent ? d.persistent : d.reversed}`
+  const beText =
+    be.year === null
+      ? d.breakeven_none
+      : `${be.year} ${d.years} · ${be.persistent ? d.persistent : d.reversed}`
 
   root.innerHTML = `
     <div class="${bannerClass}" id="cbr-banner">${escapeHtml(bannerText)}</div>
@@ -598,6 +749,17 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
       <p id="cbr-mc-prob"></p>
       <div class="cbr-chart-box"><canvas id="cbr-chart-mc2"></canvas></div>
       <div class="cbr-progress" hidden><progress id="cbr-mc-prog" max="100" value="0"></progress><span id="cbr-mc-prog-lbl"></span></div>
+      <div id="cbr-mc-cloud" hidden>
+        <h3 class="cbr-mc-cloud-title" id="cbr-mc-cloud-title"></h3>
+        <p class="cbr-mc-cloud-y" id="cbr-mc-cloud-y"></p>
+        <div class="cbr-chart-box cbr-mc-cloud-box"><canvas id="cbr-chart-mc-cloud"></canvas></div>
+        <ul class="cbr-mc-cloud-legend" id="cbr-mc-cloud-legend"></ul>
+        <p class="cbr-mc-cloud-caption" id="cbr-mc-cloud-caption"></p>
+        <details class="cbr-group" id="cbr-mc-cloud-table-wrap">
+          <summary class="cbr-toggle" style="list-style:none" id="cbr-mc-cloud-table-toggle"></summary>
+          <div class="cbr-table-wrap" id="cbr-mc-cloud-table"></div>
+        </details>
+      </div>
     </div>
     <details class="cbr-group" style="margin-top:12px">
       <summary class="cbr-toggle" style="list-style:none">${d.yearly_table}</summary>
@@ -612,16 +774,11 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
   const switches = $('.cbr-switches', root)
   switches.addEventListener('click', (ev) => {
     const k = (ev.target as HTMLElement).dataset.k
-    if (k === 'liq')
-      liquidated = true
-    else if (k === 'nonliq')
-      liquidated = false
-    else if (k === 'nom')
-      real = false
-    else if (k === 'real')
-      real = true
-    else
-      return
+    if (k === 'liq') liquidated = true
+    else if (k === 'nonliq') liquidated = false
+    else if (k === 'nom') real = false
+    else if (k === 'real') real = true
+    else return
     paintResult()
   })
 
@@ -632,12 +789,18 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
     b.className = 'cbr-chip'
     b.textContent = `${y} ${d.years}`
     b.disabled = y > inputs.horizon_years
-    b.setAttribute('aria-pressed', String(yearMax === y || (y === inputs.horizon_years && yearMax === inputs.horizon_years && !YEAR_SHORTCUTS.includes(yearMax))))
-    if (yearMax === y)
-      b.setAttribute('aria-pressed', 'true')
+    b.setAttribute(
+      'aria-pressed',
+      String(
+        yearMax === y ||
+          (y === inputs.horizon_years &&
+            yearMax === inputs.horizon_years &&
+            !YEAR_SHORTCUTS.includes(yearMax)),
+      ),
+    )
+    if (yearMax === y) b.setAttribute('aria-pressed', 'true')
     b.addEventListener('click', () => {
-      if (b.disabled)
-        return
+      if (b.disabled) return
       yearMax = y
       paintResult()
     })
@@ -645,7 +808,15 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
   }
 
   const tabs = $('.cbr-chart-tabs', root)
-  const tabIds: Tab[] = ['net', 'composition', 'loan', 'cash', 'tax', 'matrix', 'mc']
+  const tabIds: Tab[] = [
+    'net',
+    'composition',
+    'loan',
+    'cash',
+    'tax',
+    'matrix',
+    'mc',
+  ]
   for (const id of tabIds) {
     const b = document.createElement('button')
     b.type = 'button'
@@ -667,9 +838,8 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
 
 function fillYearly(r: ComputeSuccess, d: Dict): void {
   const el = document.getElementById('cbr-yearly')
-  if (!el)
-    return
-  const cols: [string, keyof typeof r.yearly[0]][] = [
+  if (!el) return
+  const cols: [string, keyof (typeof r.yearly)[0]][] = [
     [d.table.year ?? 'year', 'year'],
     [d.table.house ?? 'house', 'house'],
     [d.table.balance ?? 'balance', 'balance'],
@@ -678,25 +848,29 @@ function fillYearly(r: ComputeSuccess, d: Dict): void {
     [d.table.diff_liq ?? 'diff_liq', 'diff_liq'],
     [d.table.diff_nonliq ?? 'diff_nonliq', 'diff_nonliq'],
   ]
-  el.innerHTML = `<table class="cbr-table"><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${
-    r.yearly.map((row) => `<tr>${cols.map((c) => `<td>${c[1] === 'year' ? row.year : formatEUR(row[c[1]] as number)}</td>`).join('')}</tr>`).join('')
-  }</tbody></table>`
+  el.innerHTML = `<table class="cbr-table"><thead><tr>${cols.map((c) => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${r.yearly
+    .map(
+      (row) =>
+        `<tr>${cols.map((c) => `<td>${c[1] === 'year' ? row.year : formatEUR(row[c[1]] as number)}</td>`).join('')}</tr>`,
+    )
+    .join('')}</tbody></table>`
 }
 
 function fillMonthly(r: ComputeSuccess, d: Dict): void {
   const el = document.getElementById('cbr-monthly')
-  if (!el)
-    return
+  if (!el) return
   const sample = r.monthly.filter((_, i) => i % 12 === 11 || i === 0)
   el.innerHTML = `<table class="cbr-table"><thead><tr>
     <th>${d.table.month}</th><th>${d.table.rate}</th><th>${d.table.interest}</th>
     <th>${d.table.principal}</th><th>${d.table.sonder}</th><th>${d.table.balance}</th>
-  </tr></thead><tbody>${
-    sample.map(m => `<tr>
+  </tr></thead><tbody>${sample
+    .map(
+      (m) => `<tr>
       <td>${m.month}</td><td>${formatPct(m.rate)}</td><td>${formatEUR(m.interest)}</td>
       <td>${formatEUR(m.principal)}</td><td>${formatEUR(m.sonder)}</td><td>${formatEUR(m.bal_end)}</td>
-    </tr>`).join('')
-  }</tbody></table>
+    </tr>`,
+    )
+    .join('')}</tbody></table>
   <p class="cbr-help">${d.export_monthly}</p>`
 }
 
@@ -705,24 +879,22 @@ function chartState(): ChartState {
 }
 
 function drawCharts(r: ComputeSuccess, d: Dict): void {
-  const canvas = document.getElementById('cbr-chart') as HTMLCanvasElement | null
+  const canvas = document.getElementById(
+    'cbr-chart',
+  ) as HTMLCanvasElement | null
   const matrixEl = document.getElementById('cbr-matrix')
   const mcExtra = document.getElementById('cbr-mc-extra')
-  if (!canvas || !matrixEl || !mcExtra)
-    return
+  if (!canvas || !matrixEl || !mcExtra) return
   const box = canvas.parentElement
   if (tab === 'matrix') {
-    if (box)
-      box.hidden = true
+    if (box) box.hidden = true
     matrixEl.hidden = false
     mcExtra.hidden = true
-    if (matrix)
-      renderMatrix(matrixEl, matrix, liquidated, d)
+    if (matrix) renderMatrix(matrixEl, matrix, liquidated, d)
     return
   }
   if (tab === 'mc') {
-    if (box)
-      box.hidden = false
+    if (box) box.hidden = false
     matrixEl.hidden = true
     mcExtra.hidden = false
     if (mc) {
@@ -730,17 +902,17 @@ function drawCharts(r: ComputeSuccess, d: Dict): void {
       const c2 = document.getElementById('cbr-chart-mc2') as HTMLCanvasElement
       charts.mc2 = renderMcBands(c2, mc, d, charts.mc2 ?? null)
       const prob = document.getElementById('cbr-mc-prob')
-      if (prob)
-        prob.textContent = `${d.p_buy}: ${formatPct(mc.p_buyer_liq_ge)}`
-    }
-    else {
+      if (prob) prob.textContent = `${d.p_buy}: ${formatPct(mc.p_buyer_liq_ge)}`
+      renderMcCloudBlock(mc, d)
+    } else {
       const ctx = canvas.getContext('2d')
       ctx?.clearRect(0, 0, canvas.width, canvas.height)
+      const cloud = document.getElementById('cbr-mc-cloud')
+      if (cloud) cloud.hidden = true
     }
     return
   }
-  if (box)
-    box.hidden = false
+  if (box) box.hidden = false
   matrixEl.hidden = true
   mcExtra.hidden = true
   const st = chartState()
@@ -749,11 +921,96 @@ function drawCharts(r: ComputeSuccess, d: Dict): void {
   else if (tab === 'composition')
     charts.comp = renderComposition(canvas, r, st, d, charts.comp ?? null)
   else if (tab === 'loan')
-    charts.loan = renderLoan(canvas, r, st, d, inputs.fix_years, charts.loan ?? null)
+    charts.loan = renderLoan(
+      canvas,
+      r,
+      st,
+      d,
+      inputs.fix_years,
+      charts.loan ?? null,
+    )
   else if (tab === 'cash')
     charts.cash = renderCash(canvas, r, st, d, charts.cash ?? null)
   else if (tab === 'tax')
     charts.tax = renderTax(canvas, r, st, d, charts.tax ?? null)
+}
+
+function renderMcCloudBlock(mcResult: MonteCarloResult, d: Dict): void {
+  const wrap = document.getElementById('cbr-mc-cloud')
+  const title = document.getElementById('cbr-mc-cloud-title')
+  const yLabel = document.getElementById('cbr-mc-cloud-y')
+  const caption = document.getElementById('cbr-mc-cloud-caption')
+  const toggle = document.getElementById('cbr-mc-cloud-table-toggle')
+  const tableHost = document.getElementById('cbr-mc-cloud-table')
+  const canvas = document.getElementById(
+    'cbr-chart-mc-cloud',
+  ) as HTMLCanvasElement | null
+  const legend = document.getElementById('cbr-mc-cloud-legend')
+  if (
+    !wrap ||
+    !title ||
+    !yLabel ||
+    !caption ||
+    !toggle ||
+    !tableHost ||
+    !canvas ||
+    !legend ||
+    !mcResult.yearly
+  ) {
+    if (wrap) wrap.hidden = true
+    return
+  }
+  wrap.hidden = false
+  title.textContent = d.mc_cloud_title
+  yLabel.textContent = d.mc_cloud_axis_y
+  caption.textContent = d.mc_cloud_caption.replace(
+    '{runs}',
+    String(mcResult.runs),
+  )
+  toggle.textContent = d.mc_cloud_table
+  canvas.setAttribute('aria-label', d.mc_cloud_aria)
+  legend.innerHTML = [
+    ['line', d.mc_cloud_renter_p50],
+    ['rent-mid', d.mc_cloud_renter_p25_75],
+    ['rent-wide', d.mc_cloud_renter_p5_95],
+    ['line buy', d.mc_cloud_buyer_p50],
+    ['buy-mid', d.mc_cloud_buyer_p25_75],
+  ]
+    .map(
+      ([cls, text]) =>
+        `<li><span class="cbr-swatch ${cls}" aria-hidden="true"></span>${escapeHtml(text ?? '')}</li>`,
+    )
+    .join('')
+  charts.mcCloud = renderMcCloud(canvas, mcResult, d, charts.mcCloud ?? null)
+  const years = mcResult.yearly.years
+  const renter = mcResult.yearly.renter_liq
+  const buyer = mcResult.yearly.buyer_liq
+  const pctHeads = ['P5', 'P25', 'P50', 'P75', 'P95']
+  const head1 = `<tr><th rowspan="2">${escapeHtml(d.table.year ?? '')}</th><th colspan="5">${escapeHtml(d.table.renter_liq ?? '')}</th><th colspan="5">${escapeHtml(d.table.buyer_liq ?? '')}</th></tr>`
+  const head2 = `<tr>${pctHeads
+    .concat(pctHeads)
+    .map((h) => `<th>${h}</th>`)
+    .join('')}</tr>`
+  const body = years
+    .map((year, i) => {
+      const r = renter[i]!
+      const b = buyer[i]!
+      const cells = [
+        r.p5,
+        r.p25,
+        r.p50,
+        r.p75,
+        r.p95,
+        b.p5,
+        b.p25,
+        b.p50,
+        b.p75,
+        b.p95,
+      ]
+      return `<tr><th scope="row">${year}</th>${cells.map((v) => `<td>${formatEUR(v)}</td>`).join('')}</tr>`
+    })
+    .join('')
+  tableHost.innerHTML = `<table class="cbr-table"><thead>${head1}${head2}</thead><tbody>${body}</tbody></table>`
 }
 
 function runMc(): void {
@@ -761,18 +1018,20 @@ function runMc(): void {
   tab = 'mc'
   paintResult()
   const progWrap = document.querySelector('.cbr-progress') as HTMLElement | null
-  const prog = document.getElementById('cbr-mc-prog') as HTMLProgressElement | null
+  const prog = document.getElementById(
+    'cbr-mc-prog',
+  ) as HTMLProgressElement | null
   const lbl = document.getElementById('cbr-mc-prog-lbl')
-  if (progWrap)
-    progWrap.hidden = false
+  if (progWrap) progWrap.hidden = false
   const btn = document.getElementById('cbr-mc') as HTMLButtonElement | null
   if (btn) {
     btn.disabled = true
     btn.textContent = d.mc_running
   }
-  if (mcWorker)
-    mcWorker.terminate()
-  mcWorker = new Worker(new URL('../worker/mc-worker.ts', import.meta.url), { type: 'module' })
+  if (mcWorker) mcWorker.terminate()
+  mcWorker = new Worker(new URL('../worker/mc-worker.ts', import.meta.url), {
+    type: 'module',
+  })
   mcWorker.onmessage = (ev: MessageEvent) => {
     if (ev.data?.type === 'progress') {
       if (prog) {
@@ -780,17 +1039,21 @@ function runMc(): void {
         prog.value = ev.data.done
       }
       if (lbl)
-        lbl.textContent = d.progress.replace('{done}', ev.data.done).replace('{total}', ev.data.total)
+        lbl.textContent = d.progress
+          .replace('{done}', ev.data.done)
+          .replace('{total}', ev.data.total)
     }
     if (ev.data?.type === 'result') {
-      if (ev.data.result && !('ok' in ev.data.result && ev.data.result.ok === false))
+      if (
+        ev.data.result &&
+        !('ok' in ev.data.result && ev.data.result.ok === false)
+      )
         mc = ev.data.result as MonteCarloResult
       if (btn) {
         btn.disabled = false
         btn.textContent = d.run_mc
       }
-      if (progWrap)
-        progWrap.hidden = true
+      if (progWrap) progWrap.hidden = true
       paintResult()
     }
   }
@@ -800,17 +1063,17 @@ function runMc(): void {
 function renderFooter(): void {
   const d = dict()
   const el = document.querySelector('.cbr-footer') as HTMLElement | null
-  if (!el)
-    return
+  if (!el) return
   const year = settings.basiszins_year ?? BASISZINS_YEAR
   const ver = settings.version ?? PLUGIN_VERSION
-  const disclaimer = lang === 'de'
-    ? (settings.disclaimer_de ?? d.disclaimer)
-    : (settings.disclaimer_zh ?? d.disclaimer)
+  const disclaimer =
+    lang === 'de'
+      ? (settings.disclaimer_de ?? d.disclaimer)
+      : (settings.disclaimer_zh ?? d.disclaimer)
   el.innerHTML = `
     <details class="cbr-assumptions">
       <summary>${d.assumptions}</summary>
-      <ul>${d.assume_items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
+      <ul>${d.assume_items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
       <p>${escapeHtml((inputs.use_sparer_kirchen ? d.help.tax_note_on : d.help.tax_note) ?? '')}</p>
       <p>${escapeHtml(d.help.liq ?? '')}</p>
       <p>${escapeHtml(d.help.real ?? '')}</p>
@@ -827,19 +1090,20 @@ function escapeHtml(s: string): string {
 function applySettings(extra?: PageSettings): void {
   if (extra) {
     Object.assign(settings, extra)
-    if (extra.lang === 'zh' || extra.lang === 'de')
-      lang = extra.lang
+    if (extra.lang === 'zh' || extra.lang === 'de') lang = extra.lang
     if (extra.defaults) {
       builtinDefaults = withFixedProductDefaults(extra.defaults)
-      inputs = withFixedProductDefaults({ ...builtinDefaults, ...queryToInputs(location.search) })
+      inputs = withFixedProductDefaults({
+        ...builtinDefaults,
+        ...queryToInputs(location.search),
+      })
     }
   }
 }
 
 function start(): void {
   document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'de'
-  if (shouldEnableTestApi(settings))
-    attachTestApi()
+  if (shouldEnableTestApi(settings)) attachTestApi()
   buildApp()
   recalc(true)
   startHeightReporting()
@@ -852,14 +1116,17 @@ function boot(): void {
   }
   let started = false
   const go = (extra?: PageSettings) => {
-    if (started)
-      return
+    if (started) return
     started = true
     applySettings(extra)
     start()
   }
   window.addEventListener('message', (event) => {
-    if (event.source === window.parent && event.data && event.data.type === 'caifu-buy-vs-rent:settings')
+    if (
+      event.source === window.parent &&
+      event.data &&
+      event.data.type === 'caifu-buy-vs-rent:settings'
+    )
       go(event.data.settings as PageSettings)
   })
   window.parent.postMessage({ type: 'caifu-buy-vs-rent:need-settings' }, '*')

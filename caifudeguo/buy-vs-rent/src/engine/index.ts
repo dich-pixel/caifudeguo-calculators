@@ -36,10 +36,18 @@ export type {
   MaintBase,
   MonteCarloResult,
   MonteCarloStats,
+  MonteCarloYearly,
   MonthRow,
   NkMode,
   ResolvedInputs,
   ScenarioCell,
+  YearlyPercentiles,
   YearRow,
 } from './types'
-export { computeNk, mergeConfig, mergeInputs, resolveInputs, validate } from './validate'
+export {
+  computeNk,
+  mergeConfig,
+  mergeInputs,
+  resolveInputs,
+  validate,
+} from './validate'

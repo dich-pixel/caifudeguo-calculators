@@ -1,4 +1,9 @@
-import type { ComputeSuccess, MonteCarloResult, ScenarioCell, YearRow } from '../engine/types'
+import type {
+  ComputeSuccess,
+  MonteCarloResult,
+  ScenarioCell,
+  YearRow,
+} from '../engine/types'
 import type { Dict } from '../i18n'
 import {
   ArcElement,
@@ -17,13 +22,21 @@ import {
 import { formatEUR } from './format'
 
 Chart.register(
-  LineController, LineElement, PointElement,
-  BarController, BarElement,
-  CategoryScale, LinearScale,
-  Filler, Legend, Tooltip, ArcElement,
+  LineController,
+  LineElement,
+  PointElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Filler,
+  Legend,
+  Tooltip,
+  ArcElement,
 )
 
-Chart.defaults.font.family = "system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+Chart.defaults.font.family =
+  "system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif"
 Chart.defaults.color = '#1d2327'
 
 const BUY = '#0b5cad'
@@ -41,13 +54,21 @@ export interface ChartState {
 
 function yearRows(result: ComputeSuccess, yearMax: number): YearRow[] {
   const all = [result.start, ...result.yearly]
-  return all.filter(r => r.year <= yearMax)
+  return all.filter((r) => r.year <= yearMax)
 }
 
-function pick(row: YearRow, who: 'buyer' | 'renter' | 'diff', st: ChartState): number {
+function pick(
+  row: YearRow,
+  who: 'buyer' | 'renter' | 'diff',
+  st: ChartState,
+): number {
   const suffix = st.liquidated
-    ? (st.real ? '_liq_real' : '_liq')
-    : (st.real ? '_nonliq_real' : '_nonliq')
+    ? st.real
+      ? '_liq_real'
+      : '_liq'
+    : st.real
+      ? '_nonliq_real'
+      : '_nonliq'
   const key = `${who}${suffix}` as keyof YearRow
   return row[key] as number
 }
@@ -57,19 +78,45 @@ export function destroyChart(chart: Chart | null): null {
   return null
 }
 
-export function renderNetChart(canvas: HTMLCanvasElement, result: ComputeSuccess, st: ChartState, dict: Dict, prev: Chart | null): Chart {
+export function renderNetChart(
+  canvas: HTMLCanvasElement,
+  result: ComputeSuccess,
+  st: ChartState,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   const rows = yearRows(result, st.yearMax)
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels: rows.map(r => String(r.year)),
+      labels: rows.map((r) => String(r.year)),
       datasets: [
-        { label: dict.buyer, data: rows.map(r => pick(r, 'buyer', st)), borderColor: BUY, backgroundColor: BUY, tension: 0.1, pointRadius: 0, borderWidth: 2 },
-        { label: dict.renter, data: rows.map(r => pick(r, 'renter', st)), borderColor: RENT, backgroundColor: RENT, tension: 0.1, pointRadius: 0, borderWidth: 2 },
+        {
+          label: dict.buyer,
+          data: rows.map((r) => pick(r, 'buyer', st)),
+          borderColor: BUY,
+          backgroundColor: BUY,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: dict.renter,
+          data: rows.map((r) => pick(r, 'renter', st)),
+          borderColor: RENT,
+          backgroundColor: RENT,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
         {
           label: dict.other_capital,
-          data: rows.map(r => st.real && r.year > 0 ? r.other_capital_gross / (1 + (st.inflation ?? 0)) ** r.year : r.other_capital_gross),
+          data: rows.map((r) =>
+            st.real && r.year > 0
+              ? r.other_capital_gross / (1 + (st.inflation ?? 0)) ** r.year
+              : r.other_capital_gross,
+          ),
           borderColor: MUT,
           borderDash: [6, 4],
           pointRadius: 0,
@@ -87,12 +134,30 @@ function lineOpts() {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom' as const, labels: { boxWidth: 12, font: { size: 11 } } },
-      tooltip: { callbacks: { label: (c: { dataset: { label?: string }, parsed: { y: number | null } }) => `${c.dataset.label ?? ''}: ${formatEUR(c.parsed.y ?? 0)}` } },
+      legend: {
+        position: 'bottom' as const,
+        labels: { boxWidth: 12, font: { size: 11 } },
+      },
+      tooltip: {
+        callbacks: {
+          label: (c: {
+            dataset: { label?: string }
+            parsed: { y: number | null }
+          }) => `${c.dataset.label ?? ''}: ${formatEUR(c.parsed.y ?? 0)}`,
+        },
+      },
     },
     scales: {
-      x: { title: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 11 } } },
-      y: { ticks: { callback: (v: string | number) => formatAxis(Number(v)), font: { size: 11 } } },
+      x: {
+        title: { display: false },
+        ticks: { maxTicksLimit: 12, font: { size: 11 } },
+      },
+      y: {
+        ticks: {
+          callback: (v: string | number) => formatAxis(Number(v)),
+          font: { size: 11 },
+        },
+      },
     },
   }
 }
@@ -106,43 +171,113 @@ function formatAxis(v: number): string {
   return v.toLocaleString('de-DE', { maximumFractionDigits: 0 })
 }
 
-export function renderComposition(canvas: HTMLCanvasElement, result: ComputeSuccess, st: ChartState, dict: Dict, prev: Chart | null): Chart {
+export function renderComposition(
+  canvas: HTMLCanvasElement,
+  result: ComputeSuccess,
+  st: ChartState,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   const rows = yearRows(result, st.yearMax)
-  const deflator = (y: number) => (st.real && y > 0) ? (1 + /* filled below */ 1) : 1
+  const deflator = (y: number) =>
+    st.real && y > 0 ? 1 + /* filled below */ 1 : 1
   void deflator
   const factor = (row: YearRow) => {
-    if (!st.real || row.year === 0)
-      return 1
+    if (!st.real || row.year === 0) return 1
     return row.buyer_liq === 0 ? 1 : row.buyer_liq_real / row.buyer_liq
   }
   // The composition is a stock view; apply the same real deflator as buyer_liq.
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels: rows.map(r => String(r.year)),
+      labels: rows.map((r) => String(r.year)),
       datasets: [
-        { label: dict.house_end, data: rows.map(r => r.house * factor(r)), borderColor: '#2a7f62', backgroundColor: 'rgba(42,127,98,0.25)', fill: true, pointRadius: 0, tension: 0.1, borderWidth: 1.5 },
-        { label: dict.restschuld, data: rows.map(r => -r.balance * factor(r)), borderColor: NEG, backgroundColor: 'rgba(179,45,46,0.2)', fill: true, pointRadius: 0, tension: 0.1, borderWidth: 1.5 },
-        { label: 'ETF', data: rows.map(r => r.buyer_etf * factor(r)), borderColor: BUY, backgroundColor: 'rgba(11,92,173,0.2)', fill: true, pointRadius: 0, tension: 0.1, borderWidth: 1.5 },
-        { label: dict.table.buyer_debt, data: rows.map(r => -r.buyer_debt * factor(r)), borderColor: '#8a4b00', backgroundColor: 'rgba(138,75,0,0.2)', fill: true, pointRadius: 0, tension: 0.1, borderWidth: 1.5 },
+        {
+          label: dict.house_end,
+          data: rows.map((r) => r.house * factor(r)),
+          borderColor: '#2a7f62',
+          backgroundColor: 'rgba(42,127,98,0.25)',
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          borderWidth: 1.5,
+        },
+        {
+          label: dict.restschuld,
+          data: rows.map((r) => -r.balance * factor(r)),
+          borderColor: NEG,
+          backgroundColor: 'rgba(179,45,46,0.2)',
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          borderWidth: 1.5,
+        },
+        {
+          label: 'ETF',
+          data: rows.map((r) => r.buyer_etf * factor(r)),
+          borderColor: BUY,
+          backgroundColor: 'rgba(11,92,173,0.2)',
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          borderWidth: 1.5,
+        },
+        {
+          label: dict.table.buyer_debt,
+          data: rows.map((r) => -r.buyer_debt * factor(r)),
+          borderColor: '#8a4b00',
+          backgroundColor: 'rgba(138,75,0,0.2)',
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          borderWidth: 1.5,
+        },
       ],
     },
     options: lineOpts(),
   })
 }
 
-export function renderLoan(canvas: HTMLCanvasElement, result: ComputeSuccess, st: ChartState, dict: Dict, fixYears: number | null, prev: Chart | null): Chart {
+export function renderLoan(
+  canvas: HTMLCanvasElement,
+  result: ComputeSuccess,
+  st: ChartState,
+  dict: Dict,
+  fixYears: number | null,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   const rows = yearRows(result, st.yearMax)
   const chart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: rows.map(r => String(r.year)),
+      labels: rows.map((r) => String(r.year)),
       datasets: [
-        { label: dict.restschuld, data: rows.map(r => r.balance), borderColor: NEG, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: dict.table.cum_principal, data: rows.map(r => r.cum_principal), borderColor: BUY, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: dict.cum_interest, data: rows.map(r => r.cum_interest), borderColor: RENT, pointRadius: 0, borderWidth: 2, tension: 0.1 },
+        {
+          label: dict.restschuld,
+          data: rows.map((r) => r.balance),
+          borderColor: NEG,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: dict.table.cum_principal,
+          data: rows.map((r) => r.cum_principal),
+          borderColor: BUY,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: dict.cum_interest,
+          data: rows.map((r) => r.cum_interest),
+          borderColor: RENT,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
       ],
     },
     options: lineOpts(),
@@ -151,53 +286,120 @@ export function renderLoan(canvas: HTMLCanvasElement, result: ComputeSuccess, st
   return chart
 }
 
-export function renderCash(canvas: HTMLCanvasElement, result: ComputeSuccess, st: ChartState, dict: Dict, prev: Chart | null): Chart {
+export function renderCash(
+  canvas: HTMLCanvasElement,
+  result: ComputeSuccess,
+  st: ChartState,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
-  const rows = result.yearly.filter(r => r.year <= st.yearMax)
+  const rows = result.yearly.filter((r) => r.year <= st.yearMax)
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels: rows.map(r => String(r.year)),
+      labels: rows.map((r) => String(r.year)),
       datasets: [
-        { label: dict.fields.cash_monthly, data: rows.map(r => r.cash_month), borderColor: MUT, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: dict.table.buyer_cost_month, data: rows.map(r => r.buyer_cost_month), borderColor: BUY, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: dict.table.renter_cost_month, data: rows.map(r => r.renter_cost_month), borderColor: RENT, pointRadius: 0, borderWidth: 2, tension: 0.1 },
+        {
+          label: dict.fields.cash_monthly,
+          data: rows.map((r) => r.cash_month),
+          borderColor: MUT,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: dict.table.buyer_cost_month,
+          data: rows.map((r) => r.buyer_cost_month),
+          borderColor: BUY,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: dict.table.renter_cost_month,
+          data: rows.map((r) => r.renter_cost_month),
+          borderColor: RENT,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
       ],
     },
     options: lineOpts(),
   })
 }
 
-export function renderTax(canvas: HTMLCanvasElement, result: ComputeSuccess, st: ChartState, dict: Dict, prev: Chart | null): Chart {
+export function renderTax(
+  canvas: HTMLCanvasElement,
+  result: ComputeSuccess,
+  st: ChartState,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   const rows = yearRows(result, st.yearMax)
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels: rows.map(r => String(r.year)),
+      labels: rows.map((r) => String(r.year)),
       datasets: [
-        { label: `${dict.taxes_paid} · ${dict.buyer}`, data: rows.map(r => r.taxes_paid_buyer), borderColor: BUY, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: `${dict.taxes_paid} · ${dict.renter}`, data: rows.map(r => r.taxes_paid_renter), borderColor: RENT, pointRadius: 0, borderWidth: 2, tension: 0.1 },
-        { label: `${dict.latent_tax} · ${dict.buyer}`, data: rows.map(r => r.latent_tax_buyer), borderColor: BUY, borderDash: [4, 3], pointRadius: 0, borderWidth: 1.5, tension: 0.1 },
-        { label: `${dict.latent_tax} · ${dict.renter}`, data: rows.map(r => r.latent_tax_renter), borderColor: RENT, borderDash: [4, 3], pointRadius: 0, borderWidth: 1.5, tension: 0.1 },
+        {
+          label: `${dict.taxes_paid} · ${dict.buyer}`,
+          data: rows.map((r) => r.taxes_paid_buyer),
+          borderColor: BUY,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: `${dict.taxes_paid} · ${dict.renter}`,
+          data: rows.map((r) => r.taxes_paid_renter),
+          borderColor: RENT,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: `${dict.latent_tax} · ${dict.buyer}`,
+          data: rows.map((r) => r.latent_tax_buyer),
+          borderColor: BUY,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          borderWidth: 1.5,
+          tension: 0.1,
+        },
+        {
+          label: `${dict.latent_tax} · ${dict.renter}`,
+          data: rows.map((r) => r.latent_tax_renter),
+          borderColor: RENT,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          borderWidth: 1.5,
+          tension: 0.1,
+        },
       ],
     },
     options: lineOpts(),
   })
 }
 
-export function renderMatrix(container: HTMLElement, cells: ScenarioCell[], liquidated: boolean, dict: Dict): void {
+export function renderMatrix(
+  container: HTMLElement,
+  cells: ScenarioCell[],
+  liquidated: boolean,
+  dict: Dict,
+): void {
   container.replaceChildren()
   const table = document.createElement('table')
   table.className = 'cbr-matrix'
   table.setAttribute('role', 'table')
-  const etfVals = [cells[0]!, cells[1]!, cells[2]!].map(c => c.etf_return)
-  const houseVals = [cells[0]!, cells[3]!, cells[6]!].map(c => c.house_growth)
+  const etfVals = [cells[0]!, cells[1]!, cells[2]!].map((c) => c.etf_return)
+  const houseVals = [cells[0]!, cells[3]!, cells[6]!].map((c) => c.house_growth)
   const thead = document.createElement('thead')
   const hr = document.createElement('tr')
   hr.append(th(`${dict.fields.house_growth} \\ ${dict.fields.etf_return}`))
-  for (const r of etfVals)
-    hr.append(th(pctLabel(r)))
+  for (const r of etfVals) hr.append(th(pctLabel(r)))
   thead.append(hr)
   table.append(thead)
   const tb = document.createElement('tbody')
@@ -209,8 +411,16 @@ export function renderMatrix(container: HTMLElement, cells: ScenarioCell[], liqu
       const v = liquidated ? cell.diff_liq : cell.diff_nonliq
       const td = document.createElement('td')
       td.textContent = formatEUR(v, 0)
-      td.style.background = heat(v, cells.map(c => liquidated ? c.diff_liq : c.diff_nonliq))
-      td.style.color = Math.abs(v) > maxAbs(cells.map(c => liquidated ? c.diff_liq : c.diff_nonliq)) * 0.35 ? '#fff' : '#1d2327'
+      td.style.background = heat(
+        v,
+        cells.map((c) => (liquidated ? c.diff_liq : c.diff_nonliq)),
+      )
+      td.style.color =
+        Math.abs(v) >
+        maxAbs(cells.map((c) => (liquidated ? c.diff_liq : c.diff_nonliq))) *
+          0.35
+          ? '#fff'
+          : '#1d2327'
       td.title = `${dict.buyer}: ${formatEUR(cell.buyer_liq)} · ${dict.renter}: ${formatEUR(cell.renter_liq)}`
       tr.append(td)
     }
@@ -235,7 +445,7 @@ function pctLabel(d: number): string {
 }
 
 function maxAbs(xs: number[]): number {
-  return Math.max(1, ...xs.map(v => Math.abs(v)))
+  return Math.max(1, ...xs.map((v) => Math.abs(v)))
 }
 
 function heat(v: number, all: number[]): string {
@@ -245,40 +455,67 @@ function heat(v: number, all: number[]): string {
     const a = 0.15 + 0.7 * t
     return `rgba(30,122,70,${a})`
   }
-  const a = 0.15 + 0.7 * (-t)
+  const a = 0.15 + 0.7 * -t
   return `rgba(179,45,46,${a})`
 }
 
-export function renderMc(canvas: HTMLCanvasElement, mc: MonteCarloResult, dict: Dict, prev: Chart | null): Chart {
+export function renderMc(
+  canvas: HTMLCanvasElement,
+  mc: MonteCarloResult,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   const stats = mc.diff_liq
   const labels = ['P5', 'P10', 'P25', 'P50', 'P75', 'P90', 'P95']
-  const data = [stats.p5, stats.p10, stats.p25, stats.p50, stats.p75, stats.p90, stats.p95]
+  const data = [
+    stats.p5,
+    stats.p10,
+    stats.p25,
+    stats.p50,
+    stats.p75,
+    stats.p90,
+    stats.p95,
+  ]
   return new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: dict.hist,
-        data,
-        backgroundColor: data.map(v => v >= 0 ? POS : NEG),
-      }],
+      datasets: [
+        {
+          label: dict.hist,
+          data,
+          backgroundColor: data.map((v) => (v >= 0 ? POS : NEG)),
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (c: { parsed: { y: number | null } }) => formatEUR(c.parsed.y ?? 0) } },
+        tooltip: {
+          callbacks: {
+            label: (c: { parsed: { y: number | null } }) =>
+              formatEUR(c.parsed.y ?? 0),
+          },
+        },
       },
       scales: {
-        y: { ticks: { callback: (v: string | number) => formatAxis(Number(v)) } },
+        y: {
+          ticks: { callback: (v: string | number) => formatAxis(Number(v)) },
+        },
       },
     },
   })
 }
 
-export function renderMcBands(canvas: HTMLCanvasElement, mc: MonteCarloResult, dict: Dict, prev: Chart | null): Chart {
+export function renderMcBands(
+  canvas: HTMLCanvasElement,
+  mc: MonteCarloResult,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
   prev?.destroy()
   return new Chart(canvas, {
     type: 'bar',
@@ -307,9 +544,147 @@ export function renderMcBands(canvas: HTMLCanvasElement, mc: MonteCarloResult, d
       maintainAspectRatio: false,
       plugins: {
         legend: { position: 'bottom' as const },
-        tooltip: { callbacks: { label: (c: { dataset: { label?: string }, parsed: { y: number | null } }) => `${c.dataset.label}: ${formatEUR(c.parsed.y ?? 0)}` } },
+        tooltip: {
+          callbacks: {
+            label: (c: {
+              dataset: { label?: string }
+              parsed: { y: number | null }
+            }) => `${c.dataset.label}: ${formatEUR(c.parsed.y ?? 0)}`,
+          },
+        },
       },
-      scales: { y: { ticks: { callback: (v: string | number) => formatAxis(Number(v)) } } },
+      scales: {
+        y: {
+          ticks: { callback: (v: string | number) => formatAxis(Number(v)) },
+        },
+      },
+    },
+  })
+}
+
+export function renderMcCloud(
+  canvas: HTMLCanvasElement,
+  mc: MonteCarloResult,
+  dict: Dict,
+  prev: Chart | null,
+): Chart {
+  prev?.destroy()
+  const years = mc.yearly.years
+  const renter = mc.yearly.renter_liq
+  const buyer = mc.yearly.buyer_liq
+  const rentLight = 'rgba(107, 78, 0, 0.16)'
+  const rentDark = 'rgba(107, 78, 0, 0.38)'
+  const buyFaint = 'rgba(11, 92, 173, 0.18)'
+  const line = (data: number[]) => ({
+    data,
+    pointRadius: 0,
+    tension: 0,
+    borderWidth: 0,
+  })
+  return new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        {
+          ...line(renter.map((p) => p.p95)),
+          label: dict.mc_cloud_renter_p5_95,
+          borderColor: 'transparent',
+          backgroundColor: rentLight,
+          fill: '+1',
+          order: 4,
+        },
+        {
+          ...line(renter.map((p) => p.p5)),
+          label: '',
+          borderColor: 'transparent',
+          backgroundColor: rentLight,
+          fill: false,
+          order: 4,
+        },
+        {
+          ...line(renter.map((p) => p.p75)),
+          label: dict.mc_cloud_renter_p25_75,
+          borderColor: 'transparent',
+          backgroundColor: rentDark,
+          fill: '+1',
+          order: 3,
+        },
+        {
+          ...line(renter.map((p) => p.p25)),
+          label: '',
+          borderColor: 'transparent',
+          backgroundColor: rentDark,
+          fill: false,
+          order: 3,
+        },
+        {
+          label: dict.mc_cloud_renter_p50,
+          data: renter.map((p) => p.p50),
+          borderColor: RENT,
+          backgroundColor: RENT,
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+          borderWidth: 2,
+          order: 1,
+        },
+        {
+          ...line(buyer.map((p) => p.p75)),
+          label: dict.mc_cloud_buyer_p25_75,
+          borderColor: 'transparent',
+          backgroundColor: buyFaint,
+          fill: '+1',
+          order: 3,
+        },
+        {
+          ...line(buyer.map((p) => p.p25)),
+          label: '',
+          borderColor: 'transparent',
+          backgroundColor: buyFaint,
+          fill: false,
+          order: 3,
+        },
+        {
+          label: dict.mc_cloud_buyer_p50,
+          data: buyer.map((p) => p.p50),
+          borderColor: BUY,
+          backgroundColor: BUY,
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+          borderWidth: 2,
+          borderDash: [6, 4],
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c: {
+              dataset: { label?: string }
+              parsed: { y: number | null }
+            }) => {
+              if (!c.dataset.label) return ''
+              return `${c.dataset.label}: ${formatEUR(c.parsed.y ?? 0)}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: dict.mc_cloud_axis_year },
+          ticks: { autoSkip: true, maxRotation: 0, maxTicksLimit: 16 },
+        },
+        y: {
+          ticks: { callback: (v: string | number) => formatAxis(Number(v)) },
+        },
+      },
     },
   })
 }
