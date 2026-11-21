@@ -756,17 +756,17 @@ function renderSuccess(root: HTMLElement, r: ComputeSuccess, d: Dict): void {
         <ul class="cbr-mc-cloud-legend" id="cbr-mc-cloud-legend"></ul>
         <p class="cbr-mc-cloud-caption" id="cbr-mc-cloud-caption"></p>
         <details class="cbr-group" id="cbr-mc-cloud-table-wrap">
-          <summary class="cbr-toggle" style="list-style:none" id="cbr-mc-cloud-table-toggle"></summary>
+          <summary class="cbr-toggle" id="cbr-mc-cloud-table-toggle"></summary>
           <div class="cbr-table-wrap" id="cbr-mc-cloud-table"></div>
         </details>
       </div>
     </div>
     <details class="cbr-group" style="margin-top:12px">
-      <summary class="cbr-toggle" style="list-style:none">${d.yearly_table}</summary>
+      <summary class="cbr-toggle">${d.yearly_table}</summary>
       <div class="cbr-table-wrap" id="cbr-yearly"></div>
     </details>
     <details class="cbr-group">
-      <summary class="cbr-toggle" style="list-style:none">${d.monthly_table}</summary>
+      <summary class="cbr-toggle">${d.monthly_table}</summary>
       <div class="cbr-table-wrap" id="cbr-monthly"></div>
     </details>
   `

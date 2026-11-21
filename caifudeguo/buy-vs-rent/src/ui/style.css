@@ -141,8 +141,21 @@ body {
 .cbr-toggle::before {
   content: '▸ ';
 }
-.cbr-toggle[aria-expanded='true']::before {
+.cbr-toggle[aria-expanded='true']::before,
+details[open] > .cbr-toggle::before {
   content: '▾ ';
+}
+/* Hide the native <summary> disclosure triangle so only the ::before marker shows.
+   list-style:none alone is not enough in Chromium/Safari. */
+summary.cbr-toggle {
+  list-style: none;
+}
+summary.cbr-toggle::-webkit-details-marker {
+  display: none;
+}
+summary.cbr-toggle::marker {
+  content: none;
+  display: none;
 }
 .cbr-group-body {
   padding: 8px 0 0;
