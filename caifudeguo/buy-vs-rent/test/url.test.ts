@@ -216,4 +216,42 @@ describe('buildShareUrl', () => {
     )
     expect(new URL(url).search).toBe('')
   })
+  it('drops leftover prefixed keys on a single-instance copy so they cannot win on reopen', () => {
+    const url = buildShareUrl(
+      'https://caifudeguo.de/rechner/?bvr1.price=430000&utm=keep',
+      mergeInputs({ price: 440_000 }),
+      DEFAULT_INPUTS,
+      { instanceId: 'bvr1', namespaced: false },
+    )
+    const parsed = new URL(url)
+    expect(parsed.searchParams.get('price')).toBe('440000')
+    expect(parsed.searchParams.get('bvr1.price')).toBeNull()
+    expect(parsed.searchParams.get('utm')).toBe('keep')
+  })
+
+  it('drops leftover unprefixed keys on a first-instance namespaced copy', () => {
+    const url = buildShareUrl(
+      'https://caifudeguo.de/rechner/?price=420000&utm=keep',
+      mergeInputs({}),
+      DEFAULT_INPUTS,
+      { instanceId: 'bvr1', namespaced: true, first: true },
+    )
+    const parsed = new URL(url)
+    expect(parsed.searchParams.get('price')).toBeNull()
+    expect(parsed.searchParams.get('bvr1.price')).toBeNull()
+    expect(parsed.searchParams.get('utm')).toBe('keep')
+  })
+
+  it('does not drop unprefixed keys when copying a later instance', () => {
+    const url = buildShareUrl(
+      'https://caifudeguo.de/rechner/?price=420000&utm=keep',
+      mergeInputs({ price: 350_000 }),
+      DEFAULT_INPUTS,
+      { instanceId: 'bvr2', namespaced: true, first: false },
+    )
+    const parsed = new URL(url)
+    expect(parsed.searchParams.get('price')).toBe('420000')
+    expect(parsed.searchParams.get('bvr2.price')).toBe('350000')
+    expect(parsed.searchParams.get('utm')).toBe('keep')
+  })
 })

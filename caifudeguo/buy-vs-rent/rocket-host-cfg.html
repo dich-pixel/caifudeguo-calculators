@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- Same-origin Rocket delay-JS simulation with settings baked into iframe src. Not shipped. -->
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rocket delay host (baked settings)</title>
+    <style>
+      body { margin: 0; background: #f0f0f1; font-family: system-ui, sans-serif; }
+      #cbr-rocket-outside { padding: 12px 16px; background: #e2e4e7; }
+      iframe.caifu-buy-vs-rent { width: 100%; border: 0; display: block; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="cbr-rocket-outside">Parent chrome (click here to start delayed scripts)</div>
+    <iframe class="caifu-buy-vs-rent" data-cbr-id="bvr1" src="./index.html?cbr_test=1&cbr_cfg=%7B%22lang%22%3A%22zh%22%2C%22disclaimer_zh%22%3A%22ADMIN-ZH-MARK%22%2C%22defaults%22%3A%7B%22price%22%3A350000%7D%2C%22basiszins%22%3A0.025%2C%22basiszins_year%22%3A2026%2C%22testInterface%22%3Atrue%7D" title="买房还是租房？" style="height:2400px" scrolling="no" loading="eager"></iframe>
+    <script type="rocketlazyloadscript">
+      window.caifuBuyVsRent = {
+        origins: [location.origin],
+        settings: {
+          testInterface: true,
+          lang: 'zh',
+          disclaimer_zh: 'ADMIN-ZH-MARK',
+          defaults: { price: 350000 },
+          basiszins: 0.025,
+          basiszins_year: 2026,
+        },
+      }
+    </script>
+    <script type="rocketlazyloadscript" data-rocket-src="./embed.js"></script>
+    <script>
+      (function () {
+        var started = false
+        function startRocket(ev) {
+          if (started) return
+          if (ev && ev.target && ev.target.closest && ev.target.closest('iframe.caifu-buy-vs-rent')) return
+          started = true
+          document.querySelectorAll('script[type="rocketlazyloadscript"]').forEach(function (old) {
+            var s = document.createElement('script')
+            var src = old.getAttribute('data-rocket-src') || old.getAttribute('src')
+            if (src) s.src = src
+            else s.textContent = old.textContent
+            old.parentNode.replaceChild(s, old)
+          })
+        }
+        ;['click', 'touchstart', 'keydown'].forEach(function (type) {
+          window.addEventListener(type, startRocket, true)
+        })
+        window.__cbrStartRocket = startRocket
+      })()
+    </script>
+  </body>
+</html>

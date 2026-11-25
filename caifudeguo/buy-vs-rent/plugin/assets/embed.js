@@ -148,7 +148,34 @@
     return new URLSearchParams()
   }
 
+  const frameAlreadyLoaded = (frame) => {
+    if (frame.getAttribute('data-cbr-attached') === '1') return true
+    try {
+      const w = frame.contentWindow
+      if (!w || !w.location) return false
+      const href = w.location.href
+      return href !== '' && href !== 'about:blank'
+    } catch {
+      return Boolean(
+        frame.getAttribute('src') &&
+        frame.getAttribute('src') !== 'about:blank',
+      )
+    }
+  }
+
+  const watchFrame = (frame) => {
+    if (frame.getAttribute('data-cbr-watch') === '1') return
+    frame.setAttribute('data-cbr-watch', '1')
+    frame.addEventListener('load', () => {
+      frame.setAttribute('data-cbr-attached', '1')
+    })
+  }
+
   const applyParamsToFrame = (frame, extra) => {
+    watchFrame(frame)
+    // Never replace src after the calculator has loaded: that reloads the iframe
+    // and wipes values the user already typed (F1). Late params go by postMessage.
+    if (frameAlreadyLoaded(frame)) return
     const lazy = frame.hasAttribute('data-lazy-src')
     const dataSrc = frame.hasAttribute('data-src')
     const raw =
@@ -214,6 +241,7 @@
       pageUrl: location.href,
       instanceId,
       namespaced: multi,
+      first: index === 0,
       search,
     }
   }
@@ -232,6 +260,7 @@
           pageUrl: page.pageUrl,
           instanceId: page.instanceId,
           namespaced: page.namespaced,
+          first: page.first,
           search: page.search,
         },
         target,

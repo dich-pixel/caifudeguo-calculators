@@ -3,7 +3,16 @@
 import { Buffer } from 'node:buffer'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, relative } from 'node:path'
 import process from 'node:process'
@@ -12,14 +21,20 @@ import { crc32, deflateRawSync } from 'node:zlib'
 const root = new URL('../../../', import.meta.url).pathname
 const args = process.argv.slice(2)
 const outIdx = args.indexOf('--out')
-const outDir = outIdx >= 0 ? args[outIdx + 1] : join(root, '..', 'engineer-handoff', 'buy-vs-rent')
+const outDir =
+  outIdx >= 0
+    ? args[outIdx + 1]
+    : join(root, '..', 'engineer-handoff', 'buy-vs-rent')
 const EXPECTED_NODE = 'v22.14.0'
 const nodeMismatch = process.version !== EXPECTED_NODE
 if (nodeMismatch && !args.includes('--allow-node-mismatch')) {
-  console.error(`Node ${process.version} is running, but the release zip should be built with ${EXPECTED_NODE}.\nOverride: --allow-node-mismatch`)
+  console.error(
+    `Node ${process.version} is running, but the release zip should be built with ${EXPECTED_NODE}.\nOverride: --allow-node-mismatch`,
+  )
   process.exit(1)
 }
-const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
+const git = (...a) =>
+  execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
 
 const dirty = git('status', '--porcelain')
 if (dirty && !args.includes('--allow-dirty')) {
@@ -28,49 +43,81 @@ if (dirty && !args.includes('--allow-dirty')) {
 }
 const sha = git('rev-parse', 'HEAD')
 const short = sha.slice(0, 7)
-const php = readFileSync(join(root, 'caifudeguo/buy-vs-rent/plugin/caifu-buy-vs-rent.php'), 'utf8')
+const php = readFileSync(
+  join(root, 'caifudeguo/buy-vs-rent/plugin/caifu-buy-vs-rent.php'),
+  'utf8',
+)
 const version = /^ \* Version:\s+(\S+)/m.exec(php)[1]
 
 const childPath = `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ''}`
-execFileSync('npx', ['vite', 'build', '--config', 'caifudeguo/buy-vs-rent/vite.config.mjs'], {
-  cwd: root,
-  stdio: 'inherit',
-  env: { ...process.env, PATH: childPath, CFD_BUILD_SHA: sha },
-})
+execFileSync(
+  'npx',
+  ['vite', 'build', '--config', 'caifudeguo/buy-vs-rent/vite.config.mjs'],
+  {
+    cwd: root,
+    stdio: 'inherit',
+    env: { ...process.env, PATH: childPath, CFD_BUILD_SHA: sha },
+  },
+)
 
 const stage = mkdtempSync(join(tmpdir(), 'cbr-wp-'))
 const plugin = join(stage, 'caifu-buy-vs-rent')
 cpSync(join(root, 'caifudeguo/buy-vs-rent/plugin'), plugin, { recursive: true })
-cpSync(join(root, 'caifudeguo/buy-vs-rent/dist'), join(plugin, 'app'), { recursive: true })
-// host-wp-column.html is only for local Playwright smoke tests, never ship it.
-const hostPage = join(plugin, 'app', 'host-wp-column.html')
-try {
-  rmSync(hostPage)
-}
-catch {
-  // absent in a non-preview build
+cpSync(join(root, 'caifudeguo/buy-vs-rent/dist'), join(plugin, 'app'), {
+  recursive: true,
+})
+// Local Playwright hosts / copies must not ship in the plugin zip.
+for (const name of [
+  'host-wp-column.html',
+  'rocket-host.html',
+  'rocket-host-cfg.html',
+  'embed.js',
+]) {
+  try {
+    rmSync(join(plugin, 'app', name))
+  } catch {
+    // absent in a non-preview build
+  }
 }
 cpSync(join(root, 'LICENSE'), join(plugin, 'LICENSE'))
 mkdirSync(join(plugin, 'source'))
 const srcName = `caifudeguo-calculators-${sha}.tar.gz`
-execFileSync('git', ['archive', '--format=tar.gz', `--prefix=caifudeguo-calculators-${short}/`, '-o', join(plugin, 'source', srcName), sha], { cwd: root })
-writeFileSync(join(plugin, 'SOURCE.txt'), [
-  'caifu-buy-vs-rent plugin — corresponding source (AGPL-3.0, section 6)',
-  '',
-  `Built from: https://github.com/dich-pixel/caifudeguo-calculators/tree/${sha}`,
-  `Commit:     ${sha}`,
-  `Archive:    source/${srcName} (git archive of that commit)`,
-  'Build:      pnpm install --frozen-lockfile && node caifudeguo/buy-vs-rent/scripts/build-zip.mjs (Node 22.14.0)',
-  `Node:       ${process.version}`,
-  ...(nodeMismatch ? [`Node version mismatch: expected ${EXPECTED_NODE}`] : []),
-  '',
-].join('\n'))
+execFileSync(
+  'git',
+  [
+    'archive',
+    '--format=tar.gz',
+    `--prefix=caifudeguo-calculators-${short}/`,
+    '-o',
+    join(plugin, 'source', srcName),
+    sha,
+  ],
+  { cwd: root },
+)
+writeFileSync(
+  join(plugin, 'SOURCE.txt'),
+  [
+    'caifu-buy-vs-rent plugin — corresponding source (AGPL-3.0, section 6)',
+    '',
+    `Built from: https://github.com/dich-pixel/caifudeguo-calculators/tree/${sha}`,
+    `Commit:     ${sha}`,
+    `Archive:    source/${srcName} (git archive of that commit)`,
+    'Build:      pnpm install --frozen-lockfile && node caifudeguo/buy-vs-rent/scripts/build-zip.mjs (Node 22.14.0)',
+    `Node:       ${process.version}`,
+    ...(nodeMismatch
+      ? [`Node version mismatch: expected ${EXPECTED_NODE}`]
+      : []),
+    '',
+  ].join('\n'),
+)
 
 function walk(dir) {
-  return readdirSync(dir).sort().flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? [`${p}/`, ...walk(p)] : [p]
-  })
+  return readdirSync(dir)
+    .sort()
+    .flatMap((n) => {
+      const p = join(dir, n)
+      return statSync(p).isDirectory() ? [`${p}/`, ...walk(p)] : [p]
+    })
 }
 const entries = [`${plugin}/`, ...walk(plugin)]
 const chunks = []
@@ -80,7 +127,9 @@ const dosTime = 0
 const dosDate = ((2026 - 1980) << 9) | (1 << 5) | 1
 for (const p of entries) {
   const isDir = p.endsWith('/')
-  const name = Buffer.from(isDir ? `${relative(stage, p.slice(0, -1))}/` : relative(stage, p))
+  const name = Buffer.from(
+    isDir ? `${relative(stage, p.slice(0, -1))}/` : relative(stage, p),
+  )
   const data = isDir ? Buffer.alloc(0) : readFileSync(p)
   const comp = isDir ? data : deflateRawSync(data, { level: 9 })
   const method = isDir ? 0 : 8

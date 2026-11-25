@@ -17,7 +17,7 @@ License URI: https://www.gnu.org/licenses/agpl-3.0.html
 * 计算器以 iframe 显示（插件目录 `app/index.html`），完全在浏览器里计算：不上传用户输入、不用 cookie、不调用第三方服务。
 * 后台：设置 → 买房 vs 租房，可更新 Basiszins、输入默认值（含 Grunderwerbsteuer 税率）、默认语言和免责声明。卸载插件时删除这些设置。
 * 高度自适应：计算器页面用 ResizeObserver 测高，通过 postMessage 告诉父页面。插件只接受来自该 iframe 本身、且来源与其地址一致的消息（以及本站 / 插件 origin 和 caifudeguo.de）。
-* 兼容 WP Rocket「延迟 JavaScript 执行」和「Remove Unused CSS」：计算界面在 iframe 内，样式不会被主题页扫描去掉；embed.js 在运行时读取配置并会补发高度请求，不必把脚本从延迟执行中排除。
+* 兼容 WP Rocket「延迟 JavaScript 执行」和「Remove Unused CSS」：计算界面在 iframe 内，样式不会被主题页扫描去掉。插件会通过 `rocket_delay_js_exclusions` / `rocket_exclude_defer_js` 自动排除 embed.js 和内联配置（`caifu-buy-vs-rent`、`caifuBuyVsRent`），并给这些脚本加上 `nowprocket` / `data-no-defer` / `data-no-optimize`。后台默认值、Basiszins 和免责声明也会写入 iframe 地址，这样即使父页面脚本仍被延迟，计算器也能启动；同域时 iframe 还会自己读取父页面地址以套用分享参数，且 embed.js 随后启动时不会重载已经打开的 iframe。
 
 测试专用接口（生产环境默认关闭，见交付说明）：仅在 `WP_DEBUG`、常量 `CAIFU_BVR_TEST` 或短代码 `test="1"` 时开启。
 

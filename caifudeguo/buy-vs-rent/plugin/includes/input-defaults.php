@@ -63,6 +63,86 @@ function caifu_bvr_builtin_input_defaults()
 }
 
 /**
+ * Query keys that a share link may carry (all IN-xx defaults except σ_Haus, which is never shared).
+ *
+ * @return string[]
+ */
+function caifu_bvr_share_input_keys()
+{
+    return array_keys(caifu_bvr_builtin_input_defaults());
+}
+
+function caifu_bvr_is_share_input_key($key)
+{
+    return is_string($key) && in_array($key, caifu_bvr_share_input_keys(), true);
+}
+
+/**
+ * Pick this instance’s params from a query bag (typically $_GET).
+ * Prefixed keys win. Unprefixed keys apply when this is the only or first instance.
+ *
+ * @param array  $query
+ * @param string $instance_id
+ * @param bool   $first
+ * @return array<string,string>
+ */
+function caifu_bvr_extract_instance_query($query, $instance_id, $first)
+{
+    if (!is_array($query) || !is_string($instance_id) || $instance_id === '') {
+        return array();
+    }
+    $prefix = $instance_id . '.';
+    $prefixed = array();
+    $unprefixed = array();
+    foreach ($query as $k => $v) {
+        if (!is_string($k) || is_array($v)) {
+            continue;
+        }
+        if (strpos($k, $prefix) === 0) {
+            $key = substr($k, strlen($prefix));
+            if (caifu_bvr_is_share_input_key($key)) {
+                $prefixed[$key] = (string) $v;
+            }
+        } elseif (caifu_bvr_is_share_input_key($k)) {
+            $unprefixed[$k] = (string) $v;
+        }
+    }
+    if ($prefixed) {
+        return $prefixed;
+    }
+    if ($first) {
+        return $unprefixed;
+    }
+    return array();
+}
+
+/**
+ * True when the request query contains at least one share-link input key (plain or prefixed).
+ *
+ * @param array $query
+ * @return bool
+ */
+function caifu_bvr_query_has_share_params($query)
+{
+    if (!is_array($query)) {
+        return false;
+    }
+    foreach ($query as $k => $v) {
+        if (!is_string($k)) {
+            continue;
+        }
+        if (caifu_bvr_is_share_input_key($k)) {
+            return true;
+        }
+        $dot = strpos($k, '.');
+        if ($dot !== false && caifu_bvr_is_share_input_key(substr($k, $dot + 1))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Field schema for admin forms and sanitizing. Labels are PRD chapter 4 names.
  *
  * @return array

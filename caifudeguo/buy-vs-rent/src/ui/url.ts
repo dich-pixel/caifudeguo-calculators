@@ -20,6 +20,8 @@ export interface ShareContext {
   instanceId?: string
   /** True when the parent page has more than one calculator embed. */
   namespaced?: boolean
+  /** True when this embed is the first in document order (unprefixed keys apply to it). */
+  first?: boolean
 }
 
 export function isShareInputKey(key: string): key is keyof Inputs {
@@ -156,6 +158,19 @@ export function buildShareUrl(
   )
   const prefix = usePrefix ? `${ctx.instanceId}.` : ''
   for (const key of SHARE_INPUT_KEYS) url.searchParams.delete(`${prefix}${key}`)
+  if (!usePrefix) {
+    // Single-instance page: drop leftover prefixed keys (any instance id) so they
+    // cannot win over the unprefixed values we are about to write (A11).
+    for (const existing of [...url.searchParams.keys()]) {
+      const dot = existing.indexOf('.')
+      if (dot > 0 && isShareInputKey(existing.slice(dot + 1)))
+        url.searchParams.delete(existing)
+    }
+  } else if (ctx.first) {
+    // Multi-instance, first embed: drop leftover unprefixed keys so a later copy
+    // after the user resets this instance cannot be overwritten on reopen (C12).
+    for (const key of SHARE_INPUT_KEYS) url.searchParams.delete(key)
+  }
   const next = new URLSearchParams(q)
   for (const [k, v] of next) url.searchParams.set(`${prefix}${k}`, v)
   return url.toString()

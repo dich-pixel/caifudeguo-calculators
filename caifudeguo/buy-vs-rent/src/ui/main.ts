@@ -41,7 +41,13 @@ import {
 } from './format'
 import { startHeightReporting } from './height'
 import { attachTestApi, shouldEnableTestApi } from './test-api'
-import { isHttpUrl, isInstanceId, queryToInputs, shareUrl } from './url'
+import {
+  extractInstanceSearch,
+  isHttpUrl,
+  isInstanceId,
+  queryToInputs,
+  shareUrl,
+} from './url'
 import '../ui/style.css'
 
 interface PageSettings {
@@ -164,16 +170,30 @@ type Tab = 'net' | 'composition' | 'loan' | 'cash' | 'tax' | 'matrix' | 'mc'
 
 const YEAR_SHORTCUTS = [10, 20, 30, 50]
 
+function readSettingsFromQuery(): PageSettings {
+  try {
+    const raw = new URLSearchParams(location.search).get('cbr_cfg')
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      return {}
+    return parsed as PageSettings
+  } catch {
+    return {}
+  }
+}
+
 function readSettings(): PageSettings {
+  const fromQuery = readSettingsFromQuery()
   const el = document.getElementById('cbr-settings')
   if (el?.textContent) {
     try {
-      return JSON.parse(el.textContent) as PageSettings
+      return { ...fromQuery, ...(JSON.parse(el.textContent) as PageSettings) }
     } catch {
       /* ignore */
     }
   }
-  return window.__CBR_SETTINGS__ ?? {}
+  return { ...fromQuery, ...(window.__CBR_SETTINGS__ ?? {}) }
 }
 
 function $(sel: string, root: ParentNode = document): HTMLElement {
@@ -208,6 +228,7 @@ const charts: Record<string, Chart | null> = {}
 const shareCtx: ShareContext = {}
 let parentSearch = ''
 let appliedNonemptyParentSearch = false
+let userEdited = false
 
 function engineConfig(): EngineConfig {
   return mergeConfig({
@@ -602,6 +623,7 @@ function toggleField(key: string, show: boolean): void {
 }
 
 function schedule(): void {
+  userEdited = true
   window.clearTimeout(debounce)
   debounce = window.setTimeout(() => recalc(false), 300)
 }
@@ -1139,6 +1161,7 @@ function applyShareContext(
     pageUrl?: unknown
     instanceId?: unknown
     namespaced?: unknown
+    first?: unknown
     search?: unknown
   },
   origin: string,
@@ -1155,9 +1178,10 @@ function applyShareContext(
     shareCtx.instanceId = data.instanceId
   if (typeof data.namespaced === 'boolean')
     shareCtx.namespaced = data.namespaced
+  if (typeof data.first === 'boolean') shareCtx.first = data.first
   let changed = false
   if (typeof data.search === 'string') parentSearch = data.search
-  if (parentSearch !== '' && !appliedNonemptyParentSearch) {
+  if (parentSearch !== '' && !appliedNonemptyParentSearch && !userEdited) {
     appliedNonemptyParentSearch = true
     inputs = withFixedProductDefaults({
       ...builtinDefaults,
@@ -1168,14 +1192,123 @@ function applyShareContext(
   return changed
 }
 
+function applyLateSettings(extra?: PageSettings): void {
+  if (!extra) return
+  const oldDefaults = builtinDefaults
+  const previous = { ...inputs }
+  Object.assign(settings, extra)
+  if (extra.defaults) {
+    builtinDefaults = withFixedProductDefaults(extra.defaults)
+    const preserved: Partial<Inputs> = {}
+    if (userEdited) {
+      for (const key of Object.keys(previous) as (keyof Inputs)[]) {
+        if (!Object.is(previous[key], oldDefaults[key]))
+          Object.assign(preserved, { [key]: previous[key] })
+      }
+    }
+    inputs = withFixedProductDefaults({
+      ...builtinDefaults,
+      ...queryFromIframeOrParent(),
+      ...preserved,
+    })
+  }
+}
+
+function tryReadSameOriginParent(): {
+  pageUrl: string
+  instanceId?: string
+  namespaced: boolean
+  first: boolean
+  search: string
+} | null {
+  if (window.parent === window) return null
+  try {
+    const href = window.parent.location.href
+    const frames = window.parent.document.querySelectorAll(
+      'iframe.caifu-buy-vs-rent',
+    )
+    let index = -1
+    frames.forEach((frame, i) => {
+      if ((frame as HTMLIFrameElement).contentWindow === window) index = i
+    })
+    const el =
+      index >= 0 ? (frames[index] as HTMLIFrameElement | undefined) : undefined
+    const rawId = el?.getAttribute('data-cbr-id') ?? ''
+    const instanceId = isInstanceId(rawId)
+      ? rawId
+      : index >= 0
+        ? `bvr${index + 1}`
+        : undefined
+    const multi = frames.length > 1
+    const first = index === 0
+    const search = instanceId
+      ? extractInstanceSearch(window.parent.location.search, {
+          instanceId,
+          multi,
+          first,
+        })
+      : ''
+    return {
+      pageUrl: href,
+      instanceId,
+      namespaced: multi,
+      first,
+      search,
+    }
+  } catch {
+    return null
+  }
+}
+
+function tryReadParentConfig(): PageSettings | undefined {
+  if (window.parent === window) return undefined
+  try {
+    const cfg = (
+      window.parent as Window & {
+        caifuBuyVsRent?: { settings?: PageSettings }
+      }
+    ).caifuBuyVsRent
+    if (cfg?.settings && typeof cfg.settings === 'object') return cfg.settings
+  } catch {
+    /* cross-origin or not yet defined */
+  }
+  return undefined
+}
+
 function boot(): void {
+  const fromParent = tryReadSameOriginParent()
+  if (fromParent) {
+    if (isHttpUrl(fromParent.pageUrl)) shareCtx.pageUrl = fromParent.pageUrl
+    if (fromParent.instanceId && isInstanceId(fromParent.instanceId))
+      shareCtx.instanceId = fromParent.instanceId
+    shareCtx.namespaced = fromParent.namespaced
+    shareCtx.first = fromParent.first
+    if (fromParent.search) {
+      parentSearch = fromParent.search
+      if (!appliedNonemptyParentSearch) {
+        appliedNonemptyParentSearch = true
+        inputs = withFixedProductDefaults({
+          ...builtinDefaults,
+          ...queryFromIframeOrParent(),
+        })
+      }
+    }
+  }
   if (window.parent === window) {
     start()
     return
   }
   let started = false
   const go = (extra?: PageSettings) => {
-    if (started) return
+    if (started) {
+      if (extra) {
+        applyLateSettings(extra)
+        buildApp()
+        recalc(true)
+        renderFooter()
+      }
+      return
+    }
     started = true
     applySettings(extra)
     start()
@@ -1193,6 +1326,7 @@ function boot(): void {
       pageUrl?: unknown
       instanceId?: unknown
       namespaced?: unknown
+      first?: unknown
       search?: unknown
     }
     if (
@@ -1208,7 +1342,16 @@ function boot(): void {
     }
   })
   window.parent.postMessage({ type: 'caifu-buy-vs-rent:need-settings' }, '*')
-  window.setTimeout(() => go(), 800)
+  const parentCfg = tryReadParentConfig()
+  const haveLocalCfg = Boolean(
+    settings.defaults ||
+    settings.disclaimer_zh ||
+    settings.disclaimer_de ||
+    settings.basiszins != null,
+  )
+  if (parentCfg) go(parentCfg)
+  else if (haveLocalCfg) go()
+  else window.setTimeout(() => go(), 800)
 }
 
 boot()
