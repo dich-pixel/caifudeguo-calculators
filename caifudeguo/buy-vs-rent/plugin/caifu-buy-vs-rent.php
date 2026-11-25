@@ -149,8 +149,23 @@ function caifu_bvr_register_assets()
 }
 add_action('wp_enqueue_scripts', 'caifu_bvr_register_assets');
 
+function caifu_bvr_sanitize_instance_id($raw)
+{
+    if (!is_string($raw) || $raw === '') {
+        return '';
+    }
+    if (!preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,31}$/', $raw)) {
+        return '';
+    }
+    $reserved = array('lang', 'v', 'cbr', 'cbr_test', 'defaults', 'test', 'preset');
+    if (in_array($raw, $reserved, true)) {
+        return '';
+    }
+    return $raw;
+}
+
 /**
- * [caifu_buy_vs_rent lang="zh|de" preset="default" test="1" height="2400"]
+ * [caifu_buy_vs_rent lang="zh|de" preset="default" test="1" height="2400" id="bvr1"]
  *
  * @param array|string $atts
  * @return string
@@ -164,6 +179,7 @@ function caifu_bvr_shortcode($atts)
             'test'   => '',
             'height' => '2400',
             'title'  => '买房还是租房？',
+            'id'     => '',
         ),
         is_array($atts) ? $atts : array(),
         'caifu_buy_vs_rent'
@@ -193,11 +209,27 @@ function caifu_bvr_shortcode($atts)
     $args = array('v' => CAIFU_BVR_VERSION, 'lang' => $lang);
     $src = add_query_arg($args, plugins_url('app/index.html', __FILE__));
 
+    // Instance id is page structure (safe to cache). Share-query params are applied at runtime by embed.js.
+    static $instance_seq = 0;
+    static $used_ids = array();
+    $instance_seq++;
+    $instance_id = caifu_bvr_sanitize_instance_id($atts['id']);
+    if ($instance_id === '' || isset($used_ids[$instance_id])) {
+        $n = $instance_seq;
+        $instance_id = 'bvr' . $n;
+        while (isset($used_ids[$instance_id])) {
+            $n++;
+            $instance_id = 'bvr' . $n;
+        }
+    }
+    $used_ids[$instance_id] = true;
+
     return sprintf(
-        '<iframe class="caifu-buy-vs-rent" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="no-referrer"></iframe>',
+        '<iframe class="caifu-buy-vs-rent" data-cbr-id="%4$s" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>',
         esc_url($src),
         esc_attr($atts['title']),
-        $height
+        $height,
+        esc_attr($instance_id)
     );
 }
 add_shortcode('caifu_buy_vs_rent', 'caifu_bvr_shortcode');

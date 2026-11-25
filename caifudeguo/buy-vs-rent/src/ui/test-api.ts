@@ -1,3 +1,4 @@
+import type { Inputs } from '../engine'
 import {
   compute,
   DEFAULT_CONFIG,
@@ -19,6 +20,13 @@ export interface TestApi {
   config: typeof DEFAULT_CONFIG
   TAX_RATE: typeof TAX_RATE
   PRNG_INITSEQ: typeof PRNG_INITSEQ
+  shareUrl?: () => string
+  getInputs?: () => Inputs
+}
+
+export interface TestApiHooks {
+  shareUrl: () => string
+  getInputs: () => Inputs
 }
 
 declare global {
@@ -27,23 +35,22 @@ declare global {
   }
 }
 
-export function shouldEnableTestApi(settings: { testInterface?: boolean } | undefined): boolean {
+export function shouldEnableTestApi(
+  settings: { testInterface?: boolean } | undefined,
+): boolean {
   const host = typeof location !== 'undefined' ? location.hostname : ''
   const onProd = /(?:^|\.)caifudeguo\.de$/i.test(host)
-  if (onProd)
-    return false
-  if (settings?.testInterface)
-    return true
+  if (onProd) return false
+  if (settings?.testInterface) return true
   try {
     const params = new URLSearchParams(location.search)
     return params.get('cbr_test') === '1'
-  }
-  catch {
+  } catch {
     return false
   }
 }
 
-export function attachTestApi(): TestApi {
+export function attachTestApi(hooks?: TestApiHooks): TestApi {
   const api: TestApi = {
     compute,
     runMonteCarlo,
@@ -54,6 +61,8 @@ export function attachTestApi(): TestApi {
     config: DEFAULT_CONFIG,
     TAX_RATE,
     PRNG_INITSEQ,
+    shareUrl: hooks?.shareUrl,
+    getInputs: hooks?.getInputs,
   }
   window.CaifuBuyVsRentTest = api
   return api

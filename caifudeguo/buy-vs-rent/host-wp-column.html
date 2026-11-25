@@ -15,7 +15,7 @@
   <body>
     <div class="site">
       <h2>WordPress column host (30px padding)</h2>
-      <iframe class="cbr-frame caifu-buy-vs-rent" src="./index.html?cbr_test=1" title="买房还是租房？" style="height: 2400px" scrolling="no"></iframe>
+      <iframe class="cbr-frame caifu-buy-vs-rent" data-cbr-id="bvr1" src="./index.html?cbr_test=1" title="买房还是租房？" style="height: 2400px" scrolling="no"></iframe>
     </div>
     <script>
       (function () {
@@ -36,10 +36,19 @@
             return parsed && typeof parsed === 'object' ? parsed : {}
           } catch (e) { return {} }
         }
-        const settingsMessage = () => ({
+        const pageFields = (frame) => ({
+          pageUrl: location.href,
+          instanceId: frame.getAttribute('data-cbr-id') || 'bvr1',
+          namespaced: document.querySelectorAll(SELECTOR).length > 1,
+          search: '',
+        })
+        const settingsMessage = (frame) => Object.assign({
           type: 'caifu-buy-vs-rent:settings',
           settings: { defaults: hostDefaults(), testInterface: true },
-        })
+        }, pageFields(frame))
+        const pageMessage = (frame) => Object.assign({
+          type: 'caifu-buy-vs-rent:page',
+        }, pageFields(frame))
         const postTo = (frame, payload) => {
           const target = originOf(frame)
           if (target !== '' && frame.contentWindow)
@@ -53,7 +62,7 @@
             const own = originOf(frame)
             if (own === '' || event.origin !== own) return
             if (data.type === 'caifu-buy-vs-rent:need-settings') {
-              postTo(frame, settingsMessage())
+              postTo(frame, settingsMessage(frame)); postTo(frame, pageMessage(frame))
               return
             }
             if (data.type !== 'caifu-buy-vs-rent:height') return
@@ -64,8 +73,8 @@
           })
         })
         document.querySelectorAll(SELECTOR).forEach((frame) => {
-          frame.addEventListener('load', () => postTo(frame, settingsMessage()))
-          postTo(frame, settingsMessage())
+          frame.addEventListener('load', () => { postTo(frame, settingsMessage(frame)); postTo(frame, pageMessage(frame)) })
+          postTo(frame, settingsMessage(frame)); postTo(frame, pageMessage(frame))
           postTo(frame, { type: 'caifu-buy-vs-rent:resend' })
         })
       })()

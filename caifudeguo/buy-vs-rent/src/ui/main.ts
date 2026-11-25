@@ -9,6 +9,7 @@ import type {
 } from '../engine'
 import type { Dict, Lang } from '../i18n'
 import type { ChartState } from './charts'
+import type { ShareContext } from './url'
 import {
   BASISZINS_YEAR,
   compute,
@@ -40,7 +41,7 @@ import {
 } from './format'
 import { startHeightReporting } from './height'
 import { attachTestApi, shouldEnableTestApi } from './test-api'
-import { queryToInputs, shareUrl } from './url'
+import { isHttpUrl, isInstanceId, queryToInputs, shareUrl } from './url'
 import '../ui/style.css'
 
 interface PageSettings {
@@ -204,6 +205,9 @@ let mc: MonteCarloResult | null = null
 let debounce: number | undefined
 let mcWorker: Worker | null = null
 const charts: Record<string, Chart | null> = {}
+const shareCtx: ShareContext = {}
+let parentSearch = ''
+let appliedNonemptyParentSearch = false
 
 function engineConfig(): EngineConfig {
   return mergeConfig({
@@ -537,7 +541,7 @@ function buildApp(): void {
   })
   $('#cbr-mc').addEventListener('click', runMc)
   $('#cbr-copy').addEventListener('click', () => {
-    const url = shareUrl(inputs, builtinDefaults)
+    const url = shareUrl(inputs, builtinDefaults, shareCtx)
     const fallback = () => {
       const box = document.createElement('input')
       box.value = url
@@ -1087,6 +1091,12 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+function queryFromIframeOrParent(): Partial<Inputs> {
+  const fromSrc = queryToInputs(location.search)
+  const fromParent = parentSearch ? queryToInputs(parentSearch) : {}
+  return { ...fromSrc, ...fromParent }
+}
+
 function applySettings(extra?: PageSettings): void {
   if (extra) {
     Object.assign(settings, extra)
@@ -1095,7 +1105,7 @@ function applySettings(extra?: PageSettings): void {
       builtinDefaults = withFixedProductDefaults(extra.defaults)
       inputs = withFixedProductDefaults({
         ...builtinDefaults,
-        ...queryToInputs(location.search),
+        ...queryFromIframeOrParent(),
       })
     }
   }
@@ -1103,10 +1113,59 @@ function applySettings(extra?: PageSettings): void {
 
 function start(): void {
   document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'de'
-  if (shouldEnableTestApi(settings)) attachTestApi()
+  if (shouldEnableTestApi(settings)) {
+    attachTestApi({
+      shareUrl: () => shareUrl(inputs, builtinDefaults, shareCtx),
+      getInputs: () => inputs,
+    })
+  }
   buildApp()
   recalc(true)
   startHeightReporting()
+}
+
+function isTrustedParent(event: MessageEvent): boolean {
+  if (event.source !== window.parent) return false
+  try {
+    const u = new URL(event.origin)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function applyShareContext(
+  data: {
+    pageUrl?: unknown
+    instanceId?: unknown
+    namespaced?: unknown
+    search?: unknown
+  },
+  origin: string,
+): boolean {
+  if (typeof data.pageUrl === 'string' && isHttpUrl(data.pageUrl)) {
+    try {
+      if (new URL(data.pageUrl).origin === origin)
+        shareCtx.pageUrl = data.pageUrl
+    } catch {
+      // ignore a malformed parent URL
+    }
+  }
+  if (typeof data.instanceId === 'string' && isInstanceId(data.instanceId))
+    shareCtx.instanceId = data.instanceId
+  if (typeof data.namespaced === 'boolean')
+    shareCtx.namespaced = data.namespaced
+  let changed = false
+  if (typeof data.search === 'string') parentSearch = data.search
+  if (parentSearch !== '' && !appliedNonemptyParentSearch) {
+    appliedNonemptyParentSearch = true
+    inputs = withFixedProductDefaults({
+      ...builtinDefaults,
+      ...queryFromIframeOrParent(),
+    })
+    changed = true
+  }
+  return changed
 }
 
 function boot(): void {
@@ -1123,11 +1182,30 @@ function boot(): void {
   }
   window.addEventListener('message', (event) => {
     if (
-      event.source === window.parent &&
-      event.data &&
-      event.data.type === 'caifu-buy-vs-rent:settings'
+      !isTrustedParent(event) ||
+      !event.data ||
+      typeof event.data !== 'object'
     )
-      go(event.data.settings as PageSettings)
+      return
+    const data = event.data as {
+      type?: string
+      settings?: PageSettings
+      pageUrl?: unknown
+      instanceId?: unknown
+      namespaced?: unknown
+      search?: unknown
+    }
+    if (
+      data.type === 'caifu-buy-vs-rent:page' ||
+      data.type === 'caifu-buy-vs-rent:settings'
+    ) {
+      const changed = applyShareContext(data, event.origin)
+      if (data.type === 'caifu-buy-vs-rent:settings') go(data.settings)
+      else if (started && changed) {
+        buildApp()
+        recalc(true)
+      }
+    }
   })
   window.parent.postMessage({ type: 'caifu-buy-vs-rent:need-settings' }, '*')
   window.setTimeout(() => go(), 800)

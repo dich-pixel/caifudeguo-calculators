@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Share host (two instances, cross-origin iframe)</title>
+    <style>
+      body { margin: 0; background: #f0f0f1; font-family: system-ui, sans-serif; }
+      .site { max-width: 1200px; margin: 0 auto; padding: 24px; background: #fff; }
+      h2 { font-size: 1rem; }
+    </style>
+  </head>
+  <body>
+    <div class="site">
+      <h1>Two calculators</h1>
+      <h2>First (auto bvr1)</h2>
+      <iframe class="caifu-buy-vs-rent" src="http://127.0.0.1:4177/index.html?cbr_test=1" title="计算器 1" style="width:100%;height:2400px;border:0;display:block" scrolling="no" loading="eager"></iframe>
+      <h2>Second (id=extra)</h2>
+      <iframe class="caifu-buy-vs-rent" data-cbr-id="extra" src="http://127.0.0.1:4177/index.html?cbr_test=1" title="计算器 2" style="width:100%;height:2400px;border:0;display:block" scrolling="no" loading="eager"></iframe>
+    </div>
+    <script>
+      window.caifuBuyVsRent = {
+        origins: ['http://127.0.0.1:4177'],
+        settings: { testInterface: true },
+      }
+    </script>
+    <script src="/embed.js"></script>
+  </body>
+</html>
