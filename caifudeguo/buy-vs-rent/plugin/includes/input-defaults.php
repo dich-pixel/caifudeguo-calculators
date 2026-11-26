@@ -117,6 +117,49 @@ function caifu_bvr_extract_instance_query($query, $instance_id, $first)
 }
 
 /**
+ * Parse a raw query string, keeping dots in names (PHP's $_GET maps bvr1.price to bvr1_price).
+ * Last value wins when a key is repeated. Array-style keys are ignored.
+ *
+ * @param mixed $qs
+ * @return array<string,string>
+ */
+function caifu_bvr_parse_query_string($qs)
+{
+    if (!is_string($qs) || $qs === '') {
+        return array();
+    }
+    if ($qs[0] === '?') {
+        $qs = substr($qs, 1);
+    }
+    $out = array();
+    foreach (explode('&', $qs) as $part) {
+        if ($part === '') {
+            continue;
+        }
+        $pair = explode('=', $part, 2);
+        $key = urldecode(str_replace('+', ' ', $pair[0]));
+        if ($key === '' || substr($key, -2) === '[]' || strpos($key, '[') !== false) {
+            continue;
+        }
+        $out[$key] = isset($pair[1]) ? urldecode(str_replace('+', ' ', $pair[1])) : '';
+    }
+    return $out;
+}
+
+/**
+ * Current request query from QUERY_STRING (not $_GET).
+ *
+ * @return array<string,string>
+ */
+function caifu_bvr_request_query()
+{
+    $qs = (isset($_SERVER['QUERY_STRING']) && is_string($_SERVER['QUERY_STRING']))
+        ? $_SERVER['QUERY_STRING']
+        : '';
+    return caifu_bvr_parse_query_string($qs);
+}
+
+/**
  * True when the request query contains at least one share-link input key (plain or prefixed).
  *
  * @param array $query

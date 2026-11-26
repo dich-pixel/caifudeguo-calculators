@@ -144,7 +144,7 @@ function caifu_bvr_register_assets()
         'caifu-buy-vs-rent-embed',
         plugins_url('assets/embed.js', __FILE__),
         array(),
-        CAIFU_BVR_VERSION,
+        caifu_bvr_file_ver(__DIR__ . '/assets/embed.js'),
         true
     );
 }
@@ -153,43 +153,38 @@ add_filter('rocket_delay_js_exclusions', 'caifu_bvr_rocket_delay_js_exclusions')
 add_filter('rocket_exclude_defer_js', 'caifu_bvr_rocket_exclude_defer_js');
 add_filter('script_loader_tag', 'caifu_bvr_script_loader_tag', 10, 3);
 add_filter('wp_inline_script_attributes', 'caifu_bvr_inline_script_attributes', 10, 2);
+add_filter('no_texturize_shortcodes', 'caifu_bvr_no_texturize_shortcodes');
+
+/**
+ * @param mixed $shortcodes
+ * @return array
+ */
+function caifu_bvr_no_texturize_shortcodes($shortcodes)
+{
+    if (!is_array($shortcodes)) {
+        $shortcodes = array();
+    }
+    if (!in_array('caifu_buy_vs_rent', $shortcodes, true)) {
+        $shortcodes[] = 'caifu_buy_vs_rent';
+    }
+    return $shortcodes;
+}
 
 /**
  * Tiny, Rocket-skipped helper that copies this instance’s share params from the
- * current page URL onto the preceding iframe. Safe if embed.js is still delayed;
- * does nothing if the iframe has already loaded (so we never wipe user input).
+ * current page URL onto the preceding iframe and postMessages official settings.
+ * External file (no inline JS) so the_content / wptexturize cannot mangle it.
  *
  * @return string
  */
 function caifu_bvr_bootstrap_script()
 {
-    $keys = wp_json_encode(array_fill_keys(caifu_bvr_share_input_keys(), 1));
-    if (!is_string($keys)) {
-        $keys = '{}';
-    }
-    return '<script nowprocket data-no-defer="true" data-no-optimize="true">(function(){/* caifuBuyVsRent */'
-        . 'var KEYS=' . $keys . ';'
-        . 'var s=document.currentScript,f=s&&s.previousElementSibling;'
-        . 'if(!f||!f.classList||!f.classList.contains("caifu-buy-vs-rent"))return;'
-        . 'if(f.getAttribute("data-cbr-attached")==="1")return;'
-        . 'var raw=f.getAttribute("data-lazy-src")||f.getAttribute("data-src")||f.getAttribute("src");'
-        . 'if(!raw||raw==="about:blank")return;'
-        . 'var url;try{url=new URL(raw,document.baseURI)}catch(e){return}'
-        . 'var id=f.getAttribute("data-cbr-id")||"";'
-        . 'var frames=document.querySelectorAll("iframe.caifu-buy-vs-rent"),idx=-1,i=0;'
-        . 'for(;i<frames.length;i++){if(frames[i]===f)idx=i}'
-        . 'var first=idx===0,prefix=id+".";'
-        . 'var params=new URLSearchParams(location.search),pref=new URLSearchParams(),un=new URLSearchParams(),hasPref=false;'
-        . 'params.forEach(function(v,k){if(id&&k.indexOf(prefix)===0){var key=k.slice(prefix.length);if(KEYS[key]){pref.set(key,v);hasPref=true}}else if(KEYS[k])un.set(k,v)});'
-        . 'var extra=hasPref?pref:(first?un:new URLSearchParams());'
-        . 'Object.keys(KEYS).forEach(function(k){url.searchParams.delete(k)});'
-        . 'extra.forEach(function(v,k){url.searchParams.set(k,v)});'
-        . 'var next=url.toString(),cur=raw;try{cur=new URL(raw,document.baseURI).toString()}catch(e2){}'
-        . 'if(cur===next)return;'
-        . 'var attr=f.hasAttribute("data-lazy-src")?"data-lazy-src":(f.hasAttribute("data-src")?"data-src":"src");'
-        . 'f.setAttribute(attr,next);'
-        . 'if(attr!=="src"&&f.getAttribute("src")&&f.getAttribute("src")!=="about:blank")f.setAttribute("src",next);'
-        . '})();</script>';
+    $src = add_query_arg(
+        'ver',
+        caifu_bvr_file_ver(__DIR__ . '/assets/bootstrap.js'),
+        plugins_url('assets/bootstrap.js', __FILE__)
+    );
+    return caifu_bvr_bootstrap_tag(esc_url($src));
 }
 
 
@@ -250,12 +245,15 @@ function caifu_bvr_shortcode($atts)
     }
     wp_enqueue_script('caifu-buy-vs-rent-embed');
 
-    $args = array('v' => CAIFU_BVR_VERSION, 'lang' => $lang);
+    // Content hash of the app shell (Vite also stamps hashed query params on app assets).
+    // Plugin Version header stays 1.0.0.
+    $args = array(
+        'v'    => caifu_bvr_file_ver(__DIR__ . '/app/index.html'),
+        'lang' => $lang,
+    );
     $cfg = wp_json_encode(caifu_bvr_frontend_settings($lang, $test));
-    if (is_string($cfg) && $cfg !== '') {
-        // Admin defaults / Basiszins / disclaimer: same for every visitor, safe to cache in the iframe src
-        // so the calculator can start without waiting for a delayed parent script.
-        $args['cbr_cfg'] = $cfg;
+    if (!is_string($cfg)) {
+        $cfg = '{}';
     }
 
     // Instance id is page structure (safe to cache).
@@ -275,11 +273,10 @@ function caifu_bvr_shortcode($atts)
 
     $src = add_query_arg($args, plugins_url('app/index.html', __FILE__));
     // If this request already has share params, copy this instance’s keys onto the iframe src
-    // (helps uncached / cache-bypassing requests). Do not rely on this alone: a cached page
-    // served for a later URL will not have them, so the iframe also reads the parent URL
-    // when same-origin, and a nowprocket bootstrap + embed.js do it at runtime.
-    $get = isset($_GET) && is_array($_GET) ? wp_unslash($_GET) : array();
-    $share = caifu_bvr_extract_instance_query($get, $instance_id, $instance_seq === 1);
+    // (helps uncached / cache-bypassing requests). Parse QUERY_STRING so bvr1.price is not
+    // mangled to bvr1_price (PHP $_GET). A cached page served for a later URL still relies
+    // on the same-origin parent read and the nowprocket bootstrap / embed.js at runtime.
+    $share = caifu_bvr_extract_instance_query(caifu_bvr_request_query(), $instance_id, $instance_seq === 1);
     foreach ($share as $share_key => $share_val) {
         $src = add_query_arg($share_key, $share_val, $src);
     }
@@ -288,12 +285,13 @@ function caifu_bvr_shortcode($atts)
     }
 
     return sprintf(
-        '<iframe class="caifu-buy-vs-rent" data-cbr-id="%4$s" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>%5$s',
+        '<iframe class="caifu-buy-vs-rent" data-cbr-id="%4$s" data-cbr-settings="%6$s" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>%5$s',
         esc_url($src),
         esc_attr($atts['title']),
         $height,
         esc_attr($instance_id),
-        caifu_bvr_bootstrap_script()
+        caifu_bvr_bootstrap_script(),
+        esc_attr($cfg)
     );
 }
 add_shortcode('caifu_buy_vs_rent', 'caifu_bvr_shortcode');

@@ -115,9 +115,54 @@ test.describe('WP Rocket delayed parent scripts', () => {
     expect(
       await page.evaluate(() => Boolean((window as unknown as { caifuBuyVsRent?: unknown }).caifuBuyVsRent)),
     ).toBe(false)
+    const src = await page.locator('iframe.caifu-buy-vs-rent').getAttribute('src')
+    expect(src ?? '').not.toContain('cbr_cfg')
+    expect((src ?? '').length).toBeLessThan(2000)
     const doc = await frameOf(page)
     await waitApi(doc)
     await expect.poll(async () => (await inputsOf(doc)).price).toBe(350_000)
     await expect(doc.locator('.cbr-disclaimer')).toContainText('ADMIN-ZH-MARK')
+  })
+})
+
+test.describe('unsigned cbr_cfg is ignored', () => {
+  test('direct app URL cannot inject footer HTML or override defaults', async ({
+    page,
+  }) => {
+    const cfg = {
+      version: '<a href=https://evil.example/login>登录领取</a>',
+      basiszins_year: '<img src=x onerror=alert(1)>',
+      defaults: { price: 777000 },
+      disclaimer_zh: 1,
+      basiszins: 'nope',
+    }
+    await page.goto(
+      `/index.html?cbr_test=1&cbr_cfg=${encodeURIComponent(JSON.stringify(cfg))}`,
+    )
+    await page.waitForFunction(
+      () => {
+        const g = window as unknown as {
+          CaifuBuyVsRentTest?: { getInputs?: () => { price: number } }
+        }
+        return Boolean(g.CaifuBuyVsRentTest?.getInputs)
+      },
+      null,
+      { timeout: 15_000 },
+    )
+    const price = await page.evaluate(() => {
+      const g = window as unknown as {
+        CaifuBuyVsRentTest?: { getInputs?: () => { price: number } }
+      }
+      return g.CaifuBuyVsRentTest!.getInputs!().price
+    })
+    expect(price).toBe(400_000)
+    const footer = page.locator('.cbr-footer')
+    await expect(footer).toBeVisible()
+    await expect(footer.locator('a')).toHaveCount(0)
+    await expect(footer.locator('img')).toHaveCount(0)
+    await expect(footer).not.toContainText('evil.example')
+    await expect(footer).not.toContainText('登录领取')
+    await expect(page.locator('.cbr-disclaimer')).toBeVisible()
+    await expect(page.locator('.cbr-disclaimer')).not.toHaveText('')
   })
 })

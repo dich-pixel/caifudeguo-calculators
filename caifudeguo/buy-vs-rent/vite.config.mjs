@@ -1,5 +1,7 @@
 import { execSync } from 'node:child_process'
-import { copyFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
@@ -45,6 +47,23 @@ export default defineConfig({
       name: 'copy-host',
       closeBundle() {
         const dir = fileURLToPath(new URL('.', import.meta.url))
+        const indexPath = `${dir}dist/index.html`
+        if (existsSync(indexPath)) {
+          let html = readFileSync(indexPath, 'utf8')
+          html = html.replace(
+            /(src|href)="(\.\/assets\/[^"?]+)(?:\?[^"]*)?"/g,
+            (all, attr, rel) => {
+              const file = join(dir, 'dist', rel.replace(/^\.\//, ''))
+              if (!existsSync(file)) return all
+              const h = createHash('sha256')
+                .update(readFileSync(file))
+                .digest('hex')
+                .slice(0, 12)
+              return `${attr}="${rel}?h=${h}"`
+            },
+          )
+          writeFileSync(indexPath, html)
+        }
         copyFileSync(
           `${dir}host-wp-column.html`,
           `${dir}dist/host-wp-column.html`,

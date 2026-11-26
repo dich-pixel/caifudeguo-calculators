@@ -9,6 +9,7 @@ import type {
 } from '../engine'
 import type { Dict, Lang } from '../i18n'
 import type { ChartState } from './charts'
+import type { PageSettings } from './settings'
 import type { ShareContext } from './url'
 import {
   BASISZINS_YEAR,
@@ -40,6 +41,7 @@ import {
   parsePercentInput,
 } from './format'
 import { startHeightReporting } from './height'
+import { officialSettingsUrl, sanitizePageSettings } from './settings'
 import { attachTestApi, shouldEnableTestApi } from './test-api'
 import {
   extractInstanceSearch,
@@ -49,17 +51,6 @@ import {
   shareUrl,
 } from './url'
 import '../ui/style.css'
-
-interface PageSettings {
-  lang?: Lang
-  basiszins?: number
-  basiszins_year?: number
-  defaults?: Partial<Inputs>
-  disclaimer_zh?: string
-  disclaimer_de?: string
-  testInterface?: boolean
-  version?: string
-}
 
 const MONEY = new Set([
   'price',
@@ -170,30 +161,30 @@ type Tab = 'net' | 'composition' | 'loan' | 'cash' | 'tax' | 'matrix' | 'mc'
 
 const YEAR_SHORTCUTS = [10, 20, 30, 50]
 
-function readSettingsFromQuery(): PageSettings {
-  try {
-    const raw = new URLSearchParams(location.search).get('cbr_cfg')
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-      return {}
-    return parsed as PageSettings
-  } catch {
-    return {}
-  }
-}
-
-function readSettings(): PageSettings {
-  const fromQuery = readSettingsFromQuery()
+function readEmbeddedDocumentSettings(): PageSettings {
   const el = document.getElementById('cbr-settings')
   if (el?.textContent) {
     try {
-      return { ...fromQuery, ...(JSON.parse(el.textContent) as PageSettings) }
+      return sanitizePageSettings(JSON.parse(el.textContent) as unknown)
     } catch {
-      /* ignore */
+      /* ignore a malformed document payload */
     }
   }
-  return { ...fromQuery, ...(window.__CBR_SETTINGS__ ?? {}) }
+  return sanitizePageSettings(window.__CBR_SETTINGS__ ?? {})
+}
+
+function readSettings(): PageSettings {
+  // Unsigned ?cbr_cfg= is ignored: only same-origin official sources are trusted.
+  return readEmbeddedDocumentSettings()
+}
+
+function parseFrameSettingsAttr(raw: string | null): PageSettings {
+  if (!raw) return {}
+  try {
+    return sanitizePageSettings(JSON.parse(raw) as unknown)
+  } catch {
+    return {}
+  }
 }
 
 function $(sel: string, root: ParentNode = document): HTMLElement {
@@ -1090,23 +1081,49 @@ function renderFooter(): void {
   const d = dict()
   const el = document.querySelector('.cbr-footer') as HTMLElement | null
   if (!el) return
-  const year = settings.basiszins_year ?? BASISZINS_YEAR
-  const ver = settings.version ?? PLUGIN_VERSION
+  const year =
+    typeof settings.basiszins_year === 'number'
+      ? settings.basiszins_year
+      : BASISZINS_YEAR
+  const ver =
+    typeof settings.version === 'string'
+      ? settings.version.replace(/^v/, '')
+      : PLUGIN_VERSION
   const disclaimer =
     lang === 'de'
-      ? (settings.disclaimer_de ?? d.disclaimer)
-      : (settings.disclaimer_zh ?? d.disclaimer)
-  el.innerHTML = `
-    <details class="cbr-assumptions">
-      <summary>${d.assumptions}</summary>
-      <ul>${d.assume_items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
-      <p>${escapeHtml((inputs.use_sparer_kirchen ? d.help.tax_note_on : d.help.tax_note) ?? '')}</p>
-      <p>${escapeHtml(d.help.liq ?? '')}</p>
-      <p>${escapeHtml(d.help.real ?? '')}</p>
-    </details>
-    <p class="cbr-disclaimer">${escapeHtml(disclaimer)}</p>
-    <p>${d.version.replace('{v}', ver.replace(/^v/, '')).replace('{y}', String(year))}</p>
-  `
+      ? typeof settings.disclaimer_de === 'string'
+        ? settings.disclaimer_de
+        : d.disclaimer
+      : typeof settings.disclaimer_zh === 'string'
+        ? settings.disclaimer_zh
+        : d.disclaimer
+
+  const details = document.createElement('details')
+  details.className = 'cbr-assumptions'
+  const summary = document.createElement('summary')
+  summary.textContent = d.assumptions
+  const list = document.createElement('ul')
+  for (const item of d.assume_items) {
+    const li = document.createElement('li')
+    li.textContent = item
+    list.append(li)
+  }
+  details.append(summary, list)
+  for (const note of [
+    (inputs.use_sparer_kirchen ? d.help.tax_note_on : d.help.tax_note) ?? '',
+    d.help.liq ?? '',
+    d.help.real ?? '',
+  ]) {
+    const p = document.createElement('p')
+    p.textContent = note
+    details.append(p)
+  }
+  const disc = document.createElement('p')
+  disc.className = 'cbr-disclaimer'
+  disc.textContent = disclaimer
+  const meta = document.createElement('p')
+  meta.textContent = d.version.replace('{v}', ver).replace('{y}', String(year))
+  el.replaceChildren(details, disc, meta)
 }
 
 function escapeHtml(s: string): string {
@@ -1120,16 +1137,16 @@ function queryFromIframeOrParent(): Partial<Inputs> {
 }
 
 function applySettings(extra?: PageSettings): void {
-  if (extra) {
-    Object.assign(settings, extra)
-    if (extra.lang === 'zh' || extra.lang === 'de') lang = extra.lang
-    if (extra.defaults) {
-      builtinDefaults = withFixedProductDefaults(extra.defaults)
-      inputs = withFixedProductDefaults({
-        ...builtinDefaults,
-        ...queryFromIframeOrParent(),
-      })
-    }
+  const clean = extra ? sanitizePageSettings(extra) : {}
+  if (Object.keys(clean).length === 0) return
+  Object.assign(settings, clean)
+  if (clean.lang === 'zh' || clean.lang === 'de') lang = clean.lang
+  if (clean.defaults) {
+    builtinDefaults = withFixedProductDefaults(clean.defaults)
+    inputs = withFixedProductDefaults({
+      ...builtinDefaults,
+      ...queryFromIframeOrParent(),
+    })
   }
 }
 
@@ -1193,12 +1210,13 @@ function applyShareContext(
 }
 
 function applyLateSettings(extra?: PageSettings): void {
-  if (!extra) return
+  const clean = extra ? sanitizePageSettings(extra) : {}
+  if (Object.keys(clean).length === 0) return
   const oldDefaults = builtinDefaults
   const previous = { ...inputs }
-  Object.assign(settings, extra)
-  if (extra.defaults) {
-    builtinDefaults = withFixedProductDefaults(extra.defaults)
+  Object.assign(settings, clean)
+  if (clean.defaults) {
+    builtinDefaults = withFixedProductDefaults(clean.defaults)
     const preserved: Partial<Inputs> = {}
     if (userEdited) {
       for (const key of Object.keys(previous) as (keyof Inputs)[]) {
@@ -1220,6 +1238,7 @@ function tryReadSameOriginParent(): {
   namespaced: boolean
   first: boolean
   search: string
+  settings: PageSettings
 } | null {
   if (window.parent === window) return null
   try {
@@ -1254,6 +1273,9 @@ function tryReadSameOriginParent(): {
       namespaced: multi,
       first,
       search,
+      settings: parseFrameSettingsAttr(
+        el?.getAttribute('data-cbr-settings') ?? null,
+      ),
     }
   } catch {
     return null
@@ -1265,14 +1287,33 @@ function tryReadParentConfig(): PageSettings | undefined {
   try {
     const cfg = (
       window.parent as Window & {
-        caifuBuyVsRent?: { settings?: PageSettings }
+        caifuBuyVsRent?: { settings?: unknown }
       }
     ).caifuBuyVsRent
-    if (cfg?.settings && typeof cfg.settings === 'object') return cfg.settings
+    if (cfg?.settings && typeof cfg.settings === 'object')
+      return sanitizePageSettings(cfg.settings)
   } catch {
     /* cross-origin or not yet defined */
   }
   return undefined
+}
+
+async function tryFetchOfficialSettings(): Promise<PageSettings | undefined> {
+  const url = officialSettingsUrl(location.href)
+  if (!url) return undefined
+  try {
+    const res = await fetch(url, { credentials: 'same-origin', method: 'GET' })
+    if (!res.ok) return undefined
+    return sanitizePageSettings(await res.json())
+  } catch {
+    return undefined
+  }
+}
+
+function settingsLookPresent(s: PageSettings): boolean {
+  return Boolean(
+    s.defaults || s.disclaimer_zh || s.disclaimer_de || s.basiszins != null,
+  )
 }
 
 function boot(): void {
@@ -1293,9 +1334,31 @@ function boot(): void {
         })
       }
     }
+    if (settingsLookPresent(fromParent.settings))
+      applySettings(fromParent.settings)
   }
   if (window.parent === window) {
-    start()
+    if (settingsLookPresent(settings) || !officialSettingsUrl(location.href)) {
+      start()
+      return
+    }
+    let startedTop = false
+    const goTop = (extra?: PageSettings) => {
+      if (startedTop) {
+        if (extra) {
+          applyLateSettings(extra)
+          buildApp()
+          recalc(true)
+          renderFooter()
+        }
+        return
+      }
+      startedTop = true
+      applySettings(extra)
+      start()
+    }
+    void tryFetchOfficialSettings().then((s) => goTop(s))
+    window.setTimeout(() => goTop(), 800)
     return
   }
   let started = false
@@ -1322,7 +1385,7 @@ function boot(): void {
       return
     const data = event.data as {
       type?: string
-      settings?: PageSettings
+      settings?: unknown
       pageUrl?: unknown
       instanceId?: unknown
       namespaced?: unknown
@@ -1334,8 +1397,15 @@ function boot(): void {
       data.type === 'caifu-buy-vs-rent:settings'
     ) {
       const changed = applyShareContext(data, event.origin)
-      if (data.type === 'caifu-buy-vs-rent:settings') go(data.settings)
-      else if (started && changed) {
+      if (data.type === 'caifu-buy-vs-rent:settings') {
+        // Official settings only from a same-origin parent (or the official endpoint).
+        if (event.origin === location.origin)
+          go(sanitizePageSettings(data.settings))
+        else if (started && changed) {
+          buildApp()
+          recalc(true)
+        }
+      } else if (started && changed) {
         buildApp()
         recalc(true)
       }
@@ -1343,15 +1413,15 @@ function boot(): void {
   })
   window.parent.postMessage({ type: 'caifu-buy-vs-rent:need-settings' }, '*')
   const parentCfg = tryReadParentConfig()
-  const haveLocalCfg = Boolean(
-    settings.defaults ||
-    settings.disclaimer_zh ||
-    settings.disclaimer_de ||
-    settings.basiszins != null,
-  )
-  if (parentCfg) go(parentCfg)
+  const haveLocalCfg = settingsLookPresent(settings)
+  if (parentCfg && settingsLookPresent(parentCfg)) go(parentCfg)
   else if (haveLocalCfg) go()
-  else window.setTimeout(() => go(), 800)
+  else {
+    void tryFetchOfficialSettings().then((s) => {
+      if (s && settingsLookPresent(s)) go(s)
+    })
+    window.setTimeout(() => go(), 800)
+  }
 }
 
 boot()
