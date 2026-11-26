@@ -12,5 +12,9 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "caifudeguo/buy-vs-rent/e2e",
+    "caifudeguo/buy-vs-rent/playwright.config.ts"
+  ]
 }

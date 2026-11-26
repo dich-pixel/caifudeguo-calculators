@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- Same-origin multi-instance host that loads bootstrap.js. Not shipped in the plugin zip. -->
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Multi host (extra, main)</title>
+    <style>
+      body { margin: 0; background: #f0f0f1; font-family: system-ui, sans-serif; }
+      #cbr-rocket-outside { padding: 12px 16px; background: #e2e4e7; }
+      iframe.caifu-buy-vs-rent { width: 100%; border: 0; display: block; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="cbr-rocket-outside">Parent chrome</div>
+    <iframe class="caifu-buy-vs-rent" data-cbr-id="extra" src="./index.html?cbr_test=1" title="计算器 1" style="height:2400px;width:100%;border:0;display:block" scrolling="no" loading="eager"></iframe>
+    <script src="./share-params.js"></script>
+    <script src="./bootstrap.js"></script>
+    <iframe class="caifu-buy-vs-rent" data-cbr-id="main" src="./index.html?cbr_test=1" title="计算器 2" style="height:2400px;width:100%;border:0;display:block" scrolling="no" loading="eager"></iframe>
+    <script src="./share-params.js"></script>
+    <script src="./bootstrap.js"></script>
+
+  </body>
+</html>
