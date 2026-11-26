@@ -75,7 +75,7 @@ function caifu_bvr_frontend_settings($lang, $test)
 {
     $s = caifu_bvr_settings();
     $payload = array(
-        'lang'            => ($lang === 'de') ? 'de' : 'zh',
+        'lang'            => caifu_bvr_resolve_lang($lang, isset($s['default_lang']) ? $s['default_lang'] : 'zh'),
         'basiszins'       => ((float) $s['basiszins']) / 100.0,
         'basiszins_year'  => (int) $s['basiszins_year'],
         'disclaimer_zh'   => $s['disclaimer_zh'],
@@ -141,14 +141,88 @@ function caifu_bvr_allowed_origins()
 function caifu_bvr_register_assets()
 {
     wp_register_script(
+        'caifu-buy-vs-rent-share-params',
+        plugins_url('assets/share-params.js', __FILE__),
+        array(),
+        caifu_bvr_file_ver(__DIR__ . '/assets/share-params.js'),
+        true
+    );
+    wp_register_script(
         'caifu-buy-vs-rent-embed',
         plugins_url('assets/embed.js', __FILE__),
-        array(),
+        array('caifu-buy-vs-rent-share-params'),
         caifu_bvr_file_ver(__DIR__ . '/assets/embed.js'),
         true
     );
 }
 add_action('wp_enqueue_scripts', 'caifu_bvr_register_assets');
+add_action('rest_api_init', 'caifu_bvr_register_rest');
+
+/**
+ * Public, same-origin official settings. GET only; no CORS wildcard.
+ */
+function caifu_bvr_register_rest()
+{
+    if (!function_exists('register_rest_route')) {
+        return;
+    }
+    register_rest_route(
+        'caifu-buy-vs-rent/v1',
+        '/settings',
+        array(
+            'methods'             => 'GET',
+            'permission_callback' => '__return_true',
+            'callback'            => 'caifu_bvr_rest_settings',
+        )
+    );
+}
+
+/**
+ * @param mixed $request
+ * @return array
+ */
+function caifu_bvr_rest_settings($request)
+{
+    $requested = '';
+    if (is_object($request) && method_exists($request, 'get_param')) {
+        $requested = $request->get_param('lang');
+    }
+    return caifu_bvr_frontend_settings($requested, false);
+}
+
+/**
+ * @return string
+ */
+function caifu_bvr_settings_rest_url()
+{
+    if (function_exists('rest_url')) {
+        return rest_url('caifu-buy-vs-rent/v1/settings');
+    }
+    return '';
+}
+
+/**
+ * Drop CORS headers if a global REST filter added them (this endpoint is same-origin only).
+ *
+ * @param mixed $served
+ * @param mixed $result
+ * @param mixed $request
+ * @return mixed
+ */
+function caifu_bvr_rest_no_cors($served, $result = null, $request = null)
+{
+    $route = '';
+    if (is_object($request) && method_exists($request, 'get_route')) {
+        $route = (string) $request->get_route();
+    }
+    if ($route === '/caifu-buy-vs-rent/v1/settings' && function_exists('header_remove')) {
+        header_remove('Access-Control-Allow-Origin');
+        header_remove('Access-Control-Allow-Methods');
+        header_remove('Access-Control-Allow-Credentials');
+    }
+    return $served;
+}
+add_filter('rest_pre_serve_request', 'caifu_bvr_rest_no_cors', 99, 3);
 add_filter('rocket_delay_js_exclusions', 'caifu_bvr_rocket_delay_js_exclusions');
 add_filter('rocket_exclude_defer_js', 'caifu_bvr_rocket_exclude_defer_js');
 add_filter('script_loader_tag', 'caifu_bvr_script_loader_tag', 10, 3);
@@ -179,12 +253,17 @@ function caifu_bvr_no_texturize_shortcodes($shortcodes)
  */
 function caifu_bvr_bootstrap_script()
 {
-    $src = add_query_arg(
+    $share = add_query_arg(
+        'ver',
+        caifu_bvr_file_ver(__DIR__ . '/assets/share-params.js'),
+        plugins_url('assets/share-params.js', __FILE__)
+    );
+    $boot = add_query_arg(
         'ver',
         caifu_bvr_file_ver(__DIR__ . '/assets/bootstrap.js'),
         plugins_url('assets/bootstrap.js', __FILE__)
     );
-    return caifu_bvr_bootstrap_tag(esc_url($src));
+    return caifu_bvr_bootstrap_tag(esc_url($share)) . caifu_bvr_bootstrap_tag(esc_url($boot));
 }
 
 
@@ -284,14 +363,17 @@ function caifu_bvr_shortcode($atts)
         define('DONOTCACHEPAGE', true);
     }
 
+    $settings_url = caifu_bvr_settings_rest_url();
+
     return sprintf(
-        '<iframe class="caifu-buy-vs-rent" data-cbr-id="%4$s" data-cbr-settings="%6$s" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>%5$s',
+        '<iframe class="caifu-buy-vs-rent" data-cbr-id="%4$s" data-cbr-settings="%6$s" data-cbr-settings-url="%7$s" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>%5$s',
         esc_url($src),
         esc_attr($atts['title']),
         $height,
         esc_attr($instance_id),
         caifu_bvr_bootstrap_script(),
-        esc_attr($cfg)
+        esc_attr($cfg),
+        esc_url($settings_url)
     );
 }
 add_shortcode('caifu_buy_vs_rent', 'caifu_bvr_shortcode');

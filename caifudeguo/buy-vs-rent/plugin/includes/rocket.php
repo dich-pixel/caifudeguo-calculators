@@ -57,7 +57,8 @@ function caifu_bvr_rocket_exclude_defer_js($excluded)
  */
 function caifu_bvr_script_loader_tag($tag, $handle, $src = '')
 {
-    if ($handle !== 'caifu-buy-vs-rent-embed' || !is_string($tag)) {
+    $ours = array('caifu-buy-vs-rent-embed', 'caifu-buy-vs-rent-share-params');
+    if (!in_array($handle, $ours, true) || !is_string($tag)) {
         return $tag;
     }
     $next = preg_replace_callback(

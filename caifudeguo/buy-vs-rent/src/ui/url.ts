@@ -135,9 +135,12 @@ export function extractInstanceSearch(
       unprefixed.set(k, v)
     }
   }
-  if ([...prefixed.keys()].length) return prefixed.toString()
-  if (!opts.multi || opts.first) return unprefixed.toString()
-  return ''
+  const out = new URLSearchParams()
+  if (!opts.multi || opts.first) {
+    for (const [k, v] of unprefixed) out.set(k, v)
+  }
+  for (const [k, v] of prefixed) out.set(k, v)
+  return out.toString()
 }
 
 export function buildShareUrl(

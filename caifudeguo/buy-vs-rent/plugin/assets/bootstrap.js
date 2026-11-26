@@ -11,52 +11,8 @@
   if (!frame || !frame.classList) return
   if (!frame.classList.contains('caifu-buy-vs-rent')) return
 
-  const SHARE_KEYS = {
-    price: 1,
-    renovation: 1,
-    down_payment: 1,
-    wealth: 1,
-    nk_mode: 1,
-    nk_total_pct: 1,
-    grest_pct: 1,
-    notary_pct: 1,
-    broker_buy_pct: 1,
-    maint_pct: 1,
-    maint_base: 1,
-    building_share: 1,
-    maint_growth: 1,
-    buyer_other_costs: 1,
-    buyer_other_growth: 1,
-    house_growth: 1,
-    loan_rate: 1,
-    init_tilgung: 1,
-    fix_years: 1,
-    follow_rate: 1,
-    follow_mode: 1,
-    follow_tilgung: 1,
-    sondertilgung_pct: 1,
-    rent: 1,
-    rent_growth: 1,
-    renter_nebenkosten: 1,
-    renter_nk_growth: 1,
-    renter_renovation: 1,
-    cash_monthly: 1,
-    cash_growth: 1,
-    etf_return: 1,
-    inflation: 1,
-    horizon_years: 1,
-    house_err: 1,
-    etf_err: 1,
-    borrow_rate: 1,
-    sell_cost_pct: 1,
-    self_use_exempt: 1,
-    personal_tax_rate: 1,
-    use_sparer_kirchen: 1,
-    kirchen_rate: 1,
-    mc_runs: 1,
-    mc_sigma: 1,
-    mc_seed: 1,
-  }
+  const share = window.caifuBvrShareParams
+  if (!share || typeof share.extractInstanceSearch !== 'function') return
 
   const alreadyLoaded = () => {
     if (frame.getAttribute('data-cbr-attached') === '1') return true
@@ -88,6 +44,10 @@
       if (frames[i] === frame) index = i
     }
     const instanceId = frame.getAttribute('data-cbr-id') || ''
+    const multi = frames.length > 1
+    const first = index === 0
+    // Always pass the raw parent query. The iframe runs the shared
+    // extractInstanceSearch so unprefixed keys cannot leak to later instances.
     try {
       w.postMessage(
         {
@@ -95,8 +55,8 @@
           settings,
           pageUrl: location.href,
           instanceId,
-          namespaced: frames.length > 1,
-          first: index === 0,
+          namespaced: multi,
+          first,
           search: location.search,
         },
         '*',
@@ -126,24 +86,12 @@
           if (frames[i] === frame) index = i
         }
         const first = index === 0
-        const prefix = `${id}.`
-        const params = new URLSearchParams(location.search)
-        const pref = new URLSearchParams()
-        const un = new URLSearchParams()
-        let hasPref = false
-        params.forEach((v, k) => {
-          if (id && k.indexOf(prefix) === 0) {
-            const key = k.slice(prefix.length)
-            if (SHARE_KEYS[key]) {
-              pref.set(key, v)
-              hasPref = true
-            }
-            return
-          }
-          if (SHARE_KEYS[k]) un.set(k, v)
+        const extra = share.extractInstanceSearch(location.search, {
+          instanceId: id,
+          multi: frames.length > 1,
+          first,
         })
-        const extra = hasPref ? pref : first ? un : new URLSearchParams()
-        Object.keys(SHARE_KEYS).forEach((k) => {
+        Object.keys(share.INPUT_KEYS).forEach((k) => {
           url.searchParams.delete(k)
         })
         extra.forEach((v, k) => {

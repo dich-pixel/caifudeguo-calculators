@@ -71,7 +71,13 @@ for (const name of [
   'host-wp-column.html',
   'rocket-host.html',
   'rocket-host-cfg.html',
+  'rocket-host-two.html',
+  'multi-host.html',
+  'multi-host-three.html',
+  'multi-host-custom.html',
   'embed.js',
+  'bootstrap.js',
+  'share-params.js',
 ]) {
   try {
     rmSync(join(plugin, 'app', name))

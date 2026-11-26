@@ -146,6 +146,92 @@ describe('extractInstanceSearch namespacing', () => {
     })
     expect(queryToInputs(`?${q}`).price).toBe(350_000)
   })
+
+  it('c2: a legacy unprefixed link on a two-instance page restores only the first', () => {
+    const q = '?price=420000&rent=1350'
+    const first = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr1', multi: true, first: true })}`,
+    )
+    const second = extractInstanceSearch(q, {
+      instanceId: 'bvr2',
+      multi: true,
+      first: false,
+    })
+    expect(first.price).toBe(420_000)
+    expect(first.rent).toBe(1350)
+    expect(second).toBe('')
+  })
+
+  it('c3: a prefixed key on the second instance wins over an unprefixed price', () => {
+    const q = '?price=410000&bvr2.price=430000'
+    const first = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr1', multi: true, first: true })}`,
+    )
+    const second = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr2', multi: true, first: false })}`,
+    )
+    expect(first.price).toBe(410_000)
+    expect(second.price).toBe(430_000)
+  })
+
+  it('c3b: a prefix for the first instance wins that field; the second stays default', () => {
+    const q = '?price=410000&bvr1.rent=1400'
+    const first = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr1', multi: true, first: true })}`,
+    )
+    const second = extractInstanceSearch(q, {
+      instanceId: 'bvr2',
+      multi: true,
+      first: false,
+    })
+    expect(first.price).toBe(410_000)
+    expect(first.rent).toBe(1400)
+    expect(second).toBe('')
+  })
+
+  it('c5c: a legacy unprefixed link on a three-instance page restores only the first', () => {
+    const q = '?price=420000'
+    const prices = [true, false, false].map((first, i) =>
+      extractInstanceSearch(q, {
+        instanceId: `bvr${i + 1}`,
+        multi: true,
+        first,
+      }),
+    )
+    expect(queryToInputs(`?${prices[0]}`).price).toBe(420_000)
+    expect(prices[1]).toBe('')
+    expect(prices[2]).toBe('')
+  })
+
+  it('c6c: custom ids still apply a legacy link only to the first instance in document order', () => {
+    const q = '?price=420000'
+    const first = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'extra', multi: true, first: true })}`,
+    )
+    const second = extractInstanceSearch(q, {
+      instanceId: 'main',
+      multi: true,
+      first: false,
+    })
+    expect(first.price).toBe(420_000)
+    expect(second).toBe('')
+  })
+
+  it('c13: a generated mixed link restores prefixed values on the second instance', () => {
+    const q =
+      '?price=420000&bvr2.price=310000&bvr2.cash_monthly=2800&bvr2.inflation=0.025'
+    const first = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr1', multi: true, first: true })}`,
+    )
+    const second = queryToInputs(
+      `?${extractInstanceSearch(q, { instanceId: 'bvr2', multi: true, first: false })}`,
+    )
+    expect(first.price).toBe(420_000)
+    expect(first.cash_monthly).toBeUndefined()
+    expect(second.price).toBe(310_000)
+    expect(second.cash_monthly).toBe(2800)
+    expect(second.inflation).toBe(0.025)
+  })
 })
 
 describe('buildShareUrl', () => {

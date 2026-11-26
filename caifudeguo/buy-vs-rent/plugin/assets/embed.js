@@ -130,22 +130,24 @@
     }
   }
 
+  const shareParams = () =>
+    typeof window !== 'undefined' ? window.caifuBvrShareParams : null
+
   const extractSearch = (instanceId, multi, first) => {
-    const params = new URLSearchParams(location.search)
-    const prefix = `${instanceId}.`
-    const prefixed = new URLSearchParams()
-    const unprefixed = new URLSearchParams()
-    params.forEach((v, k) => {
-      if (k.indexOf(prefix) === 0) {
-        const key = k.slice(prefix.length)
-        if (INPUT_KEYS[key]) prefixed.set(key, v)
-      } else if (INPUT_KEYS[k]) {
-        unprefixed.set(k, v)
-      }
-    })
-    if ([...prefixed.keys()].length) return prefixed
-    if (!multi || first) return unprefixed
+    const share = shareParams()
+    if (share && typeof share.extractInstanceSearch === 'function') {
+      return share.extractInstanceSearch(location.search, {
+        instanceId,
+        multi,
+        first,
+      })
+    }
     return new URLSearchParams()
+  }
+
+  const inputKeys = () => {
+    const share = shareParams()
+    return share && share.INPUT_KEYS ? share.INPUT_KEYS : INPUT_KEYS
   }
 
   const frameAlreadyLoaded = (frame) => {
@@ -189,7 +191,7 @@
     } catch {
       return
     }
-    Object.keys(INPUT_KEYS).forEach((key) => {
+    Object.keys(inputKeys()).forEach((key) => {
       url.searchParams.delete(key)
     })
     extra.forEach((v, k) => {
@@ -235,14 +237,14 @@
       if (frames[i] === frame) index = i
     }
     const instanceId = frame.getAttribute('data-cbr-id') || ''
-    const search = extractSearch(instanceId, multi, index === 0).toString()
+    // Raw parent query; the iframe runs the shared extractInstanceSearch.
     return {
       type: PAGE_TYPE,
       pageUrl: location.href,
       instanceId,
       namespaced: multi,
       first: index === 0,
-      search,
+      search: location.search,
     }
   }
 

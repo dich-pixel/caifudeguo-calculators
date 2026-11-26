@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_INPUTS } from '../src/engine/constants'
 import {
+  explicitPageLang,
   officialSettingsUrl,
   sanitizeDefaults,
   sanitizePageSettings,
@@ -101,21 +102,52 @@ describe('sanitizeDefaults', () => {
 })
 
 describe('officialSettingsUrl', () => {
-  it('returns a same-origin settings.php URL only for the plugin app path', () => {
+  it('derives the same-origin REST settings URL from the plugin app path', () => {
     expect(
       officialSettingsUrl(
         'https://caifudeguo.de/wp-content/plugins/caifu-buy-vs-rent/app/index.html?v=abc',
+        'de',
       ),
     ).toBe(
-      'https://caifudeguo.de/wp-content/plugins/caifu-buy-vs-rent/settings.php',
+      'https://caifudeguo.de/wp-json/caifu-buy-vs-rent/v1/settings?lang=de',
     )
+    expect(
+      officialSettingsUrl(
+        'https://caifudeguo.de/sub/wp-content/plugins/caifu-buy-vs-rent/app/index.html',
+      ),
+    ).toBe('https://caifudeguo.de/sub/wp-json/caifu-buy-vs-rent/v1/settings')
     expect(
       officialSettingsUrl('https://caifudeguo.de/app/index.html'),
     ).toBeNull()
+  })
+
+  it('prefers a same-origin advertised REST URL and still attaches lang', () => {
     expect(
       officialSettingsUrl(
-        'https://evil.example/caifu-buy-vs-rent/app/index.html',
+        'https://caifudeguo.de/wp-content/plugins/caifu-buy-vs-rent/app/index.html',
+        'de',
+        'https://caifudeguo.de/wp-json/caifu-buy-vs-rent/v1/settings',
       ),
-    ).toBe('https://evil.example/caifu-buy-vs-rent/settings.php')
+    ).toBe(
+      'https://caifudeguo.de/wp-json/caifu-buy-vs-rent/v1/settings?lang=de',
+    )
+    expect(
+      officialSettingsUrl(
+        'https://caifudeguo.de/wp-content/plugins/caifu-buy-vs-rent/app/index.html',
+        'de',
+        'https://evil.example/wp-json/caifu-buy-vs-rent/v1/settings',
+      ),
+    ).toBe(
+      'https://caifudeguo.de/wp-json/caifu-buy-vs-rent/v1/settings?lang=de',
+    )
+  })
+})
+
+describe('explicitPageLang', () => {
+  it('reads zh or de from the query and ignores anything else', () => {
+    expect(explicitPageLang('?lang=de&foo=1')).toBe('de')
+    expect(explicitPageLang('?lang=zh')).toBe('zh')
+    expect(explicitPageLang('?lang=fr')).toBeUndefined()
+    expect(explicitPageLang('')).toBeUndefined()
   })
 })

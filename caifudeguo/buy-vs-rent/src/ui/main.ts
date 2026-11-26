@@ -41,7 +41,11 @@ import {
   parsePercentInput,
 } from './format'
 import { startHeightReporting } from './height'
-import { officialSettingsUrl, sanitizePageSettings } from './settings'
+import {
+  explicitPageLang,
+  officialSettingsUrl,
+  sanitizePageSettings,
+} from './settings'
 import { attachTestApi, shouldEnableTestApi } from './test-api'
 import {
   extractInstanceSearch,
@@ -197,10 +201,8 @@ function withFixedProductDefaults(partial?: Partial<Inputs>): Inputs {
 }
 
 let builtinDefaults = withFixedProductDefaults(settings.defaults ?? {})
-let lang: Lang =
-  (new URLSearchParams(location.search).get('lang') as Lang) ||
-  settings.lang ||
-  'zh'
+const pageLang = explicitPageLang(location.search)
+let lang: Lang = pageLang || settings.lang || 'zh'
 if (lang !== 'zh' && lang !== 'de') lang = 'zh'
 let inputs: Inputs = withFixedProductDefaults({
   ...builtinDefaults,
@@ -1140,7 +1142,8 @@ function applySettings(extra?: PageSettings): void {
   const clean = extra ? sanitizePageSettings(extra) : {}
   if (Object.keys(clean).length === 0) return
   Object.assign(settings, clean)
-  if (clean.lang === 'zh' || clean.lang === 'de') lang = clean.lang
+  if (!pageLang && (clean.lang === 'zh' || clean.lang === 'de'))
+    lang = clean.lang
   if (clean.defaults) {
     builtinDefaults = withFixedProductDefaults(clean.defaults)
     inputs = withFixedProductDefaults({
@@ -1197,7 +1200,16 @@ function applyShareContext(
     shareCtx.namespaced = data.namespaced
   if (typeof data.first === 'boolean') shareCtx.first = data.first
   let changed = false
-  if (typeof data.search === 'string') parentSearch = data.search
+  if (typeof data.search === 'string') {
+    const instanceId = shareCtx.instanceId
+    parentSearch = instanceId
+      ? extractInstanceSearch(data.search, {
+          instanceId,
+          multi: Boolean(shareCtx.namespaced),
+          first: Boolean(shareCtx.first),
+        })
+      : ''
+  }
   if (parentSearch !== '' && !appliedNonemptyParentSearch && !userEdited) {
     appliedNonemptyParentSearch = true
     inputs = withFixedProductDefaults({
@@ -1299,7 +1311,11 @@ function tryReadParentConfig(): PageSettings | undefined {
 }
 
 async function tryFetchOfficialSettings(): Promise<PageSettings | undefined> {
-  const url = officialSettingsUrl(location.href)
+  const url = officialSettingsUrl(
+    location.href,
+    pageLang,
+    sameOriginSettingsEndpoint(),
+  )
   if (!url) return undefined
   try {
     const res = await fetch(url, { credentials: 'same-origin', method: 'GET' })
@@ -1308,6 +1324,24 @@ async function tryFetchOfficialSettings(): Promise<PageSettings | undefined> {
   } catch {
     return undefined
   }
+}
+
+function sameOriginSettingsEndpoint(): string | null {
+  if (window.parent === window) return null
+  try {
+    const frames = window.parent.document.querySelectorAll(
+      'iframe.caifu-buy-vs-rent',
+    )
+    for (let i = 0; i < frames.length; i++) {
+      const frame = frames[i] as HTMLIFrameElement
+      if (frame.contentWindow !== window) continue
+      const raw = frame.getAttribute('data-cbr-settings-url')
+      return raw && raw.trim() !== '' ? raw : null
+    }
+  } catch {
+    /* cross-origin */
+  }
+  return null
 }
 
 function settingsLookPresent(s: PageSettings): boolean {
@@ -1338,7 +1372,14 @@ function boot(): void {
       applySettings(fromParent.settings)
   }
   if (window.parent === window) {
-    if (settingsLookPresent(settings) || !officialSettingsUrl(location.href)) {
+    if (
+      settingsLookPresent(settings) ||
+      !officialSettingsUrl(
+        location.href,
+        pageLang,
+        sameOriginSettingsEndpoint(),
+      )
+    ) {
       start()
       return
     }

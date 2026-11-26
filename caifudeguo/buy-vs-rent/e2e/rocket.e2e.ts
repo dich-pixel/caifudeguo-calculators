@@ -166,3 +166,34 @@ test.describe('unsigned cbr_cfg is ignored', () => {
     await expect(page.locator('.cbr-disclaimer')).not.toHaveText('')
   })
 })
+
+test.describe('V8 two-instance legacy link under delayed embed', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('v8: unprefixed params apply only to the first instance while parent scripts stay delayed', async ({
+    page,
+  }) => {
+    await page.goto(
+      'http://127.0.0.1:4177/rocket-host-two.html?price=420000&rent=1350',
+    )
+    expect(
+      await page.locator('script[type="rocketlazyloadscript"]').count(),
+    ).toBeGreaterThan(0)
+    const firstLoc = page.locator('iframe.caifu-buy-vs-rent').nth(0)
+    await expect(firstLoc).toBeVisible()
+    const firstHandle = await firstLoc.elementHandle()
+    const first = await firstHandle?.contentFrame()
+    if (!first) throw new Error('missing first iframe')
+    const loc = page.locator('iframe.caifu-buy-vs-rent').nth(1)
+    await expect(loc).toBeVisible()
+    const handle = await loc.elementHandle()
+    const second = await handle?.contentFrame()
+    if (!second) throw new Error('missing second iframe')
+    await waitApi(first)
+    await waitApi(second)
+    await expect.poll(async () => (await inputsOf(first)).price).toBe(420_000)
+    await expect.poll(async () => (await inputsOf(first)).rent).toBe(1350)
+    await expect.poll(async () => (await inputsOf(second)).price).toBe(400_000)
+    await expect.poll(async () => (await inputsOf(second)).rent).toBe(1850)
+  })
+})

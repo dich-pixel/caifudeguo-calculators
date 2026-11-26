@@ -74,6 +74,27 @@ export default defineConfig({
           `${dir}dist/rocket-host-cfg.html`,
         )
         copyFileSync(`${dir}plugin/assets/embed.js`, `${dir}dist/embed.js`)
+        copyFileSync(
+          `${dir}plugin/assets/bootstrap.js`,
+          `${dir}dist/bootstrap.js`,
+        )
+        copyFileSync(
+          `${dir}plugin/assets/share-params.js`,
+          `${dir}dist/share-params.js`,
+        )
+        copyFileSync(`${dir}multi-host.html`, `${dir}dist/multi-host.html`)
+        copyFileSync(
+          `${dir}multi-host-three.html`,
+          `${dir}dist/multi-host-three.html`,
+        )
+        copyFileSync(
+          `${dir}multi-host-custom.html`,
+          `${dir}dist/multi-host-custom.html`,
+        )
+        copyFileSync(
+          `${dir}rocket-host-two.html`,
+          `${dir}dist/rocket-host-two.html`,
+        )
       },
     },
   ],

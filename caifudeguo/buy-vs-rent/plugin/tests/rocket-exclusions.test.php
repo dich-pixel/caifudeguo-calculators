@@ -134,6 +134,59 @@ $enc = caifu_bvr_parse_query_string('bvr1.price=430%2C000&foo=a+b');
 assert_true($enc['bvr1.price'] === '430,000' && $enc['foo'] === 'a b', 'query values are urldecoded');
 
 
+
+assert_true(caifu_bvr_resolve_lang('de', 'zh') === 'de', 'explicit de wins over admin default');
+assert_true(caifu_bvr_resolve_lang('zh', 'de') === 'zh', 'explicit zh wins over admin default');
+assert_true(caifu_bvr_resolve_lang('', 'de') === 'de', 'omitted lang uses the admin default');
+assert_true(caifu_bvr_resolve_lang(null, 'de') === 'de', 'null lang uses the admin default');
+assert_true(caifu_bvr_resolve_lang('fr', 'nope') === 'zh', 'invalid values fall back to zh');
+
+$c2_first = caifu_bvr_extract_instance_query(caifu_bvr_parse_query_string('price=420000&rent=1350'), 'bvr1', true);
+$c2_second = caifu_bvr_extract_instance_query(caifu_bvr_parse_query_string('price=420000&rent=1350'), 'bvr2', false);
+assert_true($c2_first['price'] === '420000' && $c2_first['rent'] === '1350', 'C2: first instance gets unprefixed legacy params');
+assert_true($c2_second === array(), 'C2: later instance ignores unprefixed legacy params');
+
+$c3q = caifu_bvr_parse_query_string('price=410000&bvr2.price=430000');
+$c3_first = caifu_bvr_extract_instance_query($c3q, 'bvr1', true);
+$c3_second = caifu_bvr_extract_instance_query($c3q, 'bvr2', false);
+assert_true($c3_first['price'] === '410000' && $c3_second['price'] === '430000', 'C3: prefix on the second instance wins over unprefixed');
+
+$c3bq = caifu_bvr_parse_query_string('price=410000&bvr1.rent=1400');
+$c3b_first = caifu_bvr_extract_instance_query($c3bq, 'bvr1', true);
+$c3b_second = caifu_bvr_extract_instance_query($c3bq, 'bvr2', false);
+assert_true($c3b_first['price'] === '410000' && $c3b_first['rent'] === '1400', 'C3b: first instance uses unprefixed price and its own prefix');
+assert_true($c3b_second === array(), 'C3b: second instance stays at defaults');
+
+$c5 = caifu_bvr_extract_instance_query(caifu_bvr_parse_query_string('price=420000'), 'bvr3', false);
+assert_true($c5 === array(), 'C5c: third instance ignores a legacy unprefixed link');
+
+$c6_first = caifu_bvr_extract_instance_query(caifu_bvr_parse_query_string('price=420000'), 'extra', true);
+$c6_second = caifu_bvr_extract_instance_query(caifu_bvr_parse_query_string('price=420000'), 'main', false);
+assert_true($c6_first['price'] === '420000' && $c6_second === array(), 'C6c: custom-id page applies legacy params only to the first instance');
+
+$c13q = caifu_bvr_parse_query_string('price=420000&bvr2.price=310000&bvr2.cash_monthly=2800&bvr2.inflation=0.025');
+$c13_first = caifu_bvr_extract_instance_query($c13q, 'bvr1', true);
+$c13_second = caifu_bvr_extract_instance_query($c13q, 'bvr2', false);
+assert_true($c13_first['price'] === '420000' && !isset($c13_first['cash_monthly']), 'C13: first instance keeps the leftover unprefixed price');
+assert_true($c13_second['price'] === '310000' && $c13_second['cash_monthly'] === '2800', 'C13: second instance uses its prefixed keys, not the unprefixed price');
+
+$share_js = dirname(__DIR__) . '/assets/share-params.js';
+assert_true(is_file($share_js) && preg_match('/^[0-9a-f]{12}$/', caifu_bvr_file_ver($share_js)) === 1, 'share-params.js content hash is 12 hex chars');
+$tmp = tempnam(sys_get_temp_dir(), 'cbr-js-');
+file_put_contents($tmp, file_get_contents($share_js));
+$check = array();
+$code = 0;
+exec('node --check ' . escapeshellarg($tmp) . ' 2>&1', $check, $code);
+unlink($tmp);
+assert_true($code === 0, 'share-params.js parses as JavaScript (node --check): ' . implode("\n", $check));
+
+$share_handle = caifu_bvr_script_loader_tag(
+    '<script type="text/javascript" src="https://example.com/caifu-buy-vs-rent/assets/share-params.js?ver=abc" id="caifu-buy-vs-rent-share-params-js"></script>',
+    'caifu-buy-vs-rent-share-params',
+    'https://example.com/share-params.js'
+);
+assert_true(strpos($share_handle, 'nowprocket') !== false, 'share-params.js script tag gets nowprocket');
+
 if ($failed) {
     echo "\n$failed failed, $passed passed\n";
     exit(1);

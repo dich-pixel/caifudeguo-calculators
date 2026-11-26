@@ -107,13 +107,11 @@ function caifu_bvr_extract_instance_query($query, $instance_id, $first)
             $unprefixed[$k] = (string) $v;
         }
     }
-    if ($prefixed) {
-        return $prefixed;
+    $out = $first ? $unprefixed : array();
+    foreach ($prefixed as $key => $v) {
+        $out[$key] = $v;
     }
-    if ($first) {
-        return $unprefixed;
-    }
-    return array();
+    return $out;
 }
 
 /**
@@ -183,6 +181,25 @@ function caifu_bvr_query_has_share_params($query)
         }
     }
     return false;
+}
+
+
+/**
+ * Language for official settings: explicit request > admin default > zh.
+ *
+ * @param mixed $requested
+ * @param mixed $admin_default
+ * @return string
+ */
+function caifu_bvr_resolve_lang($requested, $admin_default = 'zh')
+{
+    if ($requested === 'de' || $requested === 'zh') {
+        return $requested;
+    }
+    if ($admin_default === 'de' || $admin_default === 'zh') {
+        return $admin_default;
+    }
+    return 'zh';
 }
 
 /**

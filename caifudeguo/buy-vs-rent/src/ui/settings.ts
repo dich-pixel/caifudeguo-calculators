@@ -139,7 +139,47 @@ export function sanitizePageSettings(raw: unknown): PageSettings {
   return out
 }
 
-export function officialSettingsUrl(href: string): string | null {
+export function explicitPageLang(search?: string): Lang | undefined {
+  try {
+    const raw =
+      search ?? (typeof location !== 'undefined' ? location.search : '')
+    const value = new URLSearchParams(
+      raw.startsWith('?') ? raw.slice(1) : raw,
+    ).get('lang')
+    if (value === 'zh' || value === 'de') return value
+  } catch {
+    /* ignore a malformed query */
+  }
+  return undefined
+}
+
+function restSettingsUrl(
+  origin: string,
+  sitePath: string,
+  lang?: string,
+): string | null {
+  const path = `${sitePath.replace(/\/$/, '')}/wp-json/caifu-buy-vs-rent/v1/settings`
+  let url: URL
+  try {
+    url = new URL(path, origin)
+  } catch {
+    return null
+  }
+  if (url.origin !== origin) return null
+  if (lang === 'zh' || lang === 'de') url.searchParams.set('lang', lang)
+  return url.href
+}
+
+/**
+ * Same-origin WP REST endpoint for official settings.
+ * Prefers an explicit URL from the parent iframe (data-cbr-settings-url);
+ * otherwise derives /wp-json/… from a standard plugin app path.
+ */
+export function officialSettingsUrl(
+  href: string,
+  lang?: string,
+  advertised?: string | null,
+): string | null {
   let here: URL
   try {
     here = new URL(href)
@@ -147,16 +187,34 @@ export function officialSettingsUrl(href: string): string | null {
     return null
   }
   if (here.protocol !== 'http:' && here.protocol !== 'https:') return null
-  if (
-    !/\/caifu-buy-vs-rent\/app\/(?:index\.html)?(?:[?#].*)?$/i.test(
-      here.pathname,
-    )
-  )
-    return null
-  const url = new URL('../settings.php', here)
-  if (url.origin !== here.origin) return null
-  if (!/\/caifu-buy-vs-rent\/settings\.php$/i.test(url.pathname)) return null
-  return url.href
+  if (advertised) {
+    try {
+      const advertisedUrl = new URL(advertised, here)
+      if (
+        advertisedUrl.origin === here.origin &&
+        (advertisedUrl.protocol === 'http:' ||
+          advertisedUrl.protocol === 'https:') &&
+        /\/wp-json\/caifu-buy-vs-rent\/v1\/settings\/?$/i.test(
+          advertisedUrl.pathname,
+        )
+      ) {
+        if (lang === 'zh' || lang === 'de')
+          advertisedUrl.searchParams.set('lang', lang)
+        return advertisedUrl.href
+      }
+    } catch {
+      /* ignore a malformed advertised URL */
+    }
+  }
+  const marker = '/caifu-buy-vs-rent/app/'
+  const index = here.pathname.toLowerCase().indexOf(marker)
+  if (index < 0) return null
+  const before = here.pathname.slice(0, index)
+  const pluginsAt = before.toLowerCase().lastIndexOf('/plugins')
+  if (pluginsAt < 0) return null
+  let root = before.slice(0, pluginsAt)
+  root = root.replace(/\/wp-content$/i, '').replace(/\/app$/i, '')
+  return restSettingsUrl(here.origin, root || '/', lang)
 }
 
 export { BASISZINS_YEAR }
