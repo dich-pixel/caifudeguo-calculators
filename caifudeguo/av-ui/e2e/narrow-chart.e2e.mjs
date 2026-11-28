@@ -180,7 +180,9 @@ export const EE_CASES = {
 /** reserved − SVG height (blank below the chart) */
 const MAX_BLANK = 24
 
-const b = await chromium.launch()
+const b = await chromium.launch(process.env.CHROME
+  ? { executablePath: process.env.CHROME, args: ['--no-sandbox', '--disable-dev-shm-usage'] }
+  : {})
 const all = []
 // layout shifts of nodes inside the chart regions, from page start (hadRecentInput NOT excluded, so the first render
 // after the toggle click counts too), and CSP violations from the app (the reserved height is an SVG height attribute: no style attribute, no CSSOM).
@@ -286,6 +288,28 @@ for (const [name, v] of Object.entries(EE_CASES)) {
     const st = await stable(p, errors, 'ee-region', 'ee-chart')
     all.push(...st.fails.map(f => `ee ${name} @ ${w}: ${f}`))
     console.log(`${st.fails.length ? '✗' : '✓'} ee ${name} @ ${w} px [box ${st.r.box} / svg ${st.r.svg} px]`)
+    await p.close()
+  }
+}
+// Page must not grow wider than the viewport: German chart text wraps, and the early-withdrawal table scrolls inside itself.
+for (const lang of ['zh', 'de']) {
+  for (const w of [320, 360, 375, 1280]) {
+    const p = await b.newPage({ viewport: { width: w, height: 900 } })
+    await p.goto(`http://localhost:${port}/index.html?lang=${lang}`)
+    await p.waitForFunction(() => {
+      const s = document.querySelector('[data-testid=cmp3-summary]')
+      return s && s.getAttribute('data-round') !== '0' && document.querySelector('[data-testid=cmp3-chart] svg.cmp3-svg:not(.cmp3-placeholder)')
+    }, null, { timeout: 20000 })
+    if (w >= 1000) {
+      const t = p.locator('button[aria-controls=ee-region]')
+      if (await t.getAttribute('aria-expanded') !== 'true')
+        await t.click()
+      await p.waitForSelector('[data-testid=ee-table]')
+    }
+    const over = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    if (over > 0)
+      all.push(`${lang} @ ${w}: horizontal overflow ${over}px`)
+    console.log(`${over > 0 ? '✗' : '✓'} overflow ${lang} @ ${w}px: ${over}px`)
     await p.close()
   }
 }

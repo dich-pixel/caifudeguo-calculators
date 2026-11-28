@@ -10,7 +10,7 @@ import type { EarlyExit, ExitPoint } from './early-exit'
 import type { FormValues, Result } from './model'
 import type { StrKey } from './strings'
 import { avDepot } from '../../../src/calculators/av-depot'
-import { axes, chartPlaceholder, el, FALLBACK_CHART_HEIGHT, frame, labelChart, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
+import { axes, chartPlaceholder, el, FALLBACK_CHART_HEIGHT, frame, headerExtra, labelChart, PAD, placeLabels, plotTop, relLine, textBox, textWidth, X_LABEL_GAP, X_ROW0_DY } from './chart'
 import { relText } from './cmp3'
 import { h, txt } from './dom'
 import { earlyExit } from './early-exit'
@@ -27,15 +27,15 @@ export function eeChartHeight(width: number): number {
 
 /** follow-up: height the chart box reserves before drawing (= SVG height: no extra x-label rows in this chart) */
 export function eeReservedHeight(_e: EarlyExit, width: number): number {
-  return eeChartHeight(width)
+  return eeChartHeight(width) + headerExtra(width)
 }
 
 /** Dual-axis chart: x = age at withdrawal (proportional), solid = diff (€), dashed = rel (%). */
 export function drawEarlyChart(e: EarlyExit, width: number): SVGSVGElement {
-  const height = eeChartHeight(width)
+  const t0 = plotTop(width) // same legend rows as the B chart
+  const height = eeChartHeight(width) + headerExtra(width)
   const narrow = width < 400
   const pts = e.points
-  const t0 = plotTop(width) // same legend rows as the B chart
   const bottom = height - PAD.bottom
   const a = { ...axes(pts.map(p => p.diff), pts.map(p => p.rel), t0, bottom, narrow), top: t0 }
   const svg = el('svg', { 'width': width, 'height': height, 'viewBox': `0 0 ${width} ${height}`, 'aria-hidden': 'true', 'class': 'cmp3-svg ee-svg', 'focusable': 'false' })
@@ -136,7 +136,7 @@ export function regionContent(e: EarlyExit): HTMLElement[] {
     e.mode === 'consume' ? 'consumeRefundNote' : null,
   ]
   return [
-    wideTable(e),
+    h('div', { class: 'ee-table-wrap' }, wideTable(e)),
     cards(e),
     ...notes.filter((k): k is StrKey => k !== null).map(k => txt('p', k, { class: 'help' })),
   ]

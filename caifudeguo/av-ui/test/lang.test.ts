@@ -73,16 +73,33 @@ describe('zh/de dictionary', () => {
     expect(src).not.toMatch(/localStorage|sessionStorage|document\.cookie/)
   })
 
-  it('the toggle is at least 32px with a 14px font', () => {
+  it('the toggle is at least 32px with a 14px font, and no text is below 0.75rem', () => {
     const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8')
     expect(css).toMatch(/\.lang-toggle button \{[^}]*min-height:\s*32px/)
     expect(css).toMatch(/\.lang-toggle button \{[^}]*font-size:\s*14px/)
+    expect(css).not.toMatch(/font-size:\s*0\.[0-6]\d*rem/)
+    expect(css).not.toContain('0.7rem')
+    expect(css).toMatch(/html\[lang='de'\] body \{ hyphens: auto/)
+  })
+
+  it('german Kinderzulage says 25 Jahre and the marginal header is a full sentence', () => {
+    setLang('de')
+    expect(t('noticeKids')).toContain('bis 25 Jahre')
+    expect(t('cmp3ColMarginal')).toContain('den du einzahlst')
+    expect(t('retirementAge')).toContain('\u00AD')
+    setLang('zh')
+    expect(t('retirementAge')).toBe('退休年龄')
+    expect(t('noticeKids')).not.toContain('Jahre')
   })
 
   it('the WordPress shortcode forwards only lang=de or lang=zh', () => {
     const php = readFileSync(new URL('../../wp-plugin/caifudeguo-av-depot/caifudeguo-av-depot.php', import.meta.url), 'utf8')
     expect(php).toContain("'lang'")
-    expect(php).toMatch(/\$lang === 'de' \|\| \$lang === 'zh'/)
+    expect(php).toMatch(/\$lang !== 'de' && \$lang !== 'zh'/)
+    expect(php).toContain("'AV-Depot-Rechner'")
+    expect(php).toContain('中文和德文界面')
+    const readme = readFileSync(new URL('../../wp-plugin/caifudeguo-av-depot/readme.txt', import.meta.url), 'utf8')
+    expect(readme).toContain('中文和德文界面')
   })
 })
 

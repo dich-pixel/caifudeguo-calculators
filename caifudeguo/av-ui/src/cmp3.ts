@@ -242,10 +242,10 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
   ]
   return [
     txt('p', 'cmp3Intro', { class: 'help' }),
-    h('table', { 'class': 'cmp3-table', 'data-testid': 'cmp3-table' },
+    h('div', { class: 'cmp3-table-wrap' }, h('table', { 'class': 'cmp3-table', 'data-testid': 'cmp3-table' },
       h('thead', {}, h('tr', {}, ...cols.map(([f, l]) => h('th', { scope: 'col', class: f }, l)))),
       h('tbody', {}, ...s.rows.map(row)),
-    ),
+    )),
     ...notes.filter((k): k is StrKey => k !== null).map(k => txt('p', k, { class: 'help' })),
     // 0.3.2: the two reference notes are folded (same order as before)
     foldedNotes(['jointApproxNotice', 'foerBonus']),

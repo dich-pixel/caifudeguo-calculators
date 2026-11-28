@@ -224,35 +224,111 @@ export function axes(left: number[], right: (number | null)[], top: number, bott
 /** estimated text width (12 px font): 13 px per CJK character, 7 px otherwise */
 export const textWidth = (text: string) => [...text].reduce((n, c) => n + (/[\u3000-\uFFFF]/.test(c) ? 13 : 7), 0)
 
+/** baseline step when a title or legend wraps (same 16 px the legend already uses between rows) */
+const LEGEND_LINE = 16
+
+/** A few px of slack so a line the Chinese charts already draw (just past the SVG) stays one line. */
+const WRAP_SLACK = 8
+
+/** Split on spaces so every line fits in maxW. A single over-long word is broken by character. */
+export function wrapLines(text: string, maxW: number): string[] {
+  if (maxW <= 0 || textWidth(text) <= maxW + WRAP_SLACK)
+    return [text]
+  const lines: string[] = []
+  let cur = ''
+  const take = (word: string) => {
+    if (textWidth(word) <= maxW)
+      return word
+    let s = ''
+    for (const ch of word) {
+      if (s && textWidth(s + ch) > maxW) {
+        lines.push(s)
+        s = ch
+      }
+      else {
+        s += ch
+      }
+    }
+    return s
+  }
+  for (const word of text.split(' ')) {
+    const next = cur ? `${cur} ${word}` : word
+    if (textWidth(next) <= maxW) {
+      cur = next
+      continue
+    }
+    if (cur)
+      lines.push(cur)
+    cur = take(word)
+  }
+  if (cur)
+    lines.push(cur)
+  return lines.length > 0 ? lines : [text]
+}
+
 const LEGEND: [string, StrKey][] = [['line', 'chartLegendDiff'], ['rel', 'chartLegendRel']]
 
-/** legend items (first row baseline 31, second row 47) */
-export function legendLayout(width: number): { x: number, y: number, cls: string, key: StrKey }[] {
+export interface LegendItem { x: number, y: number, cls: string, key: StrKey, lines: string[] }
+
+/** legend items. One line stays on the historical baselines (31, then 47); a line that does not fit the SVG wraps. */
+export function legendLayout(width: number): LegendItem[] {
+  const titleN = wrapLines(t('chartTitle'), Math.max(40, width - 4)).length
+  let x = PAD.left
+  let y = 31 + (titleN - 1) * LEGEND_LINE
+  const maxText = Math.max(40, width - PAD.left - 20)
+  const out: LegendItem[] = []
+  for (const [cls, key] of LEGEND) {
+    const lines = wrapLines(t(key), maxText)
+    const w = 20 + Math.max(...lines.map(textWidth))
+    if (x > PAD.left && x + w > width - 4) {
+      x = PAD.left
+      y += LEGEND_LINE
+    }
+    out.push({ x, y, cls, key, lines })
+    if (lines.length > 1) {
+      y += lines.length * LEGEND_LINE
+      x = PAD.left
+    }
+    else {
+      x += w + 14
+    }
+  }
+  return out
+}
+
+/** top of the plot area: 15 px below the last legend line */
+export function plotTop(width: number): number {
+  const last = legendLayout(width).reduce((n, it) => Math.max(n, it.y + (it.lines.length - 1) * LEGEND_LINE), 0)
+  return Math.max(PAD.top, last + 15)
+}
+
+/** plot top before title/legend line-wrapping (the layout the Chinese charts already use) */
+function plotTopPlain(width: number): number {
   let x = PAD.left
   let y = 31
-  return LEGEND.map(([cls, key]) => {
+  for (const [, key] of LEGEND) {
     const w = 20 + textWidth(t(key))
     if (x > PAD.left && x + w > width - 4) {
       x = PAD.left
-      y += 16
+      y += LEGEND_LINE
     }
-    const it = { x, y, cls, key }
     x += w + 14
-    return it
-  })
+  }
+  return Math.max(PAD.top, y + 15)
 }
 
-/** top of the plot area: 15 px below the last legend row */
-export function plotTop(width: number): number {
-  return Math.max(PAD.top, Math.max(...legendLayout(width).map(i => i.y)) + 15)
+/** SVG pixels added so a wrapped German title/legend does not shrink the plot */
+export function headerExtra(width: number): number {
+  return Math.max(0, plotTop(width) - plotTopPlain(width))
 }
 
 export function geometry(rows: CmpRow[], width: number): Geometry {
-  const height = chartHeight(width)
+  const top = plotTop(width)
+  // extra header rows (German title/legend) grow the SVG, not the plot
+  const height = chartHeight(width) + headerExtra(width)
   const n = rows.length
   const inner = width - PAD.left - PAD.right
   const xs = rows.map((_, i) => PAD.left + (n === 1 ? inner / 2 : (inner * i) / (n - 1)))
-  const top = plotTop(width)
   const a = axes(rows.map(r => r.diff), rows.map(r => r.rel), top, height - PAD.bottom, width < 400)
   return { width, height, top, xs, ...a }
 }
@@ -530,17 +606,36 @@ export function drawAnn(g: Element, a: Ann, cls?: string): void {
 /** axis label number in de-DE style with a real minus sign (U+2212) for negatives */
 export const axisNumber = (v: number, digits = 0) => formatNumberDe(v, digits).replace(/^[-\u2212]/, '\u2212')
 
+/** One SVG text. A single line is a text node (Chinese charts stay byte-identical); longer lines become tspans inside the SVG. */
+function drawWrapped(parent: Element, pl: Placer, x: number, y: number, anchor: string, text: string, maxW: number, cls?: string): void {
+  const lines = wrapLines(text, maxW)
+  if (lines.length === 1) {
+    parent.append(el('text', { ...pl.fixed(x, y, anchor, text), ...(cls ? { class: cls } : {}) }, text))
+    return
+  }
+  const first = pl.fixed(x, y, anchor, lines[0]!)
+  const node = el('text', { ...first, ...(cls ? { class: cls } : {}) })
+  lines.forEach((ln, i) => {
+    const yy = y + i * LEGEND_LINE
+    const left = anchor === 'start' ? first.x : anchoredLeft(x, anchor, textWidth(ln))
+    node.append(el('tspan', { x: left, y: yy }, ln))
+    if (i > 0)
+      pl.occupy(textBox(left, yy, ln))
+  })
+  parent.append(node)
+}
+
 /** Frame shared by both charts: title, legend, grid + both tick columns, axis titles. Returns the placer. */
 export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width: number, height: number, title: StrKey, xAxis: StrKey, extraBottom?: number }): Placer {
   const { width, height } = o
   const bottom = height - PAD.bottom - (o.extraBottom ?? 0)
   const pl = new Placer(width, height, a.y(0), { l: PAD.left, r: width - PAD.right })
-  svg.append(el('text', { ...pl.fixed(0, 13, 'start', t(o.title)), class: 'title' }, t(o.title)))
-  // legend: solid = € (left), dashed = % (right); may wrap to a second row on narrow screens
+  drawWrapped(svg, pl, 0, 13, 'start', t(o.title), Math.max(40, width - 4), 'title')
+  // legend: solid = € (left), dashed = % (right); may wrap to a second row, and a long German line wraps inside the SVG
   const lg = el('g', { 'class': 'legend', 'data-testid': 'chart-legend' })
   for (const it of legendLayout(width)) {
     lg.append(el('line', { 'x1': it.x, 'x2': it.x + 16, 'y1': it.y - 4, 'y2': it.y - 4, 'class': `${it.cls} sample`, ...(it.cls === 'rel' ? { 'stroke-dasharray': '5 3' } : {}) }))
-    lg.append(el('text', pl.fixed(it.x + 20, it.y, 'start', t(it.key)), t(it.key)))
+    drawWrapped(lg, pl, it.x + 20, it.y, 'start', t(it.key), Math.max(40, width - it.x - 20))
     pl.occupy({ l: it.x, r: it.x + 16, t: it.y - 6, b: it.y - 2 })
   }
   svg.append(lg)
@@ -557,7 +652,7 @@ export function frame(svg: SVGSVGElement, a: Axes & { top: number }, o: { width:
     rg.append(el('text', pl.fixed(width - PAD.right + 6, a.yR(v) + 4, 'start', s), s))
   }
   svg.append(rg)
-  svg.append(el('text', pl.fixed(PAD.left + (width - PAD.left - PAD.right) / 2, height - 6, 'middle', t(o.xAxis)), t(o.xAxis)))
+  drawWrapped(svg, pl, PAD.left + (width - PAD.left - PAD.right) / 2, height - 6, 'middle', t(o.xAxis), Math.max(40, width - 4))
   // rotated axis titles: vertical boxes
   const mid = (a.top + bottom) / 2
   const vbox = (cx: number, text: string) => pl.occupy({ l: cx - 9, r: cx + 5, t: mid - textWidth(text) / 2, b: mid + textWidth(text) / 2 })

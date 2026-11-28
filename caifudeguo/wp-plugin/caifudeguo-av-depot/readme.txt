@@ -8,7 +8,7 @@ Stable tag: 0.3.3
 License: AGPL-3.0-only
 License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
-养老投资账户（Altersvorsorgedepot）计算器，中文界面，单人报税版。
+养老投资账户（Altersvorsorgedepot）计算器，中文和德文界面，单人报税版。
 
 == Description ==
 
