@@ -17,6 +17,10 @@ html, body { margin: 0; padding: 0; background: #fff; }
 html.embedded, html.embedded body { overflow: hidden; }
 body { overflow-wrap: anywhere; }
 .app { max-width: 1200px; margin: 0 auto; padding: 12px; }
+.lang-toggle { display: inline-flex; margin: 0 0 10px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.lang-toggle button { min-height: 32px; padding: 0 14px; font-size: 14px; line-height: 1.2; border: 0; background: #fff; color: var(--fg); }
+.lang-toggle button + button { border-left: 1px solid var(--line); }
+.lang-toggle button[aria-pressed='true'] { background: var(--accent); color: #fff; font-weight: 700; }
 h1 { font-size: 1.4rem; margin: 0 0 4px; }
 h2 { font-size: 1.15rem; margin: 12px 0 4px; }
 .subtitle { margin: 0 0 8px; color: var(--muted); }

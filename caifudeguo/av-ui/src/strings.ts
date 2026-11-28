@@ -1,12 +1,17 @@
 /*
  * caifudeguo AV-Depot UI — Copyright (C) 2026 Rich Dr (caifudeguo.de)
  * Based on finanzfluss/calculators (AGPL-3.0). Licensed under AGPL-3.0-only.
- *
+ */
+import { DE } from './strings.de'
+
+/*
  * Single source of every user-visible string. The UI renders only from here,
- * and COPY.md is generated from this file (see test/copy.test.ts).
+ * and COPY.md is generated from this file (see test/copy.test.mjs).
  * `id` is the data-testid of the element showing the string.
- * `de` is the German term shown in brackets, `source` the legal/official source of that term.
- * Placeholders: {x} {min} {max} {year} {date} {sha}.
+ * `zh` is the Chinese UI text (default). `de` is the German term shown in brackets
+ * in zh mode, `source` the legal/official source of that term.
+ * The full German UI text lives in strings.de.ts under the same keys (`t()` picks it
+ * when the language is `de`). Placeholders: {x} {min} {max} {year} {date} {sha}.
  */
 
 export interface UiString {
@@ -273,12 +278,63 @@ export const STR = {
   errJump: s('form-error-jump', '跳到第一个标红项'),
 
   notesHeading: s('notes-heading', '提示 · 免责 · 来源'),
+
+  // language toggle (names stay the language's own name in both modes)
+  langLabel: s('lang-label', '语言'),
+  langZh: s('lang-zh', '中文'),
+  langDe: s('lang-de', 'Deutsch'),
 } satisfies Record<string, UiString>
 
 export type StrKey = keyof typeof STR
 
+/** UI language. `zh` is the default and keeps the original Chinese copy. */
+export type Lang = 'zh' | 'de'
+
+/** Assignable only when every zh key has a German UI string. */
+const DE_TEXT: Record<StrKey, string> = DE
+
+let currentLang: Lang = 'zh'
+
+export function getLang(): Lang {
+  return currentLang
+}
+
+export function setLang(lang: Lang): void {
+  currentLang = lang
+}
+
+/**
+ * `lang=de` and `lang=zh` in a query string. Anything else (missing, empty, unknown)
+ * is zh. No storage: the URL is the only signal.
+ */
+export function langFromSearch(search: string): Lang {
+  const v = new URLSearchParams(search).get('lang')
+  return v === 'de' || v === 'zh' ? v : 'zh'
+}
+
+/** `<html lang>` value. zh stays `zh-Hans`, the value the page shipped with. */
+export function htmlLang(lang: Lang = currentLang): 'zh-Hans' | 'de' {
+  return lang === 'de' ? 'de' : 'zh-Hans'
+}
+
+/** Visible `<h1>`. zh appends the statutory German term in brackets; de is the German title alone. */
+export function pageHeading(): string {
+  if (getLang() === 'zh' && STR.title.de)
+    return `${t('title')}（${STR.title.de}）`
+  return t('title')
+}
+
+/** `<title>`. zh matches index.html (no space before ·); de gets a normal space. */
+export function documentTitle(): string {
+  const head = pageHeading()
+  return getLang() === 'zh' ? `${head}· caifudeguo.de` : `${head} · caifudeguo.de`
+}
+
+export { DE }
+
 export function t(key: StrKey, vars: Record<string, string | number> = {}): string {
-  return STR[key].zh.replace(/\{(\w+)\}/g, (m, k: string) =>
+  const raw = currentLang === 'de' ? DE_TEXT[key] : STR[key].zh
+  return raw.replace(/\{(\w+)\}/g, (m, k: string) =>
     k in vars ? String(vars[k]) : m,
   )
 }

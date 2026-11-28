@@ -29,6 +29,8 @@ export interface Cmp3View {
   section: HTMLElement
   /** called after every main-result update; main = null when the form has errors */
   update: (values: FormValues, main: Result | null) => void
+  /** rewrite summary, chart and open table from the cached sweep (language switch; no new core run) */
+  redraw: () => void
 }
 
 export function createCmp3(): Cmp3View {
@@ -170,7 +172,15 @@ export function createCmp3(): Cmp3View {
     }, DEBOUNCE_MS)
   }
 
-  return { section, update }
+  function redraw(): void {
+    if (!data)
+      return
+    renderSummary()
+    renderChart()
+    renderRegion()
+  }
+
+  return { section, update, redraw }
 }
 
 /** Table (cards below 1000 px via CSS) and its notes. */

@@ -4,11 +4,11 @@
  * Source: https://github.com/dich-pixel/caifudeguo-calculators
  */
 import type { FieldError, FieldName, FormValues, Money, PayoutMoney, Result, TaxSavingsMode } from './model'
-import type { StrKey } from './strings'
+import type { Lang, StrKey } from './strings'
 import { zodJitless } from './_zod-jitless'
 import { createCmp3 } from './cmp3'
 import { foerderung, foerderungKey, verdictSentence } from './compare'
-import { h, txt } from './dom'
+import { h, refreshI18n, txt } from './dom'
 import { createEarlyExit } from './early-exit-view'
 import { formatEuro, formatEuro2, formatNumberDe, roundHalfUp } from './format'
 import { startHeightReporting } from './height'
@@ -16,11 +16,14 @@ import { createRetirementAuto, DEFAULTS, evaluate, FIELDS, ONE_CONTRACT_CAP, pla
 import { footerNotices, resultNotes } from './notes'
 import { CORE_COMMIT_SHORT, CORE_COMMIT_URL, forkCommit, forkSourceUrl, PARAMS_CHECK_DATE } from './params'
 import { parseAmount } from './parse'
-import { STR, t } from './strings'
+import { documentTitle, getLang, htmlLang, langFromSearch, pageHeading, setLang, STR, t } from './strings'
 import './style.css'
 
 if (!zodJitless)
   throw new Error('zod jitless config not applied (CSP: no eval)')
+
+// URL wins (`?lang=de` / `?lang=zh`); otherwise zh. Before any `t()` call. No storage.
+setLang(langFromSearch(globalThis.location?.search ?? ''))
 
 const state: FormValues = structuredClone(DEFAULTS)
 const inputs = new Map<string, HTMLInputElement>()
@@ -76,8 +79,17 @@ function field(name: FieldName, labelKey: StrKey, helpKey?: StrKey, extra?: Node
   return h('div', { class: 'field' }, txt('label', labelKey, { for: id }), input, err, extra ?? null, helpKey ? txt('p', helpKey, { id: `help-${name}`, class: 'help' }) : null)
 }
 
+let quickWrap: HTMLElement | undefined
+
+function quickAria(): string {
+  if (getLang() === 'zh')
+    return t('quickPrefix') + t('savingsRate')
+  return `${t('quickPrefix').replace(/:\s*$/, '')}: ${t('savingsRate')}`
+}
+
 function savingsQuick(): HTMLElement {
-  const wrap = h('div', { 'class': 'quick', 'role': 'group', 'aria-label': t('quickPrefix') + t('savingsRate') }, txt('span', 'quickPrefix', { 'aria-hidden': 'true' }))
+  const wrap = h('div', { 'class': 'quick', 'role': 'group', 'aria-label': quickAria() }, txt('span', 'quickPrefix', { 'aria-hidden': 'true' }))
+  quickWrap = wrap
   for (const amount of QUICK_AMOUNTS) {
     const b = h('button', { 'type': 'button', 'class': 'chip', 'data-testid': `quick-${amount}` }, formatNumberDe(amount))
     b.addEventListener('click', () => {
@@ -117,7 +129,8 @@ function renderKids(focusIndex?: number) {
       kidTouched[i] = true
       update()
     })
-    const remove = h('button', { 'type': 'button', 'class': 'linkbtn', 'data-testid': `kid-remove-${i}`, 'aria-label': `${t('kidRemove')}：${t('kidLabel', { x: i + 1 })}` }, t('kidRemove'))
+    const sep = getLang() === 'zh' ? '：' : ': '
+    const remove = h('button', { 'type': 'button', 'class': 'linkbtn', 'data-testid': `kid-remove-${i}`, 'data-i18n': 'kidRemove', 'aria-label': `${t('kidRemove')}${sep}${t('kidLabel', { x: i + 1 })}` }, t('kidRemove'))
     remove.addEventListener('click', () => {
       state.kids.splice(i, 1)
       kidTouched.splice(i, 1)
@@ -143,7 +156,7 @@ kidAddBtn.addEventListener('click', () => {
 function toggle(labelKey: StrKey, regionId: string, region: HTMLElement): HTMLButtonElement {
   region.id = regionId
   region.hidden = true
-  const btn = h('button', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': regionId, 'data-testid': STR[labelKey].id }, t(labelKey))
+  const btn = h('button', { 'type': 'button', 'class': 'toggle', 'aria-expanded': 'false', 'aria-controls': regionId, 'data-testid': STR[labelKey].id, 'data-i18n': labelKey }, t(labelKey))
   btn.addEventListener('click', () => {
     const open = btn.getAttribute('aria-expanded') !== 'true'
     btn.setAttribute('aria-expanded', String(open))
@@ -251,15 +264,20 @@ function renderResult(r: Result) {
   ), ...resultNotes(countedKids().length > 0))
 
   const cols: [StrKey, string][] = [['colContribution', 'contribution'], ['colReturn', 'grossReturn'], ['colVorab', 'vorabpauschale'], ['colVorabTax', 'vorabpauschaleTax'], ['colEnd', 'capitalEnd']]
-  const label = (k: StrKey) => STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
+  const label = (k: StrKey) => getLang() === 'zh' && STR[k].de ? `${t(k)}（${STR[k].de}）` : t(k)
+  const normalShort = () => {
+    const full = t('colNormal')
+    const i = full.indexOf('（')
+    return i === -1 ? full : full.slice(0, i)
+  }
   const head = h('tr', {}, txt('th', 'colYear', { scope: 'col' }), txt('th', 'colAge', { scope: 'col' }),
     ...cols.map(([k]) => h('th', { scope: 'col', class: 'av' }, `AV · ${label(k)}`)),
-    ...cols.map(([k]) => h('th', { scope: 'col', class: 'normal' }, `${t('colNormal').split('（')[0]} · ${label(k)}`)))
+    ...cols.map(([k]) => h('th', { scope: 'col', class: 'normal' }, `${normalShort()} · ${label(k)}`)))
   const rows = r.years.map(y => h('tr', { 'data-testid': 'yearly-row' },
     h('th', { 'scope': 'row', 'data-label': t('colYear') }, String(y.calendarYear)),
     h('td', { 'data-label': t('colAge') }, String(y.age)),
     ...cols.map(([k, f]) => h('td', { 'class': 'av', 'data-label': `AV · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).avDepot))),
-    ...cols.map(([k, f]) => h('td', { 'class': 'normal', 'data-label': `${t('colNormal').split('（')[0]} · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).normalDepot))),
+    ...cols.map(([k, f]) => h('td', { 'class': 'normal', 'data-label': `${normalShort()} · ${label(k)}` }, formatEuro2((y[f as keyof typeof y] as Money).normalDepot))),
   ))
   yearlyBody.replaceChildren(txt('p', 'yearlyNote', { class: 'help' }), txt('p', 'yearlyContribNote', { class: 'help' }), h('table', { 'class': 'yearly', 'data-testid': 'yearly-table' }, h('thead', {}, head), h('tbody', {}, ...rows)))
 }
@@ -273,7 +291,7 @@ function showError(key: string, e: FieldError | undefined) {
     input.setAttribute('aria-invalid', e ? 'true' : 'false')
 }
 
-function update() {
+function update(mode: 'calc' | 'lang' = 'calc') {
   const amount = parseAmount(state.fields.savingsRate)
   twoContracts.hidden = !(amount.ok && amount.value > ONE_CONTRACT_CAP)
   const counted = withTouchedKids(state, kidTouched)
@@ -297,7 +315,10 @@ function update() {
     if (formErr)
       status.append(h('p', { 'class': 'err', 'data-testid': 'error-form' }, t(formErr.key, formErr.vars)))
   }
-  cmp3.update(counted.values, outcome.ok ? outcome.result : null)
+  if (mode === 'lang')
+    cmp3.redraw()
+  else
+    cmp3.update(counted.values, outcome.ok ? outcome.result : null)
   early.update(counted.values, outcome.ok ? outcome : null)
 }
 
@@ -308,12 +329,76 @@ function notice(key: StrKey, detailsKey?: StrKey, tag: 'div' | 'p' = 'div'): HTM
   if (!detailsKey)
     return txt(tag, key, { class: 'notice' })
   return h('div', { 'class': 'notice', 'data-testid': STR[key].id },
-    h('p', {}, t(key)),
+    h('p', { 'data-i18n': key }, t(key)),
     h('details', {}, txt('summary', 'noticeDetailsSummary'), txt('p', detailsKey)))
 }
 
 function link(href: string, text: string, testid?: string): HTMLAnchorElement {
   return h('a', { href, 'target': '_blank', 'rel': 'noopener noreferrer', 'data-testid': testid }, text)
+}
+
+function i18nLink(href: string, key: StrKey, vars: Record<string, string | number>, testid?: string): HTMLAnchorElement {
+  const a = link(href, t(key, vars), testid)
+  a.setAttribute('data-i18n', key)
+  if (Object.keys(vars).length > 0)
+    a.setAttribute('data-i18n-vars', JSON.stringify(vars))
+  return a
+}
+
+let langButtons: HTMLButtonElement[] = []
+
+function langToggle(): HTMLElement {
+  const make = (lang: Lang, key: StrKey, testid: string, langAttr: string, allowCjk: boolean): HTMLButtonElement => {
+    const b = h('button', {
+      'type': 'button',
+      'class': 'lang-btn',
+      'lang': langAttr,
+      'data-lang': lang,
+      'data-testid': testid,
+      'data-i18n': key,
+      'aria-pressed': String(getLang() === lang),
+      ...(allowCjk ? { 'data-allow-cjk': '' } : {}),
+    }, t(key))
+    b.addEventListener('click', () => {
+      if (getLang() !== lang)
+        applyLanguage(lang)
+    })
+    return b
+  }
+  langButtons = [
+    make('zh', 'langZh', 'lang-zh', 'zh-Hans', true),
+    make('de', 'langDe', 'lang-de', 'de', false),
+  ]
+  return h('div', {
+    'class': 'lang-toggle',
+    'role': 'group',
+    'data-testid': 'lang-toggle',
+    'aria-label': t('langLabel'),
+    'data-i18n-aria': 'langLabel',
+  }, ...langButtons)
+}
+
+/** html lang, title, static copy. The h1 is composed (zh keeps the bracketed German term). */
+function applyChrome(): void {
+  document.documentElement.lang = htmlLang()
+  document.title = documentTitle()
+  refreshI18n(document.body)
+  const heading = document.querySelector('h1')
+  if (heading)
+    heading.textContent = pageHeading()
+  quickWrap?.setAttribute('aria-label', quickAria())
+  for (const btn of langButtons)
+    btn.setAttribute('aria-pressed', String(btn.getAttribute('data-lang') === getLang()))
+}
+
+function applyLanguage(lang: Lang): void {
+  setLang(lang)
+  const url = new URL(location.href)
+  url.searchParams.set('lang', lang)
+  history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`)
+  applyChrome()
+  renderKids()
+  update('lang')
 }
 
 function build() {
@@ -332,7 +417,7 @@ function build() {
   const kids = h('div', { 'class': 'field', 'role': 'group', 'aria-labelledby': 'kids-label', 'aria-describedby': 'help-kids' },
     txt('span', 'kids', { id: 'kids-label', class: 'label' }), kidsList, kidAddBtn, txt('p', 'kidsHelp', { id: 'help-kids', class: 'help' }))
 
-  const form = h('form', { 'class': 'inputs', 'novalidate': true, 'aria-label': t('title') },
+  const form = h('form', { 'class': 'inputs', 'novalidate': true, 'aria-label': t('title'), 'data-i18n-aria': 'title' },
     errBanner,
     h('div', { class: 'row2' }, field('age', 'age'), field('retirementAge', 'retirementAge')),
     field('savingsRate', 'savingsRate', 'savingsHelp', h('div', {}, savingsQuick(), twoContracts, inlineResult)),
@@ -355,15 +440,15 @@ function build() {
   const notes = h('footer', { 'class': 'notes', 'aria-labelledby': 'notes-h' },
     txt('h2', 'notesHeading', { id: 'notes-h' }),
     ...footerNotices(),
-    h('p', { 'class': 'notice', 'data-testid': STR.noticeParams.id }, link(CORE_COMMIT_URL, t('noticeParams', { date: PARAMS_CHECK_DATE, sha: CORE_COMMIT_SHORT }))),
+    h('p', { 'class': 'notice', 'data-testid': STR.noticeParams.id }, i18nLink(CORE_COMMIT_URL, 'noticeParams', { date: PARAMS_CHECK_DATE, sha: CORE_COMMIT_SHORT })),
     txt('p', 'noticeDisclaimer', { class: 'notice' }),
     txt('p', 'noticeBrowser', { class: 'notice' }),
-    h('p', { 'class': 'notice', 'data-testid': STR.noticeSource.id }, t('noticeSource'), ' ', link(forkSourceUrl(), t('noticeSourceLink', { sha: /^[0-9a-f]{40}$/.test(sha) ? sha.slice(0, 7) : sha }), STR.noticeSourceLink.id)),
+    h('p', { 'class': 'notice', 'data-testid': STR.noticeSource.id }, h('span', { 'data-i18n': 'noticeSource' }, t('noticeSource')), ' ', i18nLink(forkSourceUrl(), 'noticeSourceLink', { sha: /^[0-9a-f]{40}$/.test(sha) ? sha.slice(0, 7) : sha }, STR.noticeSourceLink.id)),
     txt('p', 'noticeNotAffiliated', { class: 'notice' }),
   )
 
   const app = h('main', { class: 'app' },
-    h('header', {}, txt('h1', 'title', {}, {}), txt('p', 'subtitle', { class: 'subtitle' }),
+    h('header', {}, langToggle(), txt('h1', 'title', {}, {}), txt('p', 'subtitle', { class: 'subtitle' }),
       h('div', { 'class': 'banner', 'role': 'note' }, txt('p', 'noticeStart', { class: 'notice' }), notice('noticeLock', 'noticeLockDetails'))),
     txt('p', 'numberFormat', { class: 'numfmt' }),
     bar,
@@ -374,9 +459,8 @@ function build() {
     early.section,
     notes,
   )
-  // Title shows the German term in brackets.
-  app.querySelector('h1')!.textContent = `${t('title')}（${STR.title.de}）`
   document.body.append(app)
+  applyChrome()
   update()
 }
 

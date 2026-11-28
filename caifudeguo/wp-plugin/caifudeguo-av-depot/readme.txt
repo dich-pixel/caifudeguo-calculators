@@ -12,7 +12,7 @@ License URI: https://www.gnu.org/licenses/agpl-3.0.html
 
 == Description ==
 
-* 短代码：`[caifudeguo_av_depot]`，可选属性 `height`（初始高度，像素，默认 2400）和 `title`（iframe 的无障碍标题）。
+* 短代码：`[caifudeguo_av_depot]`，可选属性 `height`（初始高度，像素，默认 2400）、`title`（iframe 的无障碍标题）和 `lang`（`zh` 或 `de`，作为 `?lang=` 传给计算器；不写或其他值则计算器默认中文）。不写入选项、不用 cookie。
 * 计算器以 iframe 显示（插件目录 `app/index.html`），完全在浏览器里计算：不上传数据、不用 cookie、不写 localStorage、不加载第三方资源、不做追踪。
 * 高度自适应：计算器页面用 ResizeObserver 测高，通过 postMessage 告诉父页面；插件只接受以下来源（origin）的消息：
   `https://www.caifudeguo.de`、`https://caifudeguo.de`、本站的 origin、插件文件所在的 origin。
