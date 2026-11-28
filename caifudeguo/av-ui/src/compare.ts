@@ -11,7 +11,7 @@ import type { StrKey } from './strings'
 import { formatEuro, formatNumberDe, roundHalfUp } from './format'
 import { evaluate, verdict } from './model'
 import { parseAmount } from './parse'
-import { t } from './strings'
+import { getLang, t } from './strings'
 
 /** Plan a: the 12 fixed tiers. Flips, largest difference and "多存 1 €" use only these (b3). */
 export const TIERS = [120, 300, 360, 600, 1200, 1800, 2400, 3600, 6840, 8400, 10000, 13680] as const
@@ -294,9 +294,11 @@ const KIND_KEY: Record<Kind, StrKey> = { av: 'kindAv', same: 'kindSame', normal:
 export function kindName(k: Kind): string {
   return t(KIND_KEY[k])
 }
-/** Space between a Chinese word and a following Latin word ("变成 AV 多拿"). */
+/** Space between a Chinese word and a following Latin word ("变成 AV 多拿"). German templates carry their own spacing. */
 function afterZh(k: Kind): string {
   const name = kindName(k)
+  if (getLang() !== 'zh')
+    return name
   return /^[A-Z]/i.test(name) ? ` ${name}` : name
 }
 
@@ -312,7 +314,9 @@ export function sensitivityText(s: SweepResult): string {
   const first = s.tiers[0]!.kind
   const parts = s.flips.slice(0, 3).map((f, i) =>
     t(i === 0 ? 'sensFirst' : 'sensAgain', { x: formatNumberDe(f.from), y: formatNumberDe(f.to), k: afterZh(f.kind) }))
-  return `${t('sensPrefix')}${first !== 'av' ? t('sensStart', { k: kindName(first) }) : ''}${parts.join('，')}${s.flips.length > 3 ? t('sensMore') : ''}。`
+  const comma = getLang() === 'zh' ? '，' : ', '
+  const stop = getLang() === 'zh' ? '。' : '.'
+  return `${t('sensPrefix')}${first !== 'av' ? t('sensStart', { k: kindName(first) }) : ''}${parts.join(comma)}${s.flips.length > 3 ? t('sensMore') : ''}${stop}`
 }
 
 /** Stage 5 follow-up: the tier amounts the two summary sentences name (flips written by sensitivityText, max by maxText);

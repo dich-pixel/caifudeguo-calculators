@@ -29,6 +29,8 @@ export interface Cmp3View {
   section: HTMLElement
   /** called after every main-result update; main = null when the form has errors */
   update: (values: FormValues, main: Result | null) => void
+  /** rewrite summary, chart and open table from the cached sweep (language switch; no new core run) */
+  redraw: () => void
 }
 
 export function createCmp3(): Cmp3View {
@@ -170,7 +172,15 @@ export function createCmp3(): Cmp3View {
     }, DEBOUNCE_MS)
   }
 
-  return { section, update }
+  function redraw(): void {
+    if (!data)
+      return
+    renderSummary()
+    renderChart()
+    renderRegion()
+  }
+
+  return { section, update, redraw }
 }
 
 /** Table (cards below 1000 px via CSS) and its notes. */
@@ -232,10 +242,10 @@ export function table(values: FormValues, s: SweepResult): HTMLElement[] {
   ]
   return [
     txt('p', 'cmp3Intro', { class: 'help' }),
-    h('table', { 'class': 'cmp3-table', 'data-testid': 'cmp3-table' },
+    h('div', { class: 'cmp3-table-wrap' }, h('table', { 'class': 'cmp3-table', 'data-testid': 'cmp3-table' },
       h('thead', {}, h('tr', {}, ...cols.map(([f, l]) => h('th', { scope: 'col', class: f }, l)))),
       h('tbody', {}, ...s.rows.map(row)),
-    ),
+    )),
     ...notes.filter((k): k is StrKey => k !== null).map(k => txt('p', k, { class: 'help' })),
     // 0.3.2: the two reference notes are folded (same order as before)
     foldedNotes(['jointApproxNotice', 'foerBonus']),

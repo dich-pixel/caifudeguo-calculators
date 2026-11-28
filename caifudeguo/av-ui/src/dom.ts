@@ -24,7 +24,27 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
   return el
 }
 
-/** Element showing STR[key] with its data-testid. */
+/** Element showing STR[key] with its data-testid. `data-i18n` lets a language switch rewrite the text. */
 export function txt<K extends keyof HTMLElementTagNameMap>(tag: K, key: StrKey, attrs: Attrs = {}, vars: Record<string, string | number> = {}): HTMLElementTagNameMap[K] {
-  return h(tag, { 'data-testid': STR[key].id, ...attrs }, t(key, vars))
+  const marked: Attrs = { 'data-testid': STR[key].id, ...attrs, 'data-i18n': key }
+  if (Object.keys(vars).length > 0)
+    marked['data-i18n-vars'] = JSON.stringify(vars)
+  return h(tag, marked, t(key, vars))
+}
+
+/** Rewrite every `data-i18n` node under `root` from the current language. Text-only nodes. */
+export function refreshI18n(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n')
+    if (!key || !(key in STR))
+      return
+    const raw = el.getAttribute('data-i18n-vars')
+    const vars = raw ? JSON.parse(raw) as Record<string, string | number> : {}
+    el.textContent = t(key as StrKey, vars)
+  })
+  root.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-aria')
+    if (key && key in STR)
+      el.setAttribute('aria-label', t(key as StrKey))
+  })
 }

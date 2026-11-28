@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       caifudeguo AV-Depot 计算器
  * Plugin URI:        https://github.com/dich-pixel/caifudeguo-calculators
- * Description:       养老投资账户（Altersvorsorgedepot）计算器，中文界面。短代码 [caifudeguo_av_depot]。纯浏览器端计算，不建数据表、不存选项、不用 cookie。
+ * Description:       养老投资账户（Altersvorsorgedepot）计算器，中文和德文界面。短代码 [caifudeguo_av_depot]。纯浏览器端计算，不建数据表、不存选项、不用 cookie。
  * Version:           0.3.3
  * Requires at least: 5.8
  * Requires PHP:      7.4
@@ -93,7 +93,10 @@ function caifudeguo_av_depot_register_assets()
 add_action('wp_enqueue_scripts', 'caifudeguo_av_depot_register_assets');
 
 /**
- * [caifudeguo_av_depot height="2400" title="..."]
+ * [caifudeguo_av_depot height="2400" title="..." lang="de"]
+ *
+ * `lang` is optional (`zh` or `de`) and is forwarded as `?lang=` on the iframe URL.
+ * Omitted or any other value keeps the calculator default (Chinese). No option is stored.
  *
  * @param array|string $atts
  * @return string
@@ -104,6 +107,7 @@ function caifudeguo_av_depot_shortcode($atts)
         array(
             'height' => '2400',
             'title'  => '养老投资账户计算器（Altersvorsorgedepot）',
+            'lang'   => '',
         ),
         is_array($atts) ? $atts : array(),
         'caifudeguo_av_depot'
@@ -125,11 +129,22 @@ function caifudeguo_av_depot_shortcode($atts)
     wp_enqueue_script('caifudeguo-av-depot-embed');
 
     $src = add_query_arg('v', CAIFUDEGUO_AV_DEPOT_VERSION, plugins_url('app/index.html', __FILE__));
+    $lang = is_string($atts['lang']) ? strtolower($atts['lang']) : '';
+    if ($lang !== 'de' && $lang !== 'zh') {
+        $lang = '';
+    }
+    if ($lang !== '') {
+        $src = add_query_arg('lang', $lang, $src);
+    }
+    $title = $atts['title'];
+    if ($lang === 'de' && $title === '养老投资账户计算器（Altersvorsorgedepot）') {
+        $title = 'AV-Depot-Rechner';
+    }
 
     return sprintf(
         '<iframe class="caifudeguo-av-depot" src="%1$s" title="%2$s" style="width:100%%;height:%3$dpx;border:0;display:block;overflow:hidden" scrolling="no" loading="lazy" referrerpolicy="no-referrer"></iframe>',
         esc_url($src),
-        esc_attr($atts['title']),
+        esc_attr($title),
         $height
     );
 }
